@@ -1,0 +1,38 @@
+DeviceID,SubID,ParentID,Name,Type,EntityID,Unit,Location,Description,Category,Group,Criticality
+3,5,3,Вкл/выкл,switch,switch.uviazhnitel_,on/off,Пол веранды,Управление увлажнителем,control,other,normal
+5,14,5,Выключатель,switch,switch.shchitok_veranda_switch,on/off,Щиток,Главный рубильник,power,electricity,critical
+6,19,6,Основной,climate,climate.termostat_veranda,,Веранда,Управление тёплым полом,control,other,normal
+6,20,6,Frost protection,switch,switch.termostat_veranda_frost_protection,on/off,Веранда,Защита от замерзания,control,other,normal
+6,21,6,Temperature correction,number,number.termostat_veranda_temperature_correction,,Веранда,Калибровка температуры,control,plants,normal
+7,22,7,Штора,cover,cover.wifi_curtain_driver_converter_curtain,open/closed,Окно,Светоотражающая штора,control,curtain,important
+7,23,7,Режим двигателя,select,select.wifi_curtain_driver_converter_motor_mode,,Окно,Настройки привода,control,curtain,important
+23,0,0,Датчик освещения низ,device,,,Нижний ярус,Тестовый датчик,service,light,important
+23,68,23,Освещенность,sensor,sensor.luminance_sensor_illuminance,lx,Нижний ярус,Только для проверки,service,light,important
+26,74,26,Выключатель,switch,switch.temperature_and_humidity_alarm_switch,on/off,Снаружи,Питание,power,plants,normal
+26,76,26,Освещенность улица,sensor,sensor.temperature_and_humidity_alarm_illuminance,lx,Снаружи,Для шторы,service,light,important
+29,81,29,Выключатель,switch,switch.wifi_perekliuchatel_na_din_reiku_2_switch,on/off,Щиток,Дублёр щитка,power,electricity,critical
+30,0,0,Датчик освещения верх,device,,,Верхний ярус,Тестовый датчик,service,light,important
+30,82,30,Освещенность,sensor,sensor.lightsensor_illuminance,lx,Верхний ярус,Для проверки,service,light,important
+30,83,30,Светимость,sensor,sensor.lightsensor_luminosity,,Верхний ярус,Не используется,service,light,important
+34,0,0,Полив верхний ярус,device,,,Верхний ярус,Система полива,service,watering,important
+34,87,34,Клапан основной,switch,switch.klubnika_poliv_verkh_switch_1,on/off,Верхний ярус,Главный клапан,control,watering,important
+34,88,34,Клапан удобрения,switch,switch.klubnika_poliv_verkh_switch_2,on/off,Верхний ярус,С удобрениями,control,watering,important
+34,89,34,Защита,switch,switch.klubnika_poliv_verkh_switch_3,on/off,Верхний ярус,От сухого хода,control,other,normal
+35,0,0,Полив нижний ярус,device,,,Нижний ярус,Система полива,service,watering,important
+35,90,35,Клапан основной,switch,switch.klubnika_poliv_switch_1,on/off,Нижний ярус,Главный клапан,control,watering,important
+35,91,35,Клапан удобрения,switch,switch.klubnika_poliv_switch_2,on/off,Нижний ярус,С удобрениями,control,watering,important
+35,92,35,Защита,switch,switch.klubnika_poliv_switch_3,on/off,Нижний ярус,От сухого хода,control,other,normal
+36,0,0,Сетевой фильтр (3),device,,,Зона полива,Вспомогательное питание,power,watering,important
+36,93,36,Насос удобрений,switch,switch.smart_power_strip_eu_2_socket_4,on/off,Зона полива,Перемешивание,power,electricity,critical
+36,94,36,Розетка увлажнителя,switch,switch.smart_power_strip_eu_2_socket_3,on/off,Пол,Питание увлажнителя,power,electricity,critical
+36,95,36,USB датчик освещения,switch,switch.smart_power_strip_eu_2_socket_5,on/off,Верхний ярус,Питание датчика,power,electricity,critical
+37,96,37,Свет верхний,light,switch.setevoi_filtr_klubnika_socket_2,on/off,Верхний ярус,Лампа 300Вт,control,light,important
+37,97,37,Насос полив верх,pump,switch.setevoi_filtr_klubnika_socket_4,on/off,Зона полива,Насос верха,control,watering,important
+37,98,37,Насос полив низ,pump,switch.setevoi_filtr_klubnika_socket_3,on/off,Зона полива,Насос низа,control,watering,important
+37,99,37,Питание камер,socket,switch.setveoi_filtr_klubnika_socket_5,on/off,Стеллаж,Питание 4 камер,power,other,normal
+38,0,0,Сетевой фильтр (1),device,,,Вентиляция,Управление воздухом,plants,airflow,important
+38,100,38,Вентиляторы верх,fan,switch.setevoi_filtr_novyi_socket_1,on/off,Верхний ярус,Обдув растений,control,airflow,important
+38,101,38,Вентиляторы низ,fan,switch.setevoi_filtr_novyi_usb_1,on/off,Нижний ярус,Обдув растений,control,airflow,important
+38,102,38,Питание датчика 24,socket,switch.setevoi_filtr_Novyi_socket_2,on/off,Нижний ярус,Питание T/H датчика,power,other,normal
+38,103,38,Питание датчика 4,socket,switch.setevoi_filtr_novyi_socket_3,on/off,Верхний ярус,Питание CO₂ датчика,power,other,normal
+38,104,38,Свет нижний,light,switch.setevoi_filtr_novyi_socket_4,on/off,Нижний ярус, 300w,control,light,important

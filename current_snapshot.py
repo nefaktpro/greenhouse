@@ -1,0 +1,498 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
+from datetime import datetime, timezone
+from typing import Any
+
+
+STALE_MINUTES = 1440
+
+
+@dataclass
+class EntityInfo:
+    entity_id: str
+    label: str
+    kind: str = "generic"
+
+
+# -----------------------------
+# КЛЮЧЕВЫЕ ENTITY ДЛЯ SNAPSHOT
+# -----------------------------
+
+KEY_ENTITIES: dict[str, EntityInfo] = {
+    # --- Безопасность ---
+    "binary_sensor.1_datchik_dyma_smoke": EntityInfo(
+        "binary_sensor.1_datchik_dyma_smoke", "Пожарный датчик у стеллажа", "binary"
+    ),
+    "binary_sensor.dymovoi_signalizator_2_smoke": EntityInfo(
+        "binary_sensor.dymovoi_signalizator_2_smoke", "Пожарный датчик у щитка", "binary"
+    ),
+    "binary_sensor.datchik_utechki_vody_moisture": EntityInfo(
+        "binary_sensor.datchik_utechki_vody_moisture", "Датчик протечки", "binary"
+    ),
+    "binary_sensor.25_datchik_elektrichestva_door": EntityInfo(
+        "binary_sensor.25_datchik_elektrichestva_door", "Наличие основного питания", "binary"
+    ),
+    "binary_sensor.multimode_gateway_mini_problem": EntityInfo(
+        "binary_sensor.multimode_gateway_mini_problem", "Проблема Zigbee-хаба", "binary"
+    ),
+
+    # --- Общий климат: низ ---
+    "sensor.datchik_temeratury_i_vlazhnosti_humidity": EntityInfo(
+        "sensor.datchik_temeratury_i_vlazhnosti_humidity", "Низ воздух влажность", "percent"
+    ),
+    "sensor.datchik_temeratury_i_vlazhnosti_temperature": EntityInfo(
+        "sensor.datchik_temeratury_i_vlazhnosti_temperature", "Низ воздух температура", "temp"
+    ),
+
+    # --- Климат у листьев: низ ---
+    "sensor.temperature_and_humidity_sensor_humidity": EntityInfo(
+        "sensor.temperature_and_humidity_sensor_humidity", "Низ у листьев влажность", "percent"
+    ),
+    "sensor.temperature_and_humidity_sensor_temperature": EntityInfo(
+        "sensor.temperature_and_humidity_sensor_temperature", "Низ у листьев температура", "temp"
+    ),
+
+    # --- Низ: серый горшок ---
+    "sensor.klubnika_poliv_niz_seryi_humidity": EntityInfo(
+        "sensor.klubnika_poliv_niz_seryi_humidity", "Серый горшок грунт", "percent"
+    ),
+    "sensor.klubnika_poliv_niz_seryi_temperature": EntityInfo(
+        "sensor.klubnika_poliv_niz_seryi_temperature", "Серый горшок температура грунта", "temp"
+    ),
+
+    # --- Низ: большой белый ---
+    "sensor.klubnika_vlazhnost_niz_belyi_humidity": EntityInfo(
+        "sensor.klubnika_vlazhnost_niz_belyi_humidity", "Большой белый грунт", "percent"
+    ),
+    "sensor.klubnika_vlazhnost_niz_belyi_temperature": EntityInfo(
+        "sensor.klubnika_vlazhnost_niz_belyi_temperature", "Большой белый температура грунта", "temp"
+    ),
+    "sensor.ogurets_vertikalnyi_humidity": EntityInfo(
+        "sensor.ogurets_vertikalnyi_humidity", "Большой белый поверхность", "percent"
+    ),
+    "sensor.ogurets_vertikalnyi_temperature": EntityInfo(
+        "sensor.ogurets_vertikalnyi_temperature", "Большой белый температура поверхности", "temp"
+    ),
+    "sensor.vlazhnost_nizhnii_gorshok_belyi_humidity": EntityInfo(
+        "sensor.vlazhnost_nizhnii_gorshok_belyi_humidity", "Большой белый воздух у корней", "percent"
+    ),
+    "sensor.vlazhnost_nizhnii_gorshok_belyi_temperature": EntityInfo(
+        "sensor.vlazhnost_nizhnii_gorshok_belyi_temperature", "Большой белый температура у корней", "temp"
+    ),
+
+    # --- Низ: круглый у окна ---
+    "sensor.sgs01_4_humidity": EntityInfo(
+        "sensor.sgs01_4_humidity", "Круглый у окна грунт", "percent"
+    ),
+    "sensor.sgs01_4_temperature": EntityInfo(
+        "sensor.sgs01_4_temperature", "Круглый у окна температура грунта", "temp"
+    ),
+    "sensor.vlazhnost_humidity": EntityInfo(
+        "sensor.vlazhnost_humidity", "Круглый у окна поверхность", "percent"
+    ),
+    "sensor.vlazhnost_temperature": EntityInfo(
+        "sensor.vlazhnost_temperature", "Круглый у окна температура поверхности", "temp"
+    ),
+
+    # --- Общий климат: верх ---
+    "sensor.nobito_humidity": EntityInfo(
+        "sensor.nobito_humidity", "Верх воздух влажность", "percent"
+    ),
+    "sensor.kachestvo_vozdukha_temperature": EntityInfo(
+        "sensor.kachestvo_vozdukha_temperature", "Верх воздух температура", "temp"
+    ),
+
+    # --- Климат у листьев: верх ---
+    "sensor.temperature_and_humidity_sensor_2_humidity": EntityInfo(
+        "sensor.temperature_and_humidity_sensor_2_humidity", "Верх у листьев влажность", "percent"
+    ),
+    "sensor.temperature_and_humidity_sensor_2_temperature": EntityInfo(
+        "sensor.temperature_and_humidity_sensor_2_temperature", "Верх у листьев температура", "temp"
+    ),
+
+    # --- Верх: дальний ---
+    "sensor.datchik_vlazhnosti_spotifilum_humidity": EntityInfo(
+        "sensor.datchik_vlazhnosti_spotifilum_humidity", "Дальний грунт", "percent"
+    ),
+    "sensor.datchik_vlazhnosti_spotifilum_temperature": EntityInfo(
+        "sensor.datchik_vlazhnosti_spotifilum_temperature", "Дальний температура грунта", "temp"
+    ),
+    "sensor.vlazhnost_klubnika_verkh_chernyi_humidity": EntityInfo(
+        "sensor.vlazhnost_klubnika_verkh_chernyi_humidity", "Дальний поверхность", "percent"
+    ),
+    "sensor.vlazhnost_klubnika_verkh_chernyi_temperature": EntityInfo(
+        "sensor.vlazhnost_klubnika_verkh_chernyi_temperature", "Дальний температура поверхности", "temp"
+    ),
+    "sensor.datchik_vlazhnosti_verkh_humidity": EntityInfo(
+        "sensor.datchik_vlazhnosti_verkh_humidity", "Дальний воздух у корней", "percent"
+    ),
+    "sensor.datchik_vlazhnosti_verkh_temperature": EntityInfo(
+        "sensor.datchik_vlazhnosti_verkh_temperature", "Дальний температура у корней", "temp"
+    ),
+
+    # --- Верх: у окна ---
+    "sensor.klubnika_verkh_u_okna_humidity": EntityInfo(
+        "sensor.klubnika_verkh_u_okna_humidity", "У окна грунт", "percent"
+    ),
+    "sensor.klubnika_verkh_u_okna_temperature": EntityInfo(
+        "sensor.klubnika_verkh_u_okna_temperature", "У окна температура грунта", "temp"
+    ),
+    "sensor.chernyi_poverkhnost_u_okna_humidity": EntityInfo(
+        "sensor.chernyi_poverkhnost_u_okna_humidity", "У окна поверхность", "percent"
+    ),
+    "sensor.chernyi_poverkhnost_u_okna_temperature": EntityInfo(
+        "sensor.chernyi_poverkhnost_u_okna_temperature", "У окна температура поверхности", "temp"
+    ),
+
+    # --- Важные устройства ---
+    "switch.uviazhnitel_": EntityInfo(
+        "switch.uviazhnitel_", "Увлажнитель", "binary"
+    ),
+    "switch.smart_power_strip_eu_2_socket_3": EntityInfo(
+        "switch.smart_power_strip_eu_2_socket_3", "Питание увлажнителя", "binary"
+    ),
+    "switch.setevoi_filtr_novyi_socket_1": EntityInfo(
+        "switch.setevoi_filtr_novyi_socket_1", "Вентиляторы верх", "binary"
+    ),
+    "switch.setevoi_filtr_novyi_usb_1": EntityInfo(
+        "switch.setevoi_filtr_novyi_usb_1", "Вентиляторы низ", "binary"
+    ),
+    "switch.setevoi_filtr_klubnika_socket_2": EntityInfo(
+        "switch.setevoi_filtr_klubnika_socket_2", "Свет верх", "binary"
+    ),
+    "switch.setevoi_filtr_novyi_socket_4": EntityInfo(
+        "switch.setevoi_filtr_novyi_socket_4", "Свет низ", "binary"
+    ),
+    "cover.wifi_curtain_driver_converter_curtain": EntityInfo(
+        "cover.wifi_curtain_driver_converter_curtain", "Штора", "generic"
+    ),
+    "climate.termostat_veranda": EntityInfo(
+        "climate.termostat_veranda", "Термостат", "generic"
+    ),
+    "sensor.temperature_and_humidity_alarm_temperature": EntityInfo(
+        "sensor.temperature_and_humidity_alarm_temperature", "Улица температура", "temp"
+    ),
+    "sensor.temperature_and_humidity_alarm_illuminance": EntityInfo(
+        "sensor.temperature_and_humidity_alarm_illuminance", "Улица освещённость", "generic"
+    ),
+}
+
+
+# -----------------------------
+# ВСПОМОГАТЕЛЬНОЕ
+# -----------------------------
+
+def _parse_datetime(value: str | None) -> datetime | None:
+    if not value:
+        return None
+    try:
+        # HA обычно отдаёт ISO с timezone
+        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except Exception:
+        return None
+
+
+def _now_utc() -> datetime:
+    return datetime.now(timezone.utc)
+
+
+def _age_minutes(last_updated: str | None) -> int | None:
+    dt = _parse_datetime(last_updated)
+    if dt is None:
+        return None
+    delta = _now_utc() - dt.astimezone(timezone.utc)
+    return max(0, int(delta.total_seconds() // 60))
+
+
+def _is_unavailable(state: Any) -> bool:
+    if state is None:
+        return True
+    s = str(state).strip().lower()
+    return s in {"unknown", "unavailable", "none", ""}
+
+
+def _to_float(value: Any) -> float | None:
+    if _is_unavailable(value):
+        return None
+    try:
+        return float(str(value).replace(",", "."))
+    except Exception:
+        return None
+
+
+def _format_value(state: Any, kind: str) -> str:
+    if _is_unavailable(state):
+        return "нет данных"
+
+    if kind == "percent":
+        num = _to_float(state)
+        if num is None:
+            return str(state)
+        return f"{round(num)}%"
+
+    if kind == "temp":
+        num = _to_float(state)
+        if num is None:
+            return str(state)
+        return f"{num:.1f}°C"
+
+    if kind == "binary":
+        s = str(state).lower()
+        return s
+
+    return str(state)
+
+
+def _stale_suffix(record: dict[str, Any]) -> str:
+    age = _age_minutes(record.get("last_updated"))
+    if age is None:
+        return ""
+    if age >= STALE_MINUTES:
+        return f" ⚠️ {age} мин без обновления"
+    return ""
+
+
+def _get_record(states_by_entity: dict[str, dict[str, Any]], entity_id: str) -> dict[str, Any] | None:
+    return states_by_entity.get(entity_id)
+
+
+def _line(states_by_entity: dict[str, dict[str, Any]], entity_id: str) -> str:
+    info = KEY_ENTITIES[entity_id]
+    record = _get_record(states_by_entity, entity_id)
+    if not record:
+        return f"- {info.label}: нет данных"
+    value = _format_value(record.get("state"), info.kind)
+    return f"- {info.label}: {value}{_stale_suffix(record)}"
+
+
+def _compact_metric(
+    states_by_entity: dict[str, dict[str, Any]],
+    entity_id: str,
+) -> str:
+    info = KEY_ENTITIES[entity_id]
+    record = _get_record(states_by_entity, entity_id)
+    if not record:
+        return "нет данных"
+    value = _format_value(record.get("state"), info.kind)
+    suffix = _stale_suffix(record)
+    return f"{value}{suffix}"
+
+
+def _collect_stale_items(states_by_entity: dict[str, dict[str, Any]]) -> list[str]:
+    items: list[str] = []
+    for entity_id, info in KEY_ENTITIES.items():
+        record = _get_record(states_by_entity, entity_id)
+        if not record:
+            continue
+        age = _age_minutes(record.get("last_updated"))
+        if age is not None and age >= STALE_MINUTES:
+            items.append(f"- {info.label}: {age} мин без обновления")
+    return items
+
+
+def _main_soil_average(values: list[float | None]) -> float | None:
+    nums = [v for v in values if v is not None]
+    if not nums:
+        return None
+    return sum(nums) / len(nums)
+
+
+# -----------------------------
+# НОРМАЛИЗАЦИЯ СТЕЙТОВ HA
+# -----------------------------
+
+def normalize_ha_states(raw_states: Any) -> dict[str, dict[str, Any]]:
+    """
+    Поддерживает:
+    1) список объектов HA /api/states
+    2) dict entity_id -> record
+    """
+
+    result: dict[str, dict[str, Any]] = {}
+
+    if isinstance(raw_states, dict):
+        for entity_id, item in raw_states.items():
+            if isinstance(item, dict):
+                result[entity_id] = {
+                    "entity_id": entity_id,
+                    "state": item.get("state"),
+                    "attributes": item.get("attributes", {}),
+                    "last_updated": item.get("last_updated"),
+                    "last_changed": item.get("last_changed"),
+                }
+        return result
+
+    if isinstance(raw_states, list):
+        for item in raw_states:
+            if not isinstance(item, dict):
+                continue
+            entity_id = item.get("entity_id")
+            if not entity_id:
+                continue
+            result[entity_id] = {
+                "entity_id": entity_id,
+                "state": item.get("state"),
+                "attributes": item.get("attributes", {}),
+                "last_updated": item.get("last_updated"),
+                "last_changed": item.get("last_changed"),
+            }
+        return result
+
+    return result
+
+
+# -----------------------------
+# ГЛАВНАЯ ФУНКЦИЯ
+# -----------------------------
+
+def build_current_snapshot(raw_states: Any) -> str:
+    states = normalize_ha_states(raw_states)
+
+    # --- Безопасность ---
+    safety_lines = [
+        _line(states, "binary_sensor.1_datchik_dyma_smoke"),
+        _line(states, "binary_sensor.dymovoi_signalizator_2_smoke"),
+        _line(states, "binary_sensor.datchik_utechki_vody_moisture"),
+        _line(states, "binary_sensor.25_datchik_elektrichestva_door"),
+        _line(states, "binary_sensor.multimode_gateway_mini_problem"),
+    ]
+
+    # --- Важные устройства ---
+    device_lines = [
+        _line(states, "switch.uviazhnitel_"),
+        _line(states, "switch.smart_power_strip_eu_2_socket_3"),
+        _line(states, "switch.setevoi_filtr_novyi_socket_1"),
+        _line(states, "switch.setevoi_filtr_novyi_usb_1"),
+        _line(states, "switch.setevoi_filtr_klubnika_socket_2"),
+        _line(states, "switch.setevoi_filtr_novyi_socket_4"),
+        _line(states, "cover.wifi_curtain_driver_converter_curtain"),
+        _line(states, "climate.termostat_veranda"),
+        _line(states, "sensor.temperature_and_humidity_alarm_temperature"),
+        _line(states, "sensor.temperature_and_humidity_alarm_illuminance"),
+    ]
+
+    # --- Низ ---
+    low_air_h = _compact_metric(states, "sensor.datchik_temeratury_i_vlazhnosti_humidity")
+    low_air_t = _compact_metric(states, "sensor.datchik_temeratury_i_vlazhnosti_temperature")
+    low_leaf_h = _compact_metric(states, "sensor.temperature_and_humidity_sensor_humidity")
+    low_leaf_t = _compact_metric(states, "sensor.temperature_and_humidity_sensor_temperature")
+
+    low_gray_soil = _compact_metric(states, "sensor.klubnika_poliv_niz_seryi_humidity")
+    low_gray_temp = _compact_metric(states, "sensor.klubnika_poliv_niz_seryi_temperature")
+
+    low_white_soil = _compact_metric(states, "sensor.klubnika_vlazhnost_niz_belyi_humidity")
+    low_white_temp = _compact_metric(states, "sensor.klubnika_vlazhnost_niz_belyi_temperature")
+    low_white_surface = _compact_metric(states, "sensor.ogurets_vertikalnyi_humidity")
+    low_white_surface_temp = _compact_metric(states, "sensor.ogurets_vertikalnyi_temperature")
+    low_white_root_air = _compact_metric(states, "sensor.vlazhnost_nizhnii_gorshok_belyi_humidity")
+    low_white_root_temp = _compact_metric(states, "sensor.vlazhnost_nizhnii_gorshok_belyi_temperature")
+
+    low_round_soil = _compact_metric(states, "sensor.sgs01_4_humidity")
+    low_round_temp = _compact_metric(states, "sensor.sgs01_4_temperature")
+    low_round_surface = _compact_metric(states, "sensor.vlazhnost_humidity")
+    low_round_surface_temp = _compact_metric(states, "sensor.vlazhnost_temperature")
+
+    # --- Верх ---
+    top_air_h = _compact_metric(states, "sensor.nobito_humidity")
+    top_air_t = _compact_metric(states, "sensor.kachestvo_vozdukha_temperature")
+    top_leaf_h = _compact_metric(states, "sensor.temperature_and_humidity_sensor_2_humidity")
+    top_leaf_t = _compact_metric(states, "sensor.temperature_and_humidity_sensor_2_temperature")
+
+    top_far_soil = _compact_metric(states, "sensor.datchik_vlazhnosti_spotifilum_humidity")
+    top_far_temp = _compact_metric(states, "sensor.datchik_vlazhnosti_spotifilum_temperature")
+    top_far_surface = _compact_metric(states, "sensor.vlazhnost_klubnika_verkh_chernyi_humidity")
+    top_far_surface_temp = _compact_metric(states, "sensor.vlazhnost_klubnika_verkh_chernyi_temperature")
+    top_far_root_air = _compact_metric(states, "sensor.datchik_vlazhnosti_verkh_humidity")
+    top_far_root_temp = _compact_metric(states, "sensor.datchik_vlazhnosti_verkh_temperature")
+
+    top_window_soil = _compact_metric(states, "sensor.klubnika_verkh_u_okna_humidity")
+    top_window_temp = _compact_metric(states, "sensor.klubnika_verkh_u_okna_temperature")
+    top_window_surface = _compact_metric(states, "sensor.chernyi_poverkhnost_u_okna_humidity")
+    top_window_surface_temp = _compact_metric(states, "sensor.chernyi_poverkhnost_u_okna_temperature")
+
+    # --- Средние по поливу ---
+    low_avg = _main_soil_average([
+        _to_float(states.get("sensor.klubnika_poliv_niz_seryi_humidity", {}).get("state")),
+        _to_float(states.get("sensor.klubnika_vlazhnost_niz_belyi_humidity", {}).get("state")),
+        _to_float(states.get("sensor.sgs01_4_humidity", {}).get("state")),
+    ])
+
+    top_avg = _main_soil_average([
+        _to_float(states.get("sensor.datchik_vlazhnosti_spotifilum_humidity", {}).get("state")),
+        _to_float(states.get("sensor.klubnika_verkh_u_okna_humidity", {}).get("state")),
+    ])
+
+    low_avg_line = f"{low_avg:.1f}%" if low_avg is not None else "нет данных"
+    top_avg_line = f"{top_avg:.1f}%" if top_avg is not None else "нет данных"
+
+    stale_items = _collect_stale_items(states)
+
+    lines: list[str] = []
+
+    lines.append("=== БЕЗОПАСНОСТЬ ===")
+    lines.extend(safety_lines)
+    lines.append("")
+
+    lines.append("=== ВАЖНЫЕ УСТРОЙСТВА ===")
+    lines.extend(device_lines)
+    lines.append("")
+
+    lines.append("=== НИЗ ===")
+    lines.append(f"- Воздух: влажность {low_air_h}, температура {low_air_t}")
+    lines.append(f"- У листьев: влажность {low_leaf_h}, температура {low_leaf_t}")
+    lines.append(
+        f"- Серый горшок: грунт {low_gray_soil}, температура грунта {low_gray_temp}"
+    )
+    lines.append(
+        f"- Большой белый горшок: грунт {low_white_soil}, температура грунта {low_white_temp}, "
+        f"поверхность {low_white_surface}, температура поверхности {low_white_surface_temp}, "
+        f"воздух у корней {low_white_root_air}, температура у корней {low_white_root_temp}"
+    )
+    lines.append(
+        f"- Круглый у окна: грунт {low_round_soil}, температура грунта {low_round_temp}, "
+        f"поверхность {low_round_surface}, температура поверхности {low_round_surface_temp}"
+    )
+    lines.append(f"- Средняя влажность основных датчиков низа: {low_avg_line}")
+    lines.append("")
+
+    lines.append("=== ВЕРХ ===")
+    lines.append(f"- Воздух: влажность {top_air_h}, температура {top_air_t}")
+    lines.append(f"- У листьев: влажность {top_leaf_h}, температура {top_leaf_t}")
+    lines.append(
+        f"- Дальний горшок: грунт {top_far_soil}, температура грунта {top_far_temp}, "
+        f"поверхность {top_far_surface}, температура поверхности {top_far_surface_temp}, "
+        f"воздух у корней {top_far_root_air}, температура у корней {top_far_root_temp}"
+    )
+    lines.append(
+        f"- Горшок у окна: грунт {top_window_soil}, температура грунта {top_window_temp}, "
+        f"поверхность {top_window_surface}, температура поверхности {top_window_surface_temp}"
+    )
+    lines.append(f"- Средняя влажность основных датчиков верха: {top_avg_line}")
+    lines.append("")
+
+    if stale_items:
+        lines.append("=== УСТАРЕВШИЕ ДАННЫЕ ===")
+        lines.extend(stale_items[:20])  # чтобы не раздувать snapshot бесконечно
+        if len(stale_items) > 20:
+            lines.append(f"- ... ещё {len(stale_items) - 20} устаревших показаний")
+        lines.append("")
+    else:
+        lines.append("=== УСТАРЕВШИЕ ДАННЫЕ ===")
+        lines.append("- нет")
+        lines.append("")
+
+    return "\n".join(lines).strip()
+
+
+# -----------------------------
+# УДОБНАЯ ОБЁРТКА ДЛЯ ПРОЕКТА
+# -----------------------------
+
+def build_current_snapshot_from_ha_client(ha_client: Any) -> str:
+    """
+    Ожидает, что у ha_client есть метод get_states()
+    который возвращает список состояний из Home Assistant /api/states
+    """
+    raw_states = ha_client.get_states()
+    return build_current_snapshot(raw_states)

@@ -1,0 +1,143 @@
+DeviceID,SubID,ParentID,Name,Type,EntityID,Unit,Location,Description,Category,Group,Criticality
+1,0,0,Датчик дыма (центр веранды),device,,,Веранда (центр),Пожарная безопасность,safety,fire,critical
+1,1,1,Дым,smoke,binary_sensor.1_datchik_dyma_smoke,on/off,Внутри датчика,Основной сигнал пожара,safety,fire,critical
+1,2,1,Батарея,battery,sensor.dymovoi_signalizator_battery,%,Внутри датчика,Питание датчика,power,battery,important
+1,3,1,Tamper,tamper,binary_sensor.dymovoi_signalizator_tamper,on/off,Внутри датчика,Датчик вскрытия,safety,fire,critical
+2,0,0,Камера общий план,device,,,Веранда,Видеонаблюдение,camera,other,important
+2,4,2,Видео,camera,camera.smart_camera_2,,Веранда,Общий план стеллажа,camera,camera,important
+3,0,0,Увлажнитель,device,,,Пол веранды,Увлажнение воздуха,plants,plants,normal
+3,5,3,Вкл/выкл,switch,switch.uviazhnitel_,on/off,Пол веранды,Управление увлажнителем,control,other,normal
+4,0,0,Качество воздуха (верхний ярус),device,,,Верхний ярус,Мониторинг воздуха,plants,plants,important
+4,6,4,CO₂,sensor,sensor.nobito_carbon_dioxide,ppm,Верхний ярус,Углекислый газ,service,other,normal
+4,7,4,VOC,sensor,sensor.nobito_volatile_organic_compounds,mg/m³,Верхний ярус,Летучие органические соединения,service,other,normal
+4,8,4,PM10,sensor,sensor.nobito_pm10,µg/m³,Верхний ярус,Крупная пыль,service,other,normal
+4,9,4,Влажность,sensor,sensor.nobito_humidity,%,Верхний ярус,Общая влажность воздуха,plants,plants,important
+4,10,4,Формальдегид,sensor,sensor.nobito_formaldehyde,mg/m³,Верхний ярус,Вредные испарения,service,other,normal
+4,11,4,PM2.5,sensor,sensor.nobito_pm2_5,µg/m³,Верхний ярус,Мелкая пыль,service,other,normal
+4,12,4,Температура,sensor,sensor.kachestvo_vozdukha_temperature,°C,Верхний ярус,Общая температура воздуха,plants,plants,important
+4,13,4,Индекс качества,sensor,sensor.nobito_air_quality_index,,Верхний ярус,Обобщённый индекс,service,other,normal
+5,0,0,Щиток веранда,device,,,Щиток,Главное электропитание,power,electricity,critical
+5,14,5,Выключатель,switch,switch.shchitok_veranda_switch,on/off,Щиток,Главный рубильник,power,electricity,critical
+5,15,5,Всего энергия,sensor,sensor.shchitok_veranda_total_energy,kWh,Щиток,Суммарное потребление,power,electricity,critical
+5,16,5,Мощность,sensor,sensor.shchitok_veranda_power,Вт,Щиток,Текущая мощность,power,electricity,critical
+5,17,5,Напряжение,sensor,sensor.shchitok_veranda_voltage,В,Щиток,Напряжение в сети,power,electricity,critical
+5,18,5,Ток,sensor,sensor.shchitok_veranda_current,А,Щиток,Сила тока,power,electricity,critical
+6,0,0,Термостат веранда,device,,,Веранда,Климат-контроль,plants,plants,normal
+6,19,6,Основной,climate,climate.termostat_veranda,,Веранда,Управление тёплым полом,control,other,normal
+6,20,6,Frost protection,switch,switch.termostat_veranda_frost_protection,on/off,Веранда,Защита от замерзания,control,other,normal
+6,21,6,Temperature correction,number,number.termostat_veranda_temperature_correction,,Веранда,Калибровка температуры,control,plants,normal
+7,0,0,Зашторивание,device,,,Окно,Управление шторой,service,other,normal
+7,22,7,Штора,cover,cover.wifi_curtain_driver_converter_curtain,open/closed,Окно,Светоотражающая штора,control,curtain,important
+7,23,7,Режим двигателя,select,select.wifi_curtain_driver_converter_motor_mode,,Окно,Настройки привода,control,curtain,important
+8,0,0,Датчик дыма у щитка,device,,,Над щитком,Пожарная безопасность,safety,fire,critical
+8,24,8,Дым,smoke,binary_sensor.dymovoi_signalizator_2_smoke,on/off,Над щитком,Сигнал пожара,safety,fire,critical
+8,25,8,Батарея,battery,sensor.dymovoi_signalizator_2_battery,%,Внутри датчика,Питание,power,battery,important
+8,26,8,Tamper,tamper,binary_sensor.dymovoi_signalizator_2_tamper,on/off,Внутри датчика,Вскрытие,safety,fire,critical
+9,0,0,Датчик утечки воды,device,,,Пол у канистр,Защита от протечек,safety,other,normal
+9,27,9,Влага,moisture,binary_sensor.datchik_utechki_vody_moisture,on/off,Пол,Обнаружение воды,safety,leak,critical
+9,28,9,Батарея,battery,sensor.datchik_utechki_vody_battery,%,Внутри датчика,Питание,power,leak,critical
+10,0,0,Датчик поверхности (низ большой белый),device,,,Большой белый горшок,Мониторинг почвы,plants,plants,normal
+10,29,10,Влажность,sensor,sensor.ogurets_vertikalnyi_humidity,%,Поверхность грунта,Верхний слой почвы,plants,plants,normal
+10,30,10,Температура,sensor,sensor.ogurets_vertikalnyi_temperature,°C,Поверхность грунта,Температура поверхности,plants,plants,normal
+10,31,10,Батарея,battery,sensor.ogurets_vertikalnyi_battery,%,Внутри датчика,Питание,power,battery,important
+11,0,0,Серый горшок (низ основной),device,,,Серый горшок,Мониторинг почвы,plants,plants,important
+11,32,11,Влажность,sensor,sensor.klubnika_poliv_niz_seryi_humidity,%,Внутри грунта,Основная влажность,plants,plants,important
+11,33,11,Батарея,battery,sensor.klubnika_poliv_niz_seryi_battery,%,Внутри датчика,Питание,power,battery,important
+11,34,11,Температура,sensor,sensor.klubnika_poliv_niz_seryi_temperature,°C,Внутри грунта,Температура почвы,plants,plants,important
+12,0,0,Большой белый (низ основной),device,,,Большой белый горшок,Мониторинг почвы,plants,plants,important
+12,35,12,Влажность,sensor,sensor.klubnika_vlazhnost_niz_belyi_humidity,%,Внутри грунта,Основная влажность,plants,plants,important
+12,36,12,Температура,sensor,sensor.klubnika_vlazhnost_niz_belyi_temperature,°C,Внутри грунта,Температура почвы,plants,plants,important
+12,37,12,Батарея,battery,sensor.klubnika_vlazhnost_niz_belyi_battery,%,Внутри датчика,Питание,power,battery,important
+13,0,0,Воздух у корней (низ большой белый),device,,,Большой белый горшок,Мониторинг воздуха,plants,plants,normal
+13,38,13,Влажность воздуха,sensor,sensor.vlazhnost_nizhnii_gorshok_belyi_humidity,%,Поверхность грунта,Прикорневая влажность,plants,plants,normal
+13,39,13,Температура воздуха,sensor,sensor.vlazhnost_nizhnii_gorshok_belyi_temperature,°C,Поверхность грунта,Температура у корней,plants,plants,normal
+13,40,13,Батарея,battery,sensor.vlazhnost_nizhnii_gorshok_belyi_battery,%,Внутри датчика,Питание,power,battery,important
+14,0,0,Круглый горшок у окна (низ),device,,,Круглый горшок,Мониторинг почвы,plants,plants,important
+14,41,14,Влажность,sensor,sensor.sgs01_4_humidity,%,Внутри грунта,Основная влажность,plants,plants,important
+14,42,14,Температура,sensor,sensor.sgs01_4_temperature,°C,Внутри грунта,Температура почвы,plants,plants,important
+14,43,14,Батарея,battery,sensor.sgs01_4_battery,%,Внутри датчика,Питание,power,battery,important
+15,0,0,Верх дальний (поверхность),device,,,Дальний горшок верха,Мониторинг почвы,plants,plants,normal
+15,44,15,Влажность,sensor,sensor.vlazhnost_klubnika_verkh_chernyi_humidity,%,Поверхность грунта,Верхний слой,plants,plants,normal
+15,45,15,Температура,sensor,sensor.vlazhnost_klubnika_verkh_chernyi_temperature,°C,Поверхность грунта,Температура поверхности,plants,plants,normal
+15,46,15,Батарея,battery,sensor.vlazhnost_klubnika_verkh_chernyi_battery,%,Внутри датчика,Питание,power,battery,important
+16,0,0,Верх дальний (основной),device,,,Дальний горшок верха,Мониторинг почвы,plants,plants,important
+16,47,16,Влажность,sensor,sensor.datchik_vlazhnosti_spotifilum_humidity,%,Внутри грунта,Основная влажность,plants,plants,important
+16,48,16,Температура,sensor,sensor.datchik_vlazhnosti_spotifilum_temperature,°C,Внутри грунта,Температура почвы,plants,plants,important
+16,49,16,Батарея,battery,sensor.datchik_vlazhnosti_spotifilum_battery,%,Внутри датчика,Питание,power,battery,important
+17,0,0,Низ круглый (поверхность),device,,,Круглый горшок низа,Мониторинг почвы,plants,plants,normal
+17,50,17,Влажность,sensor,sensor.vlazhnost_humidity,%,Поверхность грунта,Верхний слой,plants,plants,normal
+17,51,17,Температура,sensor,sensor.vlazhnost_temperature,°C,Поверхность грунта,Температура поверхности,plants,plants,normal
+17,52,17,Батарея,battery,sensor.vlazhnost_battery,%,Внутри датчика,Питание,power,battery,important
+18,0,0,Верх у окна (поверхность),device,,,Горшок у окна верха,Мониторинг почвы,plants,plants,normal
+18,53,18,Влажность,sensor,sensor.chernyi_poverkhnost_u_okna_humidity,%,Поверхность грунта,Верхний слой,plants,plants,normal
+18,54,18,Температура,sensor,sensor.chernyi_poverkhnost_u_okna_temperature,°C,Поверхность грунта,Температура поверхности,plants,plants,normal
+18,55,18,Батарея,battery,sensor.chernyi_poverkhnost_u_okna_battery,%,Внутри датчика,Питание,power,battery,important
+19,0,0,Верх у окна (основной),device,,,Горшок у окна верха,Мониторинг почвы,plants,plants,important
+19,56,19,Влажность,sensor,sensor.klubnika_verkh_u_okna_humidity,%,Внутри грунта,Основная влажность,plants,plants,important
+19,57,19,Температура,sensor,sensor.klubnika_verkh_u_okna_temperature,°C,Внутри грунта,Температура почвы,plants,plants,important
+19,58,19,Батарея,battery,sensor.klubnika_verkh_u_okna_battery,%,Внутри датчика,Питание,power,battery,important
+20,0,0,Верх дальний (воздух у корней),device,,,Дальний горшок верха,Мониторинг воздуха,plants,plants,normal
+20,59,20,Влажность воздуха,sensor,sensor.datchik_vlazhnosti_verkh_humidity,%,Поверхность грунта,Прикорневая влажность,plants,plants,normal
+20,60,20,Температура воздуха,sensor,sensor.datchik_vlazhnosti_verkh_temperature,°C,Поверхность грунта,Температура у корней,plants,plants,normal
+20,61,20,Батарея,battery,sensor.datchik_vlazhnosti_verkh_battery,%,Внутри датчика,Питание,power,battery,important
+21,0,0,Микроклимат низа (у листьев),device,,,Нижний ярус,Климат у листьев,plants,plants,important
+21,62,21,Влажность у листьев,sensor,sensor.temperature_and_humidity_sensor_humidity,%,Над кустом,Влажность воздуха,plants,plants,important
+21,63,21,Температура у листьев,sensor,sensor.temperature_and_humidity_sensor_temperature,°C,Над кустом,Температура воздуха,plants,plants,important
+21,64,21,Батарея,battery,sensor.temperature_and_humidity_sensor_battery,%,Внутри датчика,Питание,power,battery,important
+22,0,0,Микроклимат верха (у листьев),device,,,Верхний ярус,Климат у листьев,plants,plants,important
+22,65,22,Влажность у листьев,sensor,sensor.temperature_and_humidity_sensor_2_humidity,%,Над кустом,Самый важный датчик,plants,plants,important
+22,66,22,Температура у листьев,sensor,sensor.temperature_and_humidity_sensor_2_temperature,°C,Над кустом,Температура воздуха,plants,plants,important
+22,67,22,Батарея,battery,sensor.temperature_and_humidity_sensor_2_battery,%,Внутри датчика,Критическое питание,power,battery,important
+23,0,0,Датчик освещения низ,device,,,Нижний ярус,Тестовый датчик,service,light,important
+23,68,23,Освещенность,sensor,sensor.luminance_sensor_illuminance,lx,Нижний ярус,Только для проверки,service,light,important
+23,69,23,Батарея,battery,sensor.luminance_sensor_battery,%,Внутри датчика,Питание,power,battery,important
+24,0,0,Датчик T/H общий низ,device,,,Нижний ярус,Общий климат,plants,plants,important
+24,70,24,Температура общая,sensor,sensor.datchik_temeratury_i_vlazhnosti_temperature,°C,Центр низа,Общая температура,plants,plants,important
+24,71,24,Влажность общая,sensor,sensor.datchik_temeratury_i_vlazhnosti_humidity,%,Центр низа,Общая влажность,plants,plants,important
+25,0,0,Датчик электричества,device,,,Ввод питания,Контроль напряжения,power,electricity,critical
+25,72,25,Питание,binary_sensor,binary_sensor.25_datchik_elektrichestva_door,on/off,Ввод,Наличие сети,power,other,critical
+25,73,25,Батарея,battery,sensor.datchik_elektrichestva_battery,%,Внутри датчика,Питание датчика,power,battery,critical
+26,0,0,Датчики улица,device,,,Снаружи,Погодные условия,service,other,normal
+26,74,26,Выключатель,switch,switch.temperature_and_humidity_alarm_switch,on/off,Снаружи,Питание,power,plants,normal
+26,75,26,Влажность улица,sensor,sensor.temperature_and_humidity_alarm_humidity,%,Снаружи,Не используется,plants,plants,normal
+26,76,26,Освещенность улица,sensor,sensor.temperature_and_humidity_alarm_illuminance,lx,Снаружи,Для шторы,service,light,important
+26,77,26,Температура улица,sensor,sensor.temperature_and_humidity_alarm_temperature,°C,Снаружи,Для прогноза,plants,plants,normal
+26,78,26,Батарея улица,sensor,sensor.temperature_and_humidity_alarm_battery_state,low/ok,Снаружи,Состояние,service,battery,important
+27,0,0,Камера верхний правый,device,,,Верхний ярус справа,Видеонаблюдение,camera,other,important
+27,79,27,Видео,camera,camera.kamera_verkhnii_stellazh_obshchii_plan,,Верхний ярус,Дальний горшок,camera,camera,important
+28,0,0,Камера верхний левый,device,,,Верхний ярус слева,Видеонаблюдение,camera,other,important
+28,80,28,Видео,camera,camera.kamera_na_ogurtsy,,Верхний ярус,Горшок у окна,camera,camera,important
+29,0,0,Резервный выключатель,device,,,Щиток,Резервное питание,power,electricity,critical
+29,81,29,Выключатель,switch,switch.wifi_perekliuchatel_na_din_reiku_2_switch,on/off,Щиток,Дублёр щитка,power,electricity,critical
+30,0,0,Датчик освещения верх,device,,,Верхний ярус,Тестовый датчик,service,light,important
+30,82,30,Освещенность,sensor,sensor.lightsensor_illuminance,lx,Верхний ярус,Для проверки,service,light,important
+30,83,30,Светимость,sensor,sensor.lightsensor_luminosity,,Верхний ярус,Не используется,service,light,important
+31,0,0,Zigbee хаб,device,,,Веранда,Координатор сети,safety,gateway,critical
+31,84,31,Проблема,binary_sensor,binary_sensor.multimode_gateway_mini_problem,on/off,Хаб,Статус связи,safety,gateway,critical
+32,0,0,Камера нижний левый,device,,,Нижний ярус слева,Видеонаблюдение,camera,other,important
+32,85,32,Видео,camera,camera.security_camera_4_2,,Нижний ярус,Серый горшок,camera,camera,important
+33,0,0,Камера нижний правый,device,,,Нижний ярус справа,Видеонаблюдение,camera,other,important
+33,86,33,Видео,camera,camera.kamera_vertikalnaia_pomidor,,Нижний ярус,Большой белый,camera,camera,important
+34,0,0,Полив верхний ярус,device,,,Верхний ярус,Система полива,service,watering,important
+34,87,34,Клапан основной,switch,switch.klubnika_poliv_verkh_switch_1,on/off,Верхний ярус,Главный клапан,control,watering,important
+34,88,34,Клапан удобрения,switch,switch.klubnika_poliv_verkh_switch_2,on/off,Верхний ярус,С удобрениями,control,watering,important
+34,89,34,Защита,switch,switch.klubnika_poliv_verkh_switch_3,on/off,Верхний ярус,От сухого хода,control,other,normal
+35,0,0,Полив нижний ярус,device,,,Нижний ярус,Система полива,service,watering,important
+35,90,35,Клапан основной,switch,switch.klubnika_poliv_switch_1,on/off,Нижний ярус,Главный клапан,control,watering,important
+35,91,35,Клапан удобрения,switch,switch.klubnika_poliv_switch_2,on/off,Нижний ярус,С удобрениями,control,watering,important
+35,92,35,Защита,switch,switch.klubnika_poliv_switch_3,on/off,Нижний ярус,От сухого хода,control,other,normal
+36,0,0,Сетевой фильтр (3),device,,,Зона полива,Вспомогательное питание,power,watering,important
+36,93,36,Насос удобрений,switch,switch.smart_power_strip_eu_2_socket_4,on/off,Зона полива,Перемешивание,power,electricity,critical
+36,94,36,Розетка увлажнителя,switch,switch.smart_power_strip_eu_2_socket_3,on/off,Пол,Питание увлажнителя,power,electricity,critical
+36,95,36,USB датчик освещения,switch,switch.smart_power_strip_eu_2_socket_5,on/off,Верхний ярус,Питание датчика,power,electricity,critical
+37,0,0,Сетевой фильтр (2),device,,,Верхний ярус,Основное питание,power,other,normal
+37,96,37,Свет верхний,light,switch.setevoi_filtr_klubnika_socket_2,on/off,Верхний ярус,Лампа 300Вт,control,light,important
+37,97,37,Насос полив верх,pump,switch.setevoi_filtr_klubnika_socket_4,on/off,Зона полива,Насос верха,control,watering,important
+37,98,37,Насос полив низ,pump,switch.setevoi_filtr_klubnika_socket_3,on/off,Зона полива,Насос низа,control,watering,important
+37,99,37,Питание камер,socket,switch.setveoi_filtr_klubnika_socket_5,on/off,Стеллаж,Питание 4 камер,power,other,normal
+38,0,0,Сетевой фильтр (1),device,,,Вентиляция,Управление воздухом,plants,airflow,important
+38,100,38,Вентиляторы верх,fan,switch.setevoi_filtr_novyi_socket_1,on/off,Верхний ярус,Обдув растений,control,airflow,important
+38,101,38,Вентиляторы низ,fan,switch.setevoi_filtr_novyi_usb_1,on/off,Нижний ярус,Обдув растений,control,airflow,important
+38,102,38,Питание датчика 24,socket,switch.setevoi_filtr_Novyi_socket_2,on/off,Нижний ярус,Питание T/H датчика,power,other,normal
+38,103,38,Питание датчика 4,socket,switch.setevoi_filtr_novyi_socket_3,on/off,Верхний ярус,Питание CO₂ датчика,power,other,normal
+38,104,38,Свет нижний,light,switch.setevoi_filtr_novyi_socket_4,on/off,Нижний ярус, 300w,control,light,important

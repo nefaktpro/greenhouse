@@ -1,0 +1,14 @@
+id,parent_id,name,type,entity_id,unit,location,controllable,critical
+1,,Датчик дыма,device,,,"Веранда",false,true
+1.1,1,Дым,binary_sensor,binary_sensor.1_datchik_dyma_smoke,on/off,Внутри,false,true
+1.2,1,Батарея,sensor,sensor.dymovoi_signalizator_battery,%,Внутри,false,false
+3,,Увлажнитель,device,,,"Пол веранды",true,false
+3.1,3,Питание,switch,switch.uvlazhnitel_l,on/off,Внутри,true,false
+38,,Сетевой фильтр (1),device,,,"Веранда",true,false
+38.101,38,Вентиляторы низ,switch,switch.setevoi_filtr_novyi_usb_1,on/off,Веранда,true,false
+8,,Датчик дыма у щитка,device,,,"Щиток веранда",false,true
+8.24,8,Дым,binary_sensor,binary_sensor.dymovoi_signalizator_2_smoke,on/off,У щитка,false,true
+5,,Щиток веранда,device,,,"Веранда",true,true
+5.14,5,Выключатель,switch,switch.shchitok_veranda_switch,on/off,Веранда,true,true
+29,,Резервный выключатель,device,,,"Веранда",true,true
+29.81,29,Выключатель,switch,switch.wifi_perekliuchatel_na_din_reiku_2_switch,on/off,Веранда,true,true
