@@ -25,6 +25,7 @@ from test_mode import get_ask_payload
 from action_executor import execute_decisions
 from ask_manager import load_ask_state
 from ai_mode_support import build_ai_comment_for_decisions
+from chat.chat_router import handle_chat_message
 ACTION_MAP = {
     "water_low": "💧 Полив низа",
     "water_top": "💧 Полив верха",
@@ -586,20 +587,30 @@ def register_handlers(bot):
         except Exception as e:
             safe_send(bot, str(message.chat.id), f"Ошибка /auto_status:\n{e}")
 
-    @bot.message_handler(func=lambda m: True, content_types=["text"])
-    def handle_menu_buttons(message):
-        text = (message.text or "").strip()
+    
 
+
+@bot.message_handler(func=lambda m: True, content_types=["text"])
+def handle_menu_buttons(message):
+    text = (message.text or "").strip()
+
+    try:
+        # --- МЕНЮ (оставляем как есть) ---
         if text == "🌿 Растения":
             return cmd_plants(message)
+
         elif text == "📊 Статус":
             return cmd_status(message)
+
         elif text == "🚨 Критично":
             return cmd_critical(message)
+
         elif text == "🤖 AI":
             return cmd_ai(message)
+
         elif text == "🤖 Режим":
             return cmd_mode(message)
+
         elif text == "📷 Камеры":
             bot.send_message(
                 message.chat.id,
@@ -607,13 +618,30 @@ def register_handlers(bot):
                 reply_markup=build_cameras_menu(),
             )
             return
+
         elif text == "🛡 Безопасность":
             return cmd_safety(message)
+
         elif text == "🔌 Устройства":
             return cmd_devices(message)
 
+        # --- ВСЁ ОСТАЛЬНОЕ → ЧАТ ---
+        response = handle_chat_message(text)
+
+        bot.send_message(
+            message.chat.id,
+            response.reply_text,
+        )
+        return
+
+    except Exception as e:
+        bot.send_message(
+            message.chat.id,
+            f"❌ Ошибка обработки сообщения: {e}"
+        )
+        return
+     
 
 
 
 
-    
