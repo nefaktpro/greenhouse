@@ -1,0 +1,212 @@
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from typing import Any, Dict, Optional
+
+from chat.intent_parser import ParsedIntent, parse_intent
+from chat.observation_store import add_observation
+from mode_manager import get_mode_config
+
+
+@dataclass
+class ChatResponse:
+    reply_text: str
+    parsed_intent: ParsedIntent
+    response_type: str = "message"
+    ask_payload: Optional[Dict[str, Any]] = None
+    action_payload: Optional[Dict[str, Any]] = None
+    meta: Dict[str, Any] = field(default_factory=dict)
+
+
+def _build_status_reply() -> str:
+    mode = get_mode_config()
+    mode_name = mode.get("mode", "UNKNOWN")
+    execute = "да" if mode.get("execute") else "нет"
+    ask = "да" if mode.get("ask") else "нет"
+    ai_control = "да" if mode.get("ai_control") else "нет"
+
+    return (
+        "🫧 Базовый чат-статус теплицы\n\n"
+        f"Текущий режим: {mode_name}\n"
+        f"Выполнение действий: {execute}\n"
+        f"ASK-подтверждение: {ask}\n"
+        f"AI-управление: {ai_control}\n\n"
+        "Это первая версия чат-слоя. "
+        "Дальше сюда подключим реальный status/AI/context."
+    )
+
+
+def _build_why_reply() -> str:
+    return (
+        "🤔 Пока я умею распознавать вопрос формата «почему», "
+        "но ещё не подключён к explainability-слою.\n\n"
+        "Следующий этап — связать чат с decision log, AI summary и текущим snapshot."
+    )
+
+
+def _build_memory_save_reply(text: str) -> str:
+    cleaned = text.strip() or "пустая заметка"
+    return (
+        "🧠 Команда памяти распознана.\n\n"
+        f"Что нужно запомнить: {cleaned}\n\n"
+        "Пока это ещё не записывается в knowledge.json через chat-layer, "
+        "но распознавание уже работает."
+    )
+
+
+def _build_memory_forget_reply(text: str) -> str:
+    cleaned = text.strip() or "пустой запрос"
+    return (
+        "🧹 Команда забывания распознана.\n\n"
+        f"Что нужно забыть: {cleaned}\n\n"
+        "На следующем шаге подключим реальную работу с памятью."
+    )
+
+
+def _build_device_action_reply(parsed: ParsedIntent) -> ChatResponse:
+    mode = get_mode_config()
+    mode_name = mode.get("mode", "UNKNOWN")
+    target = parsed.target or "неизвестная цель"
+    action = parsed.action or "unknown"
+
+    human_target_map = {
+        "fan_top": "верхний вентилятор",
+        "fan_low": "нижний вентилятор",
+        "all_fans": "все вентиляторы",
+    }
+
+    human_action_map = {
+        "turn_on": "включить",
+        "turn_off": "выключить",
+    }
+
+    human_target = human_target_map.get(target, target)
+    human_action = human_action_map.get(action, action)
+
+    reply = (
+        "🎛 Команда управления распознана.\n\n"
+        f"Действие: {human_action}\n"
+        f"Цель: {human_target}\n"
+        f"Режим системы: {mode_name}\n\n"
+    )
+
+    if mode_name == "TEST":
+        reply += "Сейчас TEST-режим: я не выполняю действие, только показываю, что сделал бы."
+        return ChatResponse(
+            reply_text=reply,
+            parsed_intent=parsed,
+            response_type="message",
+            action_payload={
+                "action": action,
+                "target": target,
+                "dry_run": True,
+            },
+            meta={"mode": mode_name},
+        )
+
+    if mode.get("ask"):
+        reply += "Сейчас ASK-режим: следующим шагом это нужно будет отправлять в ASK-подтверждение."
+        return ChatResponse(
+            reply_text=reply,
+            parsed_intent=parsed,
+            response_type="ask_candidate",
+            ask_payload={
+                "action": action,
+                "target": target,
+            },
+            meta={"mode": mode_name},
+        )
+
+    reply += "Следующим шагом подключим реальное выполнение через existing executor."
+    return ChatResponse(
+        reply_text=reply,
+        parsed_intent=parsed,
+        response_type="action_candidate",
+        action_payload={
+            "action": action,
+            "target": target,
+            "dry_run": False,
+        },
+        meta={"mode": mode_name},
+    )
+
+
+def handle_chat_message(text: str) -> ChatResponse:
+    parsed = parse_intent(text)
+
+    if parsed.intent_type == "empty":
+        return ChatResponse(
+            reply_text="Сообщение пустое. Напиши вопрос, команду или наблюдение.",
+            parsed_intent=parsed,
+        )
+
+    if parsed.intent_type == "status_question":
+        return ChatResponse(
+            reply_text=_build_status_reply(),
+            parsed_intent=parsed,
+            response_type="status",
+        )
+
+    if parsed.intent_type == "why_question":
+        return ChatResponse(
+            reply_text=_build_why_reply(),
+            parsed_intent=parsed,
+            response_type="explain_stub",
+        )
+
+    if parsed.intent_type == "memory_save":
+        return ChatResponse(
+            reply_text=_build_memory_save_reply(parsed.payload.get("text", "")),
+            parsed_intent=parsed,
+            response_type="memory_stub",
+        )
+
+    if parsed.intent_type == "memory_forget":
+        return ChatResponse(
+            reply_text=_build_memory_forget_reply(parsed.payload.get("text", "")),
+            parsed_intent=parsed,
+            response_type="memory_stub",
+        )
+
+    if parsed.intent_type == "observation":
+        saved = add_observation(
+            text=parsed.payload.get("text", text),
+            source="user",
+            category="chat_observation",
+            meta={"tags": parsed.tags},
+        )
+        return ChatResponse(
+            reply_text=(
+                "👀 Наблюдение сохранено.\n\n"
+                f"Текст: {saved['text']}\n"
+                f"Время: {saved['timestamp']}"
+            ),
+            parsed_intent=parsed,
+            response_type="observation_saved",
+            meta={"saved": saved},
+        )
+
+    if parsed.intent_type == "device_action":
+        return _build_device_action_reply(parsed)
+
+    if parsed.intent_type == "generic_question":
+        return ChatResponse(
+            reply_text=(
+                "❓ Я понял, что это вопрос, но пока не смог точно определить тип.\n\n"
+                "Попробуй переформулировать, например:\n"
+                "• что с теплицей?\n"
+                "• почему низ сухой?\n"
+                "• включи верхний вентилятор"
+            ),
+            parsed_intent=parsed,
+            response_type="generic_question",
+        )
+
+    return ChatResponse(
+        reply_text=(
+            "💬 Сообщение получено, но пока не классифицировано точно.\n\n"
+            "На этом этапе чат уже умеет различать часть команд, наблюдений и вопросов."
+        ),
+        parsed_intent=parsed,
+        response_type="generic_message",
+    )
