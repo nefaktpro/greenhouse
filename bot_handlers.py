@@ -590,56 +590,56 @@ def register_handlers(bot):
     
 
 
-@bot.message_handler(func=lambda m: True, content_types=["text"])
-def handle_menu_buttons(message):
-    text = (message.text or "").strip()
+    @bot.message_handler(func=lambda m: True, content_types=["text"])
+    def handle_menu_buttons(message):
+        text = (message.text or "").strip()
 
-    try:
-        # --- МЕНЮ (оставляем как есть) ---
-        if text == "🌿 Растения":
-            return cmd_plants(message)
+        try:
+            # --- МЕНЮ (оставляем как есть) ---
+            if text == "🌿 Растения":
+                return cmd_plants(message)
 
-        elif text == "📊 Статус":
-            return cmd_status(message)
+            elif text == "📊 Статус":
+                return cmd_status(message)
 
-        elif text == "🚨 Критично":
-            return cmd_critical(message)
+            elif text == "🚨 Критично":
+                return cmd_critical(message)
 
-        elif text == "🤖 AI":
-            return cmd_ai(message)
+            elif text == "🤖 AI":
+                return cmd_ai(message)
 
-        elif text == "🤖 Режим":
-            return cmd_mode(message)
+            elif text == "🤖 Режим":
+                return cmd_mode(message)
 
-        elif text == "📷 Камеры":
+            elif text == "📷 Камеры":
+                bot.send_message(
+                    message.chat.id,
+                    "📷 Выбери камеру:",
+                    reply_markup=build_cameras_menu(),
+                )
+                return
+
+            elif text == "🛡 Безопасность":
+                return cmd_safety(message)
+
+            elif text == "🔌 Устройства":
+                return cmd_devices(message)
+
+            # --- ВСЁ ОСТАЛЬНОЕ → ЧАТ ---
+            response = handle_chat_message(text)
+
             bot.send_message(
                 message.chat.id,
-                "📷 Выбери камеру:",
-                reply_markup=build_cameras_menu(),
+                response.reply_text,
             )
             return
 
-        elif text == "🛡 Безопасность":
-            return cmd_safety(message)
-
-        elif text == "🔌 Устройства":
-            return cmd_devices(message)
-
-        # --- ВСЁ ОСТАЛЬНОЕ → ЧАТ ---
-        response = handle_chat_message(text)
-
-        bot.send_message(
-            message.chat.id,
-            response.reply_text,
-        )
-        return
-
-    except Exception as e:
-        bot.send_message(
-            message.chat.id,
-            f"❌ Ошибка обработки сообщения: {e}"
-        )
-        return
+        except Exception as e:
+            bot.send_message(
+                message.chat.id,
+                f"❌ Ошибка обработки сообщения: {e}"
+            )
+            return
      
 
 
