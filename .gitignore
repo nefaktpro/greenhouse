@@ -1,9 +1,8 @@
 __pycache__/
 *.pyc
-*.bak
-*.save
-*.pynano
-*.nano
 *.log
 .env
-backups/
+*.sqlite
+*.db
+data/runtime/
+data/logs/

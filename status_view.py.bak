@@ -1,0 +1,124 @@
+from datetime import datetime, timezone
+
+from ha_client import HomeAssistantClient
+
+
+STALE_AFTER_MINUTES = 15
+
+
+def _get_state_data(ha: HomeAssistantClient, entity_id: str) -> dict | None:
+    return ha.get_state(entity_id)
+
+
+def _normalize_state(state) -> str:
+    if state in (None, "", "unknown", "unavailable"):
+        return "нет данных"
+
+    try:
+        value = float(state)
+
+        if value.is_integer():
+            return str(int(value))
+
+        return f"{value:.1f}"
+    except Exception:
+        return str(state)
+
+
+def _age_minutes(iso_ts: str | None) -> int | None:
+    if not iso_ts:
+        return None
+
+    try:
+        dt = datetime.fromisoformat(iso_ts.replace("Z", "+00:00"))
+        now = datetime.now(timezone.utc)
+        diff = now - dt
+        return int(diff.total_seconds() // 60)
+    except Exception:
+        return None
+
+
+def _line(ha: HomeAssistantClient, label: str, entity_id: str, unit: str = "") -> list[str]:
+    state_data = _get_state_data(ha, entity_id)
+
+    if not state_data:
+        return [
+            f"  {label}: нет данных",
+            "    ⚠️ датчик недоступен",
+        ]
+
+    value = _normalize_state(state_data.get("state"))
+    suffix = unit if value != "нет данных" else ""
+
+    lines = [f"  {label}: {value}{suffix}"]
+
+    minutes = _age_minutes(state_data.get("last_updated") or state_data.get("last_changed"))
+
+    if minutes is None:
+        lines.append("    ⚠️ нет времени обновления")
+    elif minutes >= STALE_AFTER_MINUTES:
+        lines.append(f"    ⚠️ {minutes} мин без обновления")
+
+    return lines
+
+
+def build_plants_low_text(ha: HomeAssistantClient) -> str:
+    lines = [
+        "🌿 НИЗ — влажность и температура",
+        "",
+        "🌬 Воздух вокруг кустов",
+        *_line(ha, "Влажность воздуха", "sensor.temperature_and_humidity_sensor_humidity", "%"),
+        *_line(ha, "Температура воздуха", "sensor.temperature_and_humidity_sensor_temperature", "°C"),
+        "",
+        "🪴 Большой белый горшок",
+        *_line(ha, "Основная влажность земли", "sensor.klubnika_vlazhnost_niz_belyi_humidity", "%"),
+        *_line(ha, "Температура земли", "sensor.klubnika_vlazhnost_niz_belyi_temperature", "°C"),
+        *_line(ha, "Влажность на поверхности", "sensor.ogurets_vertikalnyi_humidity", "%"),
+        *_line(ha, "Температура поверхности", "sensor.ogurets_vertikalnyi_temperature", "°C"),
+        *_line(ha, "Воздух у корней", "sensor.vlazhnost_nizhnii_gorshok_belyi_humidity", "%"),
+        *_line(ha, "Температура у корней", "sensor.vlazhnost_nizhnii_gorshok_belyi_temperature", "°C"),
+        "",
+        "🪴 Серый горшок",
+        *_line(ha, "Основная влажность земли", "sensor.klubnika_poliv_niz_seryi_humidity", "%"),
+        *_line(ha, "Температура земли", "sensor.klubnika_poliv_niz_seryi_temperature", "°C"),
+        "  Влажность на поверхности: нет данных",
+        "  Температура поверхности: нет данных",
+        "",
+        "🪴 Круглый горшок у окна",
+        *_line(ha, "Основная влажность земли", "sensor.sgs01_4_humidity", "%"),
+        *_line(ha, "Температура земли", "sensor.sgs01_4_temperature", "°C"),
+        *_line(ha, "Влажность на поверхности", "sensor.vlazhnost_humidity", "%"),
+        *_line(ha, "Температура поверхности", "sensor.vlazhnost_temperature", "°C"),
+    ]
+
+    return "\n".join(lines)
+
+
+def build_plants_high_text(ha: HomeAssistantClient) -> str:
+    lines = [
+        "🌿 ВЕРХ — влажность и температура",
+        "",
+        "🌬 Воздух вокруг кустов",
+        *_line(ha, "Влажность воздуха", "sensor.temperature_and_humidity_sensor_2_humidity", "%"),
+        *_line(ha, "Температура воздуха", "sensor.temperature_and_humidity_sensor_2_temperature", "°C"),
+        "",
+        "🪴 Дальний горшок",
+        *_line(ha, "Основная влажность земли", "sensor.datchik_vlazhnosti_spotifilum_humidity", "%"),
+        *_line(ha, "Температура земли", "sensor.datchik_vlazhnosti_spotifilum_temperature", "°C"),
+        *_line(ha, "Влажность на поверхности", "sensor.vlazhnost_klubnika_verkh_chernyi_humidity", "%"),
+        *_line(ha, "Температура поверхности", "sensor.vlazhnost_klubnika_verkh_chernyi_temperature", "°C"),
+        *_line(ha, "Воздух у корней", "sensor.datchik_vlazhnosti_verkh_humidity", "%"),
+        *_line(ha, "Температура у корней", "sensor.datchik_vlazhnosti_verkh_temperature", "°C"),
+        "",
+        "🪴 Горшок у окна",
+        *_line(ha, "Основная влажность земли", "sensor.klubnika_verkh_u_okna_humidity", "%"),
+        *_line(ha, "Температура земли", "sensor.klubnika_verkh_u_okna_temperature", "°C"),
+        *_line(ha, "Влажность на поверхности", "sensor.chernyi_poverkhnost_u_okna_humidity", "%"),
+        *_line(ha, "Температура поверхности", "sensor.chernyi_poverkhnost_u_okna_temperature", "°C"),
+    ]
+
+    return "\n".join(lines)
+
+
+def build_plants_full_text(ha: HomeAssistantClient) -> str:
+    return build_plants_low_text(ha) + "\n\n" + build_plants_high_text(ha)

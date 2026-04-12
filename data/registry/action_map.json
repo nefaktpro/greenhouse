@@ -1,0 +1,50 @@
+{
+  "fan_top_on": {
+    "target_role": "top_air_circulation",
+    "operation": "turn_on"
+  },
+  "fan_top_off": {
+    "target_role": "top_air_circulation",
+    "operation": "turn_off"
+  },
+  "fan_bottom_on": {
+    "target_role": "bottom_air_circulation",
+    "operation": "turn_on"
+  },
+  "fan_bottom_off": {
+    "target_role": "bottom_air_circulation",
+    "operation": "turn_off"
+  },
+  "humidifier_power_on": {
+    "target_role": "humidifier_power",
+    "operation": "turn_on"
+  },
+  "humidifier_power_off": {
+    "target_role": "humidifier_power",
+    "operation": "turn_off"
+  },
+  "humidifier_on": {
+    "target_role": "main_humidifier",
+    "operation": "turn_on"
+  },
+  "humidifier_off": {
+    "target_role": "main_humidifier",
+    "operation": "turn_off"
+  },
+  "watering_top_on": {
+    "target_role": "watering_top_main_valve",
+    "operation": "turn_on"
+  },
+  "watering_top_off": {
+    "target_role": "watering_top_main_valve",
+    "operation": "turn_off"
+  },
+  "watering_bottom_on": {
+    "target_role": "watering_bottom_main_valve",
+    "operation": "turn_on"
+  },
+  "watering_bottom_off": {
+    "target_role": "watering_bottom_main_valve",
+    "operation": "turn_off"
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "registry_version": "1.0",
+  "files": {
+    "devices": {
+      "path": "data/registry/devices.csv",
+      "source_of_truth": true,
+      "editable": true
+    },
+    "capabilities": {
+      "path": "data/registry/device_capabilities.json",
+      "source_of_truth": true,
+      "editable": true
+    },
+    "action_map": {
+      "path": "data/registry/action_map.json",
+      "source_of_truth": true,
+      "editable": true
+    },
+    "zones": {
+      "path": "data/registry/zones.json",
+      "source_of_truth": true,
+      "editable": true
+    }
+  }
+}

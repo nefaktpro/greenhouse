@@ -1,0 +1,53 @@
+DeviceID,SubID,ParentID,Name,Type,EntityID,Unit,Location,Description,Category,Group,Criticality
+3,0,0,Увлажнитель,device,,,Пол веранды,Увлажнение воздуха,plants,plants,normal
+4,0,0,Качество воздуха (верхний ярус),device,,,Верхний ярус,Мониторинг воздуха,plants,plants,important
+4,9,4,Влажность,sensor,sensor.nobito_humidity,%,Верхний ярус,Общая влажность воздуха,plants,plants,important
+4,12,4,Температура,sensor,sensor.kachestvo_vozdukha_temperature,°C,Верхний ярус,Общая температура воздуха,plants,plants,important
+6,0,0,Термостат веранда,device,,,Веранда,Климат-контроль,plants,plants,normal
+6,21,6,Temperature correction,number,number.termostat_veranda_temperature_correction,,Веранда,Калибровка температуры,control,plants,normal
+10,0,0,Датчик поверхности (низ большой белый),device,,,Большой белый горшок,Мониторинг почвы,plants,plants,normal
+10,29,10,Влажность,sensor,sensor.ogurets_vertikalnyi_humidity,%,Поверхность грунта,Верхний слой почвы,plants,plants,normal
+10,30,10,Температура,sensor,sensor.ogurets_vertikalnyi_temperature,°C,Поверхность грунта,Температура поверхности,plants,plants,normal
+11,0,0,Серый горшок (низ основной),device,,,Серый горшок,Мониторинг почвы,plants,plants,important
+11,32,11,Влажность,sensor,sensor.klubnika_poliv_niz_seryi_humidity,%,Внутри грунта,Основная влажность,plants,plants,important
+11,34,11,Температура,sensor,sensor.klubnika_poliv_niz_seryi_temperature,°C,Внутри грунта,Температура почвы,plants,plants,important
+12,0,0,Большой белый (низ основной),device,,,Большой белый горшок,Мониторинг почвы,plants,plants,important
+12,35,12,Влажность,sensor,sensor.klubnika_vlazhnost_niz_belyi_humidity,%,Внутри грунта,Основная влажность,plants,plants,important
+12,36,12,Температура,sensor,sensor.klubnika_vlazhnost_niz_belyi_temperature,°C,Внутри грунта,Температура почвы,plants,plants,important
+13,0,0,Воздух у корней (низ большой белый),device,,,Большой белый горшок,Мониторинг воздуха,plants,plants,normal
+13,38,13,Влажность воздуха,sensor,sensor.vlazhnost_nizhnii_gorshok_belyi_humidity,%,Поверхность грунта,Прикорневая влажность,plants,plants,normal
+13,39,13,Температура воздуха,sensor,sensor.vlazhnost_nizhnii_gorshok_belyi_temperature,°C,Поверхность грунта,Температура у корней,plants,plants,normal
+14,0,0,Круглый горшок у окна (низ),device,,,Круглый горшок,Мониторинг почвы,plants,plants,important
+14,41,14,Влажность,sensor,sensor.sgs01_4_humidity,%,Внутри грунта,Основная влажность,plants,plants,important
+14,42,14,Температура,sensor,sensor.sgs01_4_temperature,°C,Внутри грунта,Температура почвы,plants,plants,important
+15,0,0,Верх дальний (поверхность),device,,,Дальний горшок верха,Мониторинг почвы,plants,plants,normal
+15,44,15,Влажность,sensor,sensor.vlazhnost_klubnika_verkh_chernyi_humidity,%,Поверхность грунта,Верхний слой,plants,plants,normal
+15,45,15,Температура,sensor,sensor.vlazhnost_klubnika_verkh_chernyi_temperature,°C,Поверхность грунта,Температура поверхности,plants,plants,normal
+16,0,0,Верх дальний (основной),device,,,Дальний горшок верха,Мониторинг почвы,plants,plants,important
+16,47,16,Влажность,sensor,sensor.datchik_vlazhnosti_spotifilum_humidity,%,Внутри грунта,Основная влажность,plants,plants,important
+16,48,16,Температура,sensor,sensor.datchik_vlazhnosti_spotifilum_temperature,°C,Внутри грунта,Температура почвы,plants,plants,important
+17,0,0,Низ круглый (поверхность),device,,,Круглый горшок низа,Мониторинг почвы,plants,plants,normal
+17,50,17,Влажность,sensor,sensor.vlazhnost_humidity,%,Поверхность грунта,Верхний слой,plants,plants,normal
+17,51,17,Температура,sensor,sensor.vlazhnost_temperature,°C,Поверхность грунта,Температура поверхности,plants,plants,normal
+18,0,0,Верх у окна (поверхность),device,,,Горшок у окна верха,Мониторинг почвы,plants,plants,normal
+18,53,18,Влажность,sensor,sensor.chernyi_poverkhnost_u_okna_humidity,%,Поверхность грунта,Верхний слой,plants,plants,normal
+18,54,18,Температура,sensor,sensor.chernyi_poverkhnost_u_okna_temperature,°C,Поверхность грунта,Температура поверхности,plants,plants,normal
+19,0,0,Верх у окна (основной),device,,,Горшок у окна верха,Мониторинг почвы,plants,plants,important
+19,56,19,Влажность,sensor,sensor.klubnika_verkh_u_okna_humidity,%,Внутри грунта,Основная влажность,plants,plants,important
+19,57,19,Температура,sensor,sensor.klubnika_verkh_u_okna_temperature,°C,Внутри грунта,Температура почвы,plants,plants,important
+20,0,0,Верх дальний (воздух у корней),device,,,Дальний горшок верха,Мониторинг воздуха,plants,plants,normal
+20,59,20,Влажность воздуха,sensor,sensor.datchik_vlazhnosti_verkh_humidity,%,Поверхность грунта,Прикорневая влажность,plants,plants,normal
+20,60,20,Температура воздуха,sensor,sensor.datchik_vlazhnosti_verkh_temperature,°C,Поверхность грунта,Температура у корней,plants,plants,normal
+21,0,0,Микроклимат низа (у листьев),device,,,Нижний ярус,Климат у листьев,plants,plants,important
+21,62,21,Влажность у листьев,sensor,sensor.temperature_and_humidity_sensor_humidity,%,Над кустом,Влажность воздуха,plants,plants,important
+21,63,21,Температура у листьев,sensor,sensor.temperature_and_humidity_sensor_temperature,°C,Над кустом,Температура воздуха,plants,plants,important
+22,0,0,Микроклимат верха (у листьев),device,,,Верхний ярус,Климат у листьев,plants,plants,important
+22,65,22,Влажность у листьев,sensor,sensor.temperature_and_humidity_sensor_2_humidity,%,Над кустом,Самый важный датчик,plants,plants,important
+22,66,22,Температура у листьев,sensor,sensor.temperature_and_humidity_sensor_2_temperature,°C,Над кустом,Температура воздуха,plants,plants,important
+24,0,0,Датчик T/H общий низ,device,,,Нижний ярус,Общий климат,plants,plants,important
+24,70,24,Температура общая,sensor,sensor.datchik_temeratury_i_vlazhnosti_temperature,°C,Центр низа,Общая температура,plants,plants,important
+24,71,24,Влажность общая,sensor,sensor.datchik_temeratury_i_vlazhnosti_humidity,%,Центр низа,Общая влажность,plants,plants,important
+26,74,26,Выключатель,switch,switch.temperature_and_humidity_alarm_switch,on/off,Снаружи,Питание,power,plants,normal
+26,75,26,Влажность улица,sensor,sensor.temperature_and_humidity_alarm_humidity,%,Снаружи,Не используется,plants,plants,normal
+26,77,26,Температура улица,sensor,sensor.temperature_and_humidity_alarm_temperature,°C,Снаружи,Для прогноза,plants,plants,normal
+38,0,0,Сетевой фильтр (1),device,,,Вентиляция,Управление воздухом,plants,airflow,important
