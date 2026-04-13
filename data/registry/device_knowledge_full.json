@@ -1,0 +1,1473 @@
+{
+  "source_file": "Контекст устройств.docx",
+  "source_status": "raw_knowledge_from_user_may_be_outdated",
+  "total_devices": 38,
+  "devices": [
+    {
+      "device_id": "1",
+      "logic_details": "**❗️ ПОЖАР — ПРИОРИТЕТ №1.** Если этот датчик переходит в состояние `on`, это критическая тревога. Я игнорирую все остальные задачи и автоматизации, пока не получу от тебя команду \"отбой пожарной тревоги\". Датчик может сработать от реального дыма, от перегрева проводки или от возгорания где-то на веранде. Это самый важный датчик в системе.",
+      "actions": "1️⃣ **МГНОВЕННО** отключаю устр 5 (главный щиток веранды).\n2️⃣ **Проверяю, отключился ли устр 5** (по датчику электричества ID 25.72). Если через 5 секунд питание всё ещё есть — отключаю резервный устр 29.\n3️⃣ Проверяю ID 25.72, чтобы понять, есть ли питание от резервной батареи или дом всё ещё под напряжением.\n4️⃣ Шлю тебе **SOS-уведомление в Telegram**: *«⚠️⚠️⚠️ ПОЖАРНАЯ ТРЕВОГА! Датчик дыма (устр 1) сработал. Питание веранды отключено. Срочно проверь!»*\n5️⃣ **Повторяю попытку отключения КАЖДУЮ МИНУТУ**, если вдруг питание восстановилось или не отключилось с первого раза.\n6️⃣ Жду твоей явной команды \"отбой пожарной тревоги\" или \"сброс тревоги\". Пока не получу эту команду, никакие другие автоматизации не выполняю.",
+      "parent_id": "0",
+      "name": "Датчик дыма (центр веранды)",
+      "device_type": "device - пожарная безопасность",
+      "location": "Веранда, центр потолка, около стеллажа, в самой горячей зоне, максимально близко к растениям и проводке.",
+      "physical": "Обычный дымовой извещатель. Питается от батарейки CR123A (~2 года). Висит так, чтобы улавливать дым от возможного возгорания проводки или растений.",
+      "elements": [
+        {
+          "element_id": "1.1",
+          "name": "Дым",
+          "actions": "",
+          "location": "Внутри устройства.",
+          "type": "smoke",
+          "entity_id": "binary_sensor.1_datchik_dyma_smoke",
+          "unit": "on/off",
+          "status": "active"
+        },
+        {
+          "element_id": "1.2",
+          "name": "Батарея",
+          "actions": "",
+          "location": "Внутри датчика.",
+          "type": "battery",
+          "entity_id": "sensor.dymovoi_signalizator_battery",
+          "unit": "%",
+          "status": "active"
+        },
+        {
+          "element_id": "1.3",
+          "name": "Tamper",
+          "actions": "",
+          "location": "Внутри датчика, контакт на корпусе.",
+          "type": "tamper",
+          "entity_id": "binary_sensor.dymovoi_signalizator_tamper",
+          "unit": "on/off",
+          "status": "ignore"
+        }
+      ]
+    },
+    {
+      "device_id": "2",
+      "logic_details": "**Я — твои глаза.** Использую эту камеру для самопроверки и контроля. Когда я выполняю автоматизацию, я должен убедиться, что она реально сработала.",
+      "actions": "1️⃣ **По команде:** «фото» или `/photo` — делаю скриншот и отправляю.\n2️⃣ **При выполнении автоматизаций:** фото до, фото после, сравниваю. Если состояние не совпадает — уведомляю.\n3️⃣ **Время ожидания:** 10 сек для света, 30 сек для шторы.",
+      "parent_id": "0",
+      "name": "Камера общий план",
+      "device_type": "device - видеонаблюдение",
+      "location": "Веранда, общий план стеллажа. Висит так, чтобы охватывать весь стеллаж целиком (верхний и нижний ярусы). Хорошо видно и левую, и правую часть.",
+      "physical": "Wi-Fi камера. Качество картинки позволяет различать включён ли свет, открыта ли штора, общее состояние растений.",
+      "elements": [
+        {
+          "element_id": "2.4",
+          "name": "Видео",
+          "actions": "",
+          "location": "На устройстве.",
+          "type": "camera",
+          "entity_id": "camera.smart_camera_2",
+          "status": "active"
+        }
+      ]
+    },
+    {
+      "device_id": "3",
+      "logic_details": "**Увлажнение воздуха для растений.** Главная цель: поддерживать влажность **60-70% на уровне листьев**. Для этого ориентируюсь на датчики №65 (верх) и №62 (низ).",
+      "actions": "**Алгоритм включения:**\n1️⃣ Сначала включаю розетку питания (№94).\n2️⃣ Жду 30 секунд (увлажнителю нужно время на загрузку).\n3️⃣ Только после этого включаю этот switch (№5).\n**Алгоритм работы:**\n1️⃣ Не работать больше 1 часа подряд.\n2️⃣ Режим: 1 час работы / 1 час перерыва.\n3️⃣ Если влажность на №65 (или №62) достигла 70% — выключить немедленно.\n4️⃣ Если влажность упала ниже 55% — включить снова.\n5️⃣ Если влажность >70% при выключенном увлажнителе больше часа — включить вентиляторы.",
+      "parent_id": "0",
+      "name": "Увлажнитель",
+      "device_type": "device - климат-контроль",
+      "location": "Пол веранды, у стеллажа. Стоит внизу, рядом с растениями. От него отходят две трубы, которые идут напрямую к горшкам — каждому растению отдельный выход пара.",
+      "physical": "- Бак на 15 литров воды.\n- Воды хватает на 3-4 дня непрерывной работы.\n- Есть отдельная розетка питания (№94), которая включает питание самого увлажнителя. Этот switch (№5) управляет уже самим устройством.",
+      "elements": [
+        {
+          "element_id": "3.5",
+          "name": "Вкл/выкл",
+          "actions": "",
+          "location": "На устройстве.",
+          "type": "switch",
+          "entity_id": "switch.uviazhnitel_",
+          "unit": "on/off",
+          "status": "active"
+        }
+      ]
+    },
+    {
+      "device_id": "4",
+      "logic_details": "**Полный контроль воздуха на верхнем ярусе.** Каждый датчик имеет свою логику.",
+      "actions": "",
+      "parent_id": "0",
+      "name": "Качество воздуха (верхний ярус)",
+      "device_type": "device - мониторинг воздуха",
+      "location": "Верхний ярус, центр. Висит на уровне растений, чтобы измерять именно тот воздух, которым дышат листья.",
+      "physical": "Мультисенсор, измеряет CO₂, VOC, PM10, PM2.5, формальдегид, температуру, влажность.",
+      "elements": [
+        {
+          "element_id": "4.6",
+          "name": "CO₂",
+          "actions": "- **<400 ppm:** уведомление *«CO₂ мало, открой окно или включи приток воздуха»*\n- **>1000 ppm:** *«CO₂ много, включи вентиляторы для проветривания»*\n- **>1500 ppm:** *«КРИТИЧНО! CO₂ >1500 ppm. Срочно проветри!»*",
+          "location": "Внутри устройства.",
+          "type": "sensor",
+          "entity_id": "sensor.nobito_carbon_dioxide",
+          "unit": "ppm",
+          "status": "active"
+        },
+        {
+          "element_id": "4.7",
+          "name": "VOC",
+          "actions": "",
+          "location": "Внутри устройства.",
+          "type": "sensor",
+          "entity_id": "sensor.nobito_volatile_organic_compounds",
+          "unit": "mg/m³",
+          "status": "test"
+        },
+        {
+          "element_id": "4.8",
+          "name": "PM10",
+          "actions": "",
+          "location": "Внутри устройства.",
+          "type": "sensor",
+          "entity_id": "sensor.nobito_pm10",
+          "unit": "µg/m³",
+          "status": "test"
+        },
+        {
+          "element_id": "4.9",
+          "name": "Влажность",
+          "actions": "",
+          "location": "Внутри устройства.",
+          "type": "sensor",
+          "entity_id": "sensor.nobito_humidity",
+          "unit": "%",
+          "status": "active"
+        },
+        {
+          "element_id": "4.10",
+          "name": "Формальдегид",
+          "actions": "",
+          "location": "Внутри устройства.",
+          "type": "sensor",
+          "entity_id": "sensor.nobito_formaldehyde",
+          "unit": "mg/m³",
+          "status": "test"
+        },
+        {
+          "element_id": "4.11",
+          "name": "PM2.5",
+          "actions": "",
+          "location": "Внутри устройства.",
+          "type": "sensor",
+          "entity_id": "sensor.nobito_pm2_5",
+          "unit": "µg/m³",
+          "status": "test"
+        },
+        {
+          "element_id": "4.12",
+          "name": "Температура",
+          "actions": "",
+          "location": "Внутри устройства.",
+          "type": "sensor",
+          "entity_id": "sensor.kachestvo_vozdukha_temperature",
+          "unit": "°C",
+          "status": "active"
+        },
+        {
+          "element_id": "4.13",
+          "name": "Индекс качества",
+          "actions": "",
+          "location": "Внутри устройства.",
+          "type": "sensor",
+          "entity_id": "sensor.nobito_air_quality_index",
+          "status": "test"
+        }
+      ]
+    },
+    {
+      "device_id": "5",
+      "logic_details": "**ГЛАВНЫЙ РУБИЛЬНИК.** Использую только в аварийных ситуациях или по твоей команде.",
+      "actions": "**При пожаре:** отключаю. Проверяю отключение по №72. Если не отключился — дублирую через №81.\n**По команде:** «выключи питание веранды», «включи питание веранды».",
+      "parent_id": "0",
+      "name": "Щиток веранда",
+      "device_type": "device - электричество",
+      "location": "Веранда, главный щиток. Физический автомат, который рубит всё питание на веранде.",
+      "physical": "Главный автомат, рубит всё питание на веранде, НО НЕ ТРОГАЕТ ТЕРМОСТАТ (№19). Термостат подключен отдельно, чтобы при аварии температура сохранялась.",
+      "elements": [
+        {
+          "element_id": "5.14",
+          "name": "Выключатель",
+          "actions": "",
+          "location": "В щитке.",
+          "type": "switch",
+          "entity_id": "switch.shchitok_veranda_switch",
+          "unit": "on/off",
+          "status": "active"
+        },
+        {
+          "element_id": "5.15",
+          "name": "Всего энергия",
+          "actions": "",
+          "location": "В щитке.",
+          "type": "sensor",
+          "entity_id": "sensor.shchitok_veranda_total_energy",
+          "unit": "kWh",
+          "status": "active"
+        },
+        {
+          "element_id": "5.16",
+          "name": "Мощность",
+          "actions": "",
+          "location": "В щитке.",
+          "type": "sensor",
+          "entity_id": "sensor.shchitok_veranda_power",
+          "unit": "Вт",
+          "status": "active"
+        },
+        {
+          "element_id": "5.17",
+          "name": "Напряжение",
+          "actions": "",
+          "location": "В щитке.",
+          "type": "sensor",
+          "entity_id": "sensor.shchitok_veranda_voltage",
+          "unit": "В",
+          "status": "active"
+        },
+        {
+          "element_id": "5.18",
+          "name": "Ток",
+          "actions": "",
+          "location": "В щитке.",
+          "type": "sensor",
+          "entity_id": "sensor.shchitok_veranda_current",
+          "unit": "А",
+          "status": "active"
+        }
+      ]
+    },
+    {
+      "device_id": "6",
+      "logic_details": "**ГЛАВНЫЙ КЛИМАТ-КОНТРОЛЬ.** Думаю медленно, но точно. Моя задача — поддерживать комфортную температуру для растений (цель 22-25°C), учитывая, что система очень инерционная.",
+      "actions": "1️⃣ **Каждые 30 минут** смотрю текущую температуру, заданную температуру и уличную температуру (№77).\n2️⃣ **Если разница между текущей и заданной > 1°C** — планирую изменение.\n3️⃣ **Учитываю инерцию и улицу:**\n- Если на улице холодно (<5°C), нагрев будет медленнее — начинаю раньше.\n- Если на улице тепло (>15°C), пол может нагреваться от солнца.\n4️⃣ **Меняю уставку максимум на 0.5°C за раз.**\n5️⃣ **Максимальное время ожидания — 2 часа.** Если за 2 часа температура не изменилась — уведомляю о проблеме.",
+      "parent_id": "0",
+      "name": "Термостат веранда",
+      "device_type": "device - климат-контроль (тёплый пол)",
+      "location": "Веранда, панель управления на стене. Управляет тёплым полом.",
+      "physical": "Управляет тёплым полом. **ОЧЕНЬ ИНЕРЦИОННАЯ СИСТЕМА** — реакция на изменение температуры занимает **1-2 часа**. Пол нагревается медленно и остывает тоже медленно. Калибровка: ±0.5-1°C.",
+      "elements": [
+        {
+          "element_id": "6.19",
+          "name": "Основной термостат",
+          "actions": "",
+          "location": "Панель управления.",
+          "type": "climate",
+          "entity_id": "climate.termostat_veranda",
+          "status": "active"
+        },
+        {
+          "element_id": "6.20",
+          "name": "Frost protection",
+          "actions": "",
+          "location": "В настройках термостата.",
+          "type": "switch",
+          "entity_id": "switch.termostat_veranda_frost_protection",
+          "unit": "on/off",
+          "status": "ignore"
+        },
+        {
+          "element_id": "6.21",
+          "name": "Temperature correction",
+          "actions": "",
+          "location": "В настройках термостата.",
+          "type": "number",
+          "entity_id": "number.termostat_veranda_temperature_correction",
+          "status": "ignore"
+        }
+      ]
+    },
+    {
+      "device_id": "7",
+      "logic_details": "**ДНЁМ:** Открываю, чтобы использовать естественный свет и тепло.\n**НОЧЬЮ:** Закрываю, чтобы сохранять тепло и не терять свет от ламп.",
+      "actions": "1️⃣ **Ориентируюсь на время восхода/заката** (основное).\n2️⃣ **Уличный датчик освещённости (№76)** — для коррекции (пасмурно/солнечно).\n3️⃣ Штора двигается плавно, **время ожидания после команды — 30 секунд**.",
+      "parent_id": "0",
+      "name": "Зашторивание",
+      "device_type": "device - управление светом/теплом",
+      "location": "На окне, закрывает стеллаж с клубникой от окна. Штора светоотражающая, плотная.",
+      "physical": "Светоотражающая штора. Когда закрыта — отражает холод от окна и свет от ламп обратно на растения. Когда открыта — пропускает естественный свет и тепло.",
+      "elements": [
+        {
+          "element_id": "7.22",
+          "name": "Штора",
+          "actions": "",
+          "location": "На окне.",
+          "type": "cover",
+          "entity_id": "cover.wifi_curtain_driver_converter_curtain",
+          "unit": "open/closed",
+          "status": "active"
+        },
+        {
+          "element_id": "7.23",
+          "name": "Режим двигателя",
+          "actions": "",
+          "location": "Внутри привода шторы.",
+          "type": "select",
+          "entity_id": "select.wifi_curtain_driver_converter_motor_mode",
+          "status": "ignore"
+        }
+      ]
+    },
+    {
+      "device_id": "8",
+      "logic_details": "**❗️ ПОЖАР — ПРИОРИТЕТ №1.** Если этот датчик срабатывает, это ещё опаснее, чем №1, потому что огонь может начаться прямо в проводке.",
+      "actions": "**Те же, что для №1:**\n1️⃣ МГНОВЕННО отключаю устр 5 и устр 29.\n2️⃣ Проверяю №72.\n3️⃣ Шлю SOS.\n4️⃣ Повторяю попытку каждую минуту.\n5️⃣ Жду команды \"отбой\".",
+      "parent_id": "0",
+      "name": "Датчик дыма у щитка",
+      "device_type": "device - пожарная безопасность",
+      "location": "Над щитком (устр 5), прямо над главным автоматом. Самое опасное место — здесь может загореться проводка.",
+      "physical": "Дубль первого датчика дыма, но локализован прямо над щитком.",
+      "elements": [
+        {
+          "element_id": "8.24",
+          "name": "Дым",
+          "actions": "",
+          "location": "Внутри устройства.",
+          "type": "smoke",
+          "entity_id": "binary_sensor.dymovoi_signalizator_2_smoke",
+          "unit": "on/off",
+          "status": "active"
+        },
+        {
+          "element_id": "8.25",
+          "name": "Батарея",
+          "actions": "",
+          "location": "Внутри датчика.",
+          "type": "battery",
+          "entity_id": "sensor.dymovoi_signalizator_2_battery",
+          "unit": "%",
+          "status": "active"
+        },
+        {
+          "element_id": "8.26",
+          "name": "Tamper",
+          "actions": "",
+          "location": "Внутри датчика.",
+          "type": "tamper",
+          "entity_id": "binary_sensor.dymovoi_signalizator_2_tamper",
+          "unit": "on/off",
+          "status": "ignore"
+        }
+      ]
+    },
+    {
+      "device_id": "9",
+      "logic_details": "**❗️ ПРОТЕЧКА.** Если `on` — это авария. Нужно срочно отключать всё, что связано с поливом.",
+      "actions": "1️⃣ Немедленно отключаю все розетки полива: №87,88,90,91,97,98,93.\n2️⃣ Проверяю, выключились ли.\n3️⃣ Шлю СРОЧНОЕ уведомление: *«💧 ПРОТЕЧКА! Весь полив отключён. Проверь канистры и шланги!»*\n4️⃣ Раз в 10 минут проверяю, не высохло ли.\n5️⃣ Если протечка устранена — уведомляю, но полив включаю только по команде.",
+      "parent_id": "0",
+      "name": "Датчик утечки воды",
+      "device_type": "device - защита от протечек",
+      "location": "На полу, рядом с канистрами для полива. Лежит в месте, куда может потечь вода.",
+      "physical": "Простой датчик протечки. Если на него попадает вода, выдаёт `on`.",
+      "elements": [
+        {
+          "element_id": "9.27",
+          "name": "Влага",
+          "actions": "",
+          "location": "На корпусе датчика.",
+          "type": "moisture",
+          "entity_id": "binary_sensor.datchik_utechki_vody_moisture",
+          "unit": "on/off",
+          "status": "active"
+        },
+        {
+          "element_id": "9.28",
+          "name": "Батарея",
+          "actions": "",
+          "location": "Внутри датчика.",
+          "type": "battery",
+          "entity_id": "sensor.datchik_utechki_vody_battery",
+          "unit": "%",
+          "status": "active"
+        }
+      ]
+    },
+    {
+      "device_id": "10",
+      "logic_details": "**❗️❗️❗️ ЭКСПЕРИМЕНТАЛЬНЫЙ ДАТЧИК.** Использую как ранний индикатор. Если поверхность сухая (0-5%), а внутри мокро — значит, либо перелив, либо вода не доходит.",
+      "actions": "1️⃣ Если <5-10% — поверхность сухая.\n2️⃣ Смотрю на основной датчик этого горшка (№35).\n3️⃣ Если основные датчики тоже низкие (<30%) — пора поливать.\n4️⃣ Если поверхность сухая, а внутри мокро (>50%) — уведомление о возможном переливе.",
+      "parent_id": "0",
+      "name": "Датчик поверхности (низ, большой белый)",
+      "device_type": "device - мониторинг почвы (поверхность)",
+      "location": "Самый большой белый горшок на нижнем ярусе. Датчик воткнут на поверхности, под керамзитом, на глубине 1-2 см.",
+      "physical": "- Горшок 25x25x60 см, объём 30-40 литров.\n- Датчик измеряет влажность только в верхнем слое, под керамзитом.",
+      "elements": [
+        {
+          "element_id": "10.29",
+          "name": "Влажность",
+          "actions": "",
+          "location": "На поверхности горшка.",
+          "type": "sensor",
+          "entity_id": "sensor.ogurets_vertikalnyi_humidity",
+          "unit": "%",
+          "status": "active"
+        },
+        {
+          "element_id": "10.30",
+          "name": "Температура",
+          "actions": "",
+          "location": "На поверхности.",
+          "type": "sensor",
+          "entity_id": "sensor.ogurets_vertikalnyi_temperature",
+          "unit": "°C",
+          "status": "active"
+        },
+        {
+          "element_id": "10.31",
+          "name": "Батарея",
+          "actions": "",
+          "location": "Внутри датчика.",
+          "type": "battery",
+          "entity_id": "sensor.ogurets_vertikalnyi_battery",
+          "unit": "%",
+          "status": "active"
+        }
+      ]
+    },
+    {
+      "device_id": "11",
+      "logic_details": "Это один из трёх китов, по которым я считаю среднюю влажность нижнего яруса. Вместе с №35 (белый) и №41 (круглый).",
+      "actions": "1️⃣ Участвую в расчёте среднего для низа: **(№35 + №32 + №41) / 3**.\n2️⃣ **Если среднее < 30%** — пора поливать нижний ярус.\n3️⃣ **Если среднее > 70%** — слишком мокро, предупреждаю о переливе.",
+      "parent_id": "0",
+      "name": "Датчик (низ, серый горшок, основной)",
+      "device_type": "device - мониторинг почвы (основной)",
+      "location": "Серый горшок на нижнем ярусе. Датчик воткнут глубоко, измеряет влажность во всём объёме грунта.",
+      "physical": "- Горшок 12x12x60 см, объём 15-20 литров.\n- Сверху керамзит 2-3 см.\n- **ОСНОВНОЙ ДАТЧИК ДЛЯ ПОЛИВА (НИЗ, СЕРЫЙ).**",
+      "elements": [
+        {
+          "element_id": "11.32",
+          "name": "Влажность (серый горшок)",
+          "actions": "",
+          "location": "Внутри грунта, глубоко.",
+          "type": "sensor",
+          "entity_id": "sensor.klubnika_poliv_niz_seryi_humidity",
+          "unit": "%",
+          "status": "active"
+        },
+        {
+          "element_id": "11.33",
+          "name": "Батарея (серый)",
+          "actions": "",
+          "location": "Внутри датчика.",
+          "type": "battery",
+          "entity_id": "sensor.klubnika_poliv_niz_seryi_battery",
+          "unit": "%",
+          "status": "active"
+        },
+        {
+          "element_id": "11.34",
+          "name": "Температура (серый)",
+          "actions": "",
+          "location": "Внутри грунта.",
+          "type": "sensor",
+          "entity_id": "sensor.klubnika_poliv_niz_seryi_temperature",
+          "unit": "°C",
+          "status": "active"
+        }
+      ]
+    },
+    {
+      "device_id": "12",
+      "logic_details": "",
+      "actions": "",
+      "parent_id": "0",
+      "name": "Датчик (низ, большой белый горшок, основной)",
+      "device_type": "device - мониторинг почвы (основной)",
+      "location": "Большой белый горшок на нижнем ярусе. Датчик внутри, глубоко.",
+      "physical": "- Самый большой горшок (30-40л).\n- **ОСНОВНОЙ ДАТЧИК ДЛЯ ПОЛИВА (НИЗ, БЕЛЫЙ).**",
+      "elements": [
+        {
+          "element_id": "12.35",
+          "name": "Влажность (большой белый)",
+          "actions": "",
+          "location": "Внутри грунта, глубоко.",
+          "type": "sensor",
+          "entity_id": "sensor.klubnika_vlazhnost_niz_belyi_humidity",
+          "unit": "%",
+          "status": "active"
+        },
+        {
+          "element_id": "12.36",
+          "name": "Температура (большой белый)",
+          "actions": "",
+          "location": "Внутри грунта.",
+          "type": "sensor",
+          "entity_id": "sensor.klubnika_vlazhnost_niz_belyi_temperature",
+          "unit": "°C",
+          "status": "active"
+        },
+        {
+          "element_id": "12.37",
+          "name": "Батарея (большой белый)",
+          "actions": "",
+          "location": "Внутри датчика.",
+          "type": "battery",
+          "entity_id": "sensor.klubnika_vlazhnost_niz_belyi_battery",
+          "unit": "%",
+          "status": "active"
+        }
+      ]
+    },
+    {
+      "device_id": "13",
+      "logic_details": "**❗️❗️❗️ ЭКСПЕРИМЕНТАЛЬНЫЙ.** Это НЕ ДУБЛЬ №29. №29 — грунт, №38 — воздух.",
+      "actions": "1️⃣ Сравниваю с №29 (грунт).\n2️⃣ Если влажность воздуха у корней >80% длительное время — включить вентиляторы.\n3️⃣ Если №29 низкий (<10%), а №38 тоже низкий (<50%) — срочно поливать.",
+      "parent_id": "0",
+      "name": "Датчик (низ, большой белый, воздух у корней)",
+      "device_type": "device - мониторинг воздуха в прикорневой зоне",
+      "location": "Большой белый горшок, НА поверхности. Лежит прямо на грунте/перлите, измеряет влажность воздуха у корней.",
+      "physical": "Измеряет влажность воздуха в прикорневой зоне. Обычно высокий показатель (70-80%), даже если грунт сухой.",
+      "elements": [
+        {
+          "element_id": "13.38",
+          "name": "Влажность воздуха у корней",
+          "actions": "",
+          "location": "На поверхности грунта.",
+          "type": "sensor",
+          "entity_id": "sensor.vlazhnost_nizhnii_gorshok_belyi_humidity",
+          "unit": "%",
+          "status": "active"
+        },
+        {
+          "element_id": "13.39",
+          "name": "Температура воздуха у корней",
+          "actions": "",
+          "location": "На поверхности.",
+          "type": "sensor",
+          "entity_id": "sensor.vlazhnost_nizhnii_gorshok_belyi_temperature",
+          "unit": "°C",
+          "status": "active"
+        },
+        {
+          "element_id": "13.40",
+          "name": "Батарея",
+          "actions": "",
+          "location": "Внутри датчика.",
+          "type": "battery",
+          "entity_id": "sensor.vlazhnost_nizhnii_gorshok_belyi_battery",
+          "unit": "%",
+          "status": "active"
+        }
+      ]
+    },
+    {
+      "device_id": "14",
+      "logic_details": "",
+      "actions": "",
+      "parent_id": "0",
+      "name": "Датчик (низ, круглый горшок у окна, основной)",
+      "device_type": "device - мониторинг почвы (основной)",
+      "location": "Круглый тестовый горшок у окна на нижнем ярусе. Внутри, глубоко.",
+      "physical": "- Круглый горшок, 1 куст (тестовый).\n- **ОСНОВНОЙ ДАТЧИК (КРУГЛЫЙ, НИЗ).**",
+      "elements": [
+        {
+          "element_id": "14.41",
+          "name": "Влажность (круглый)",
+          "actions": "",
+          "location": "Внутри грунта.",
+          "type": "sensor",
+          "entity_id": "sensor.sgs01_4_humidity",
+          "unit": "%",
+          "status": "active"
+        },
+        {
+          "element_id": "14.42",
+          "name": "Температура (круглый)",
+          "actions": "",
+          "location": "Внутри грунта.",
+          "type": "sensor",
+          "entity_id": "sensor.sgs01_4_temperature",
+          "unit": "°C",
+          "status": "active"
+        },
+        {
+          "element_id": "14.43",
+          "name": "Батарея (круглый)",
+          "actions": "",
+          "location": "Внутри датчика.",
+          "type": "battery",
+          "entity_id": "sensor.sgs01_4_battery",
+          "unit": "%",
+          "status": "active"
+        }
+      ]
+    },
+    {
+      "device_id": "15",
+      "logic_details": "",
+      "actions": "",
+      "parent_id": "0",
+      "name": "Датчик (верх, дальний горшок, поверхность)",
+      "device_type": "device - мониторинг почвы (поверхность)",
+      "location": "Дальний горшок на верхнем ярусе. Датчик на поверхности, глубина 1-2 см, под мульчой.",
+      "physical": "Поверхностная влажность верхнего яруса. Аналог №29 для верха.",
+      "elements": [
+        {
+          "element_id": "15.44",
+          "name": "Влажность поверхности (верх дальний)",
+          "actions": "",
+          "location": "На поверхности.",
+          "type": "sensor",
+          "entity_id": "sensor.vlazhnost_klubnika_verkh_chernyi_humidity",
+          "unit": "%",
+          "status": "active"
+        },
+        {
+          "element_id": "15.45",
+          "name": "Температура поверхности (верх дальний)",
+          "actions": "",
+          "location": "На поверхности.",
+          "type": "sensor",
+          "entity_id": "sensor.vlazhnost_klubnika_verkh_chernyi_temperature",
+          "unit": "°C",
+          "status": "active"
+        },
+        {
+          "element_id": "15.46",
+          "name": "Батарея",
+          "actions": "",
+          "location": "Внутри датчика.",
+          "type": "battery",
+          "entity_id": "sensor.vlazhnost_klubnika_verkh_chernyi_battery",
+          "unit": "%",
+          "status": "active"
+        }
+      ]
+    },
+    {
+      "device_id": "16",
+      "logic_details": "Участвую в расчёте средней влажности верхнего яруса вместе с №56 (у окна).",
+      "actions": "1️⃣ Участвую в формуле **(№47 + №56) / 2**.\n2️⃣ **Если среднее < 30%** — пора поливать верхний ярус.\n3️⃣ Если среднее >70% — перелив, предупредить.",
+      "parent_id": "0",
+      "name": "Датчик (верх, дальний горшок, основной)",
+      "device_type": "device - мониторинг почвы (основной)",
+      "location": "Дальний горшок на верхнем ярусе. Датчик внутри, глубоко.",
+      "physical": "- **ОСНОВНОЙ ДАТЧИК ДЛЯ ПОЛИВА (ВЕРХ, ДАЛЬНИЙ).**",
+      "elements": [
+        {
+          "element_id": "16.47",
+          "name": "Влажность (верх дальний основной)",
+          "actions": "",
+          "location": "Внутри грунта, глубоко.",
+          "type": "sensor",
+          "entity_id": "sensor.datchik_vlazhnosti_spotifilum_humidity",
+          "unit": "%",
+          "status": "active"
+        },
+        {
+          "element_id": "16.48",
+          "name": "Температура (верх дальний)",
+          "actions": "",
+          "location": "Внутри грунта.",
+          "type": "sensor",
+          "entity_id": "sensor.datchik_vlazhnosti_spotifilum_temperature",
+          "unit": "°C",
+          "status": "active"
+        },
+        {
+          "element_id": "16.49",
+          "name": "Батарея",
+          "actions": "",
+          "location": "Внутри датчика.",
+          "type": "battery",
+          "entity_id": "sensor.datchik_vlazhnosti_spotifilum_battery",
+          "unit": "%",
+          "status": "active"
+        }
+      ]
+    },
+    {
+      "device_id": "17",
+      "logic_details": "",
+      "actions": "",
+      "parent_id": "0",
+      "name": "Датчик (низ, круглый горшок, поверхность)",
+      "device_type": "device - мониторинг почвы (поверхность)",
+      "location": "Круглый горшок на нижнем ярусе. На поверхности, глубина 1-2 см.",
+      "elements": [
+        {
+          "element_id": "17.50",
+          "name": "Влажность поверхности (низ круглый)",
+          "actions": "",
+          "location": "На поверхности.",
+          "type": "sensor",
+          "entity_id": "sensor.vlazhnost_humidity",
+          "unit": "%",
+          "status": "active"
+        },
+        {
+          "element_id": "17.51",
+          "name": "Температура поверхности (низ круглый)",
+          "actions": "",
+          "location": "На поверхности.",
+          "type": "sensor",
+          "entity_id": "sensor.vlazhnost_temperature",
+          "unit": "°C",
+          "status": "active"
+        },
+        {
+          "element_id": "17.52",
+          "name": "Батарея",
+          "actions": "",
+          "location": "Внутри датчика.",
+          "type": "battery",
+          "entity_id": "sensor.vlazhnost_battery",
+          "unit": "%",
+          "status": "active"
+        }
+      ]
+    },
+    {
+      "device_id": "18",
+      "logic_details": "",
+      "actions": "",
+      "parent_id": "0",
+      "name": "Датчик (верх, горшок у окна, поверхность)",
+      "device_type": "device - мониторинг почвы (поверхность)",
+      "location": "Горшок у окна на верхнем ярусе. На поверхности, глубина 1-2 см.",
+      "elements": [
+        {
+          "element_id": "18.53",
+          "name": "Влажность поверхности (верх у окна)",
+          "actions": "",
+          "location": "На поверхности.",
+          "type": "sensor",
+          "entity_id": "sensor.chernyi_poverkhnost_u_okna_humidity",
+          "unit": "%",
+          "status": "active"
+        },
+        {
+          "element_id": "18.54",
+          "name": "Температура поверхности (верх у окна)",
+          "actions": "",
+          "location": "На поверхности.",
+          "type": "sensor",
+          "entity_id": "sensor.chernyi_poverkhnost_u_okna_temperature",
+          "unit": "°C",
+          "status": "active"
+        },
+        {
+          "element_id": "18.55",
+          "name": "Батарея",
+          "actions": "",
+          "location": "Внутри датчика.",
+          "type": "battery",
+          "entity_id": "sensor.chernyi_poverkhnost_u_okna_battery",
+          "unit": "%",
+          "status": "active"
+        }
+      ]
+    },
+    {
+      "device_id": "19",
+      "logic_details": "",
+      "actions": "",
+      "parent_id": "0",
+      "name": "Датчик (верх, горшок у окна, основной)",
+      "device_type": "device - мониторинг почвы (основной)",
+      "location": "Горшок у окна на верхнем ярусе. Внутри, глубоко.",
+      "physical": "- **ОСНОВНОЙ ДАТЧИК У ОКНА (ВЕРХ).**",
+      "elements": [
+        {
+          "element_id": "19.56",
+          "name": "Влажность (верх у окна основной)",
+          "actions": "",
+          "location": "Внутри грунта.",
+          "type": "sensor",
+          "entity_id": "sensor.klubnika_verkh_u_okna_humidity",
+          "unit": "%",
+          "status": "active"
+        },
+        {
+          "element_id": "19.57",
+          "name": "Температура (верх у окна)",
+          "actions": "",
+          "location": "Внутри грунта.",
+          "type": "sensor",
+          "entity_id": "sensor.klubnika_verkh_u_okna_temperature",
+          "unit": "°C",
+          "status": "active"
+        },
+        {
+          "element_id": "19.58",
+          "name": "Батарея",
+          "actions": "",
+          "location": "Внутри датчика.",
+          "type": "battery",
+          "entity_id": "sensor.klubnika_verkh_u_okna_battery",
+          "unit": "%",
+          "status": "active"
+        }
+      ]
+    },
+    {
+      "device_id": "20",
+      "logic_details": "",
+      "actions": "",
+      "parent_id": "0",
+      "name": "Датчик (верх, дальний, воздух у корней)",
+      "device_type": "device - мониторинг воздуха в прикорневой зоне",
+      "location": "Дальний горшок на верхнем ярусе, НА поверхности. Лежит на грунте, измеряет влажность воздуха у корней. Аналог №13 (№38) для верха.",
+      "elements": [
+        {
+          "element_id": "20.59",
+          "name": "Влажность воздуха у корней (верх)",
+          "actions": "",
+          "location": "На поверхности грунта.",
+          "type": "sensor",
+          "entity_id": "sensor.datchik_vlazhnosti_verkh_humidity",
+          "unit": "%",
+          "status": "active"
+        },
+        {
+          "element_id": "20.60",
+          "name": "Температура воздуха у корней (верх)",
+          "actions": "",
+          "location": "На поверхности.",
+          "type": "sensor",
+          "entity_id": "sensor.datchik_vlazhnosti_verkh_temperature",
+          "unit": "°C",
+          "status": "active"
+        },
+        {
+          "element_id": "20.61",
+          "name": "Батарея",
+          "actions": "",
+          "location": "Внутри датчика.",
+          "type": "battery",
+          "entity_id": "sensor.datchik_vlazhnosti_verkh_battery",
+          "unit": "%",
+          "status": "active"
+        }
+      ]
+    },
+    {
+      "device_id": "21",
+      "logic_details": "**❗️❗️❗️ КЛЮЧЕВОЙ ДАТЧИК ДЛЯ ПОНИМАНИЯ МИКРОКЛИМАТА НИЗА.** Показывает реальные условия, в которых находятся листья.",
+      "actions": "",
+      "parent_id": "0",
+      "name": "Датчик (низ, у куста с экраном)",
+      "device_type": "device - микроклимат у листьев (низ)",
+      "location": "Нижний ярус, висит НАД кустом, на уровне листьев. Направлен прямо на листву.",
+      "physical": "Измеряет то, что реально \"чувствуют\" листья на нижнем ярусе.",
+      "elements": [
+        {
+          "element_id": "21.62",
+          "name": "Влажность воздуха у листьев (низ)",
+          "actions": "",
+          "location": "На уровне листьев.",
+          "type": "sensor",
+          "entity_id": "sensor.temperature_and_humidity_sensor_humidity",
+          "unit": "%",
+          "logic_details": "**ГЛАВНЫЙ ДАТЧИК ДЛЯ УВЛАЖНИТЕЛЯ (НИЗ):**\n- Цель влажности: 60-70%\n- Если <55% — включать увлажнитель\n- Если >70% — выключать увлажнитель\n- Если >75-80% длительно — включать вентиляторы (№101)",
+          "status": "active"
+        },
+        {
+          "element_id": "21.63",
+          "name": "Температура воздуха у листьев (низ)",
+          "actions": "",
+          "location": "На уровне листьев.",
+          "type": "sensor",
+          "entity_id": "sensor.temperature_and_humidity_sensor_temperature",
+          "unit": "°C",
+          "logic_details": "- Цель: 22-26°C\n- >28°C — включить вентиляторы\n- <18°C — включить обогрев",
+          "status": "active"
+        },
+        {
+          "element_id": "21.64",
+          "name": "Батарея",
+          "actions": "",
+          "location": "Внутри датчика.",
+          "type": "battery",
+          "entity_id": "sensor.temperature_and_humidity_sensor_battery",
+          "unit": "%",
+          "status": "active"
+        }
+      ]
+    },
+    {
+      "device_id": "22",
+      "logic_details": "**❗️❗️❗️ САМЫЙ ВАЖНЫЙ ДАТЧИК ДЛЯ УВЛАЖНИТЕЛЯ И КЛИМАТ-КОНТРОЛЯ.**",
+      "actions": "",
+      "parent_id": "0",
+      "name": "Датчик (верх, у куста с экраном)",
+      "device_type": "device - микроклимат у листьев (верх)",
+      "location": "Верхний ярус, висит НАД кустом, на уровне листьев. Аналог №21 для верха.",
+      "physical": "Измеряет то, что реально \"чувствуют\" листья на верхнем ярусе.",
+      "elements": [
+        {
+          "element_id": "22.65",
+          "name": "Влажность воздуха у листьев (верх)",
+          "actions": "",
+          "location": "На уровне листьев.",
+          "type": "sensor",
+          "entity_id": "sensor.temperature_and_humidity_sensor_2_humidity",
+          "unit": "%",
+          "logic_details": "**ГЛАВНЫЙ ДАТЧИК ДЛЯ УВЛАЖНИТЕЛЯ (ВЕРХ):**\n- Цель влажности: 60-70%\n- Если <55% — включать увлажнитель\n- Если >70% — выключать увлажнитель\n- Если >75-80% длительно — включать вентиляторы (№100)",
+          "status": "active"
+        },
+        {
+          "element_id": "22.66",
+          "name": "Температура воздуха у листьев (верх)",
+          "actions": "",
+          "location": "На уровне листьев.",
+          "type": "sensor",
+          "entity_id": "sensor.temperature_and_humidity_sensor_2_temperature",
+          "unit": "°C",
+          "logic_details": "- Цель: 22-26°C\n- >28°C — включить вентиляторы/открыть штору\n- <18°C — включить обогрев",
+          "status": "active"
+        },
+        {
+          "element_id": "22.67",
+          "name": "Батарея",
+          "actions": "",
+          "location": "Внутри датчика.",
+          "type": "battery",
+          "entity_id": "sensor.temperature_and_humidity_sensor_2_battery",
+          "unit": "%",
+          "status": "active"
+        }
+      ]
+    },
+    {
+      "device_id": "23",
+      "logic_details": "**❗️❗️❗️ НЕ ИСПОЛЬЗОВАТЬ В АВТОМАТИЗАЦИЯХ!** Только для теста.",
+      "actions": "",
+      "parent_id": "0",
+      "name": "Датчик освещения (низ)",
+      "device_type": "device - мониторинг света (тестовый)",
+      "location": "Нижний ярус, лежит на видном месте.",
+      "physical": "Китайский датчик освещённости. Точности нет, только динамика.",
+      "elements": [
+        {
+          "element_id": "23.68",
+          "name": "Освещенность (низ)",
+          "actions": "",
+          "location": "На устройстве.",
+          "type": "sensor",
+          "entity_id": "sensor.luminance_sensor_illuminance",
+          "unit": "lx",
+          "status": "test"
+        },
+        {
+          "element_id": "23.69",
+          "name": "Батарея",
+          "actions": "",
+          "location": "Внутри датчика.",
+          "type": "battery",
+          "entity_id": "sensor.luminance_sensor_battery",
+          "unit": "%",
+          "status": "test"
+        }
+      ]
+    },
+    {
+      "device_id": "24",
+      "logic_details": "",
+      "actions": "",
+      "parent_id": "0",
+      "name": "Датчик температуры и влажности (общий низ)",
+      "device_type": "device - общий мониторинг климата",
+      "location": "Нижний ярус, центр. Висит в воздухе, на уровне растений.",
+      "elements": [
+        {
+          "element_id": "24.70",
+          "name": "Температура общая (низ)",
+          "actions": "",
+          "location": "В центре нижнего яруса.",
+          "type": "sensor",
+          "entity_id": "sensor.datchik_temeratury_i_vlazhnosti_temperature",
+          "unit": "°C",
+          "status": "active"
+        },
+        {
+          "element_id": "24.71",
+          "name": "Влажность общая (низ)",
+          "actions": "",
+          "location": "В центре нижнего яруса.",
+          "type": "sensor",
+          "entity_id": "sensor.datchik_temeratury_i_vlazhnosti_humidity",
+          "unit": "%",
+          "status": "active"
+        }
+      ]
+    },
+    {
+      "device_id": "25",
+      "logic_details": "",
+      "actions": "",
+      "parent_id": "0",
+      "name": "Датчик электричества",
+      "device_type": "device - контроль питания",
+      "location": "На вводе электричества в дом.",
+      "elements": [
+        {
+          "element_id": "25.72",
+          "name": "Питание",
+          "actions": "",
+          "location": "В щитке.",
+          "type": "binary_sensor",
+          "entity_id": "binary_sensor.25_datchik_elektrichestva_door",
+          "unit": "on/off",
+          "logic_details": "📌 **Мои действия при пропаже питания:**\n1️⃣ Отключаю всё энергоёмкое: лампы (№96,104), увлажнитель (№5,94), насосы (№97,98,93), вентиляторы (№100,101).\n2️⃣ Оставляю только критическое: термостат, датчики, бот.\n3️⃣ Уведомление о работе от резервной батареи.",
+          "status": "active"
+        },
+        {
+          "element_id": "25.73",
+          "name": "Батарея датчика электричества",
+          "actions": "",
+          "location": "Внутри датчика.",
+          "type": "battery",
+          "entity_id": "sensor.datchik_elektrichestva_battery",
+          "unit": "%",
+          "status": "active"
+        }
+      ]
+    },
+    {
+      "device_id": "26",
+      "logic_details": "",
+      "actions": "",
+      "parent_id": "0",
+      "name": "Датчики улица",
+      "device_type": "device - внешние погодные условия",
+      "location": "Снаружи дома, в защищённом месте.",
+      "elements": [
+        {
+          "element_id": "26.74",
+          "name": "Выключатель уличного датчика",
+          "actions": "",
+          "location": "На устройстве.",
+          "type": "switch",
+          "entity_id": "switch.temperature_and_humidity_alarm_switch",
+          "unit": "on/off",
+          "status": "ignore"
+        },
+        {
+          "element_id": "26.75",
+          "name": "Влажность улица",
+          "actions": "",
+          "location": "Снаружи.",
+          "type": "sensor",
+          "entity_id": "sensor.temperature_and_humidity_alarm_humidity",
+          "unit": "%",
+          "status": "ignore"
+        },
+        {
+          "element_id": "26.76",
+          "name": "Освещенность улица",
+          "actions": "- Если по времени день, но освещённость <1000 люкс (пасмурно) — штору можно не открывать.\n- Если >5000 люкс (солнце) — открывать.\n❗️ Нужно подобрать пороги.",
+          "location": "Снаружи, на открытом месте.",
+          "type": "sensor",
+          "entity_id": "sensor.temperature_and_humidity_alarm_illuminance",
+          "unit": "lx",
+          "status": "active"
+        },
+        {
+          "element_id": "26.77",
+          "name": "Температура улица",
+          "actions": "1️⃣ Для термостата: если на улице холодно (<5°C), начинаю греть раньше.\n2️⃣ Прогнозирование: резкое похолодание — скоро упадёт и внутри.\n3️⃣ Сравнение с внутренней температурой для оценки утепления.",
+          "location": "Снаружи.",
+          "type": "sensor",
+          "entity_id": "sensor.temperature_and_humidity_alarm_temperature",
+          "unit": "°C",
+          "status": "active"
+        },
+        {
+          "element_id": "26.78",
+          "name": "Состояние батареи улица",
+          "actions": "",
+          "location": "Внутри уличного датчика.",
+          "type": "sensor",
+          "entity_id": "sensor.temperature_and_humidity_alarm_battery_state",
+          "unit": "low/ok",
+          "status": "active"
+        }
+      ]
+    },
+    {
+      "device_id": "27",
+      "logic_details": "",
+      "actions": "",
+      "parent_id": "0",
+      "name": "Камера (верхний стеллаж справа)",
+      "device_type": "device - видеонаблюдение",
+      "elements": [
+        {
+          "element_id": "27.79",
+          "name": "Видео (верх правый)",
+          "actions": "",
+          "location": "Верхний ярус, справа. Направлена на правую часть и дальний горшок.",
+          "type": "camera",
+          "entity_id": "camera.kamera_verkhnii_stellazh_obshchii_plan",
+          "status": "active"
+        }
+      ]
+    },
+    {
+      "device_id": "28",
+      "logic_details": "",
+      "actions": "",
+      "parent_id": "0",
+      "name": "Камера (верхний стеллаж слева)",
+      "device_type": "device - видеонаблюдение",
+      "elements": [
+        {
+          "element_id": "28.80",
+          "name": "Видео (верх левый)",
+          "actions": "",
+          "location": "Верхний ярус, слева. Направлена на горшок у окна и штору.",
+          "type": "camera",
+          "entity_id": "camera.kamera_na_ogurtsy",
+          "status": "active"
+        }
+      ]
+    },
+    {
+      "device_id": "29",
+      "logic_details": "",
+      "actions": "",
+      "parent_id": "0",
+      "name": "WiFi переключатель (резервный)",
+      "device_type": "device - резервное питание",
+      "elements": [
+        {
+          "element_id": "29.81",
+          "name": "Резервный выключатель",
+          "actions": "**Действую только в двух случаях:**\n1️⃣ При пожаре, если устр 5 не отключился через 5 секунд.\n2️⃣ По твоей прямой команде.",
+          "location": "В щитке, рядом с устр 5.",
+          "type": "switch",
+          "entity_id": "switch.wifi_perekliuchatel_na_din_reiku_2_switch",
+          "unit": "on/off",
+          "status": "active"
+        }
+      ]
+    },
+    {
+      "device_id": "30",
+      "logic_details": "",
+      "actions": "",
+      "parent_id": "0",
+      "name": "Датчик освещения (верх)",
+      "device_type": "device - мониторинг света (тестовый)",
+      "elements": [
+        {
+          "element_id": "30.82",
+          "name": "Освещенность (верх)",
+          "actions": "",
+          "location": "Верхний ярус.",
+          "type": "sensor",
+          "entity_id": "sensor.lightsensor_illuminance",
+          "unit": "lx",
+          "status": "test"
+        },
+        {
+          "element_id": "30.83",
+          "name": "Светимость (верх)",
+          "actions": "",
+          "location": "На устройстве.",
+          "type": "sensor",
+          "entity_id": "sensor.lightsensor_luminosity",
+          "status": "test"
+        }
+      ]
+    },
+    {
+      "device_id": "31",
+      "logic_details": "**📡 СТАТУС СВЯЗИ.** Если есть проблема — датчики могут отваливаться.",
+      "actions": "",
+      "parent_id": "0",
+      "name": "Zigbee хаб",
+      "device_type": "device - координатор сети",
+      "location": "Где-то на веранде, подключен к розетке.",
+      "physical": "Zigbee-координатор. Обеспечивает связь со всеми Zigbee-датчиками.",
+      "elements": [
+        {
+          "element_id": "31.84",
+          "name": "Проблема Zigbee хаба",
+          "actions": "1️⃣ Уведомление: *«Проблема с Zigbee-хабом. Часть датчиков может не работать. Проверь питание или перезагрузи»*.\n2️⃣ Проверяю критичные Zigbee-датчики (21,22,62,65). Если они пропали — дублирую уведомление.",
+          "location": "На устройстве.",
+          "type": "binary_sensor",
+          "entity_id": "binary_sensor.multimode_gateway_mini_problem",
+          "unit": "on/off",
+          "status": "active"
+        }
+      ]
+    },
+    {
+      "device_id": "32",
+      "logic_details": "",
+      "actions": "",
+      "parent_id": "0",
+      "name": "Камера (нижний ярус слева)",
+      "device_type": "device - видеонаблюдение",
+      "elements": [
+        {
+          "element_id": "32.85",
+          "name": "Видео (низ левый)",
+          "actions": "",
+          "location": "Нижний ярус, слева. Направлена на серый горшок (устр 11).",
+          "type": "camera",
+          "entity_id": "camera.security_camera_4_2",
+          "status": "active"
+        }
+      ]
+    },
+    {
+      "device_id": "33",
+      "logic_details": "",
+      "actions": "",
+      "parent_id": "0",
+      "name": "Камера (нижний ярус справа)",
+      "device_type": "device - видеонаблюдение",
+      "elements": [
+        {
+          "element_id": "33.86",
+          "name": "Видео (низ правый)",
+          "actions": "",
+          "location": "Нижний ярус, справа. Направлена на большой белый (устр 12) и круглый (устр 14) горшки.",
+          "type": "camera",
+          "entity_id": "camera.kamera_vertikalnaia_pomidor",
+          "status": "active"
+        }
+      ]
+    },
+    {
+      "device_id": "34",
+      "logic_details": "**СИСТЕМА ПОЛИВА ВЕРХА.** Три розетки: основной, с удобрениями, защита.",
+      "actions": "",
+      "parent_id": "0",
+      "name": "Полив верхний ярус",
+      "device_type": "device - автоматический полив",
+      "location": "Верхний ярус, магистраль.",
+      "elements": [
+        {
+          "element_id": "34.87",
+          "name": "Полив верх (основной)",
+          "actions": "1️⃣ Проверяю среднюю влажность верха: (№47 + №56) / 2.\n2️⃣ Если <30% — пора поливать.\n3️⃣ Лимит: не больше 60 секунд в день.\n4️⃣ Включаю на 30-60 секунд.\n5️⃣ Записываю в лог время полива.\n6️⃣ Не поливаю повторно минимум 24 часа.\n7️⃣ Лучшее время — утро.",
+          "location": "Верхний ярус.",
+          "type": "switch",
+          "entity_id": "switch.klubnika_poliv_verkh_switch_1",
+          "unit": "on/off",
+          "status": "active"
+        },
+        {
+          "element_id": "34.88",
+          "name": "Полив верх (удобрения)",
+          "actions": "В дни внесения удобрений:\n1️⃣ Включаю вместо основной розетки.\n2️⃣ Длительность 30-60 секунд.\n3️⃣ Перед включением включаю насос перемешивания (№93) на 2 минуты.\n4️⃣ Частота: раз в неделю.",
+          "location": "Верхний ярус, линия с удобрениями.",
+          "type": "switch",
+          "entity_id": "switch.klubnika_poliv_verkh_switch_2",
+          "unit": "on/off",
+          "status": "active"
+        },
+        {
+          "element_id": "34.89",
+          "name": "Полив верх (защита)",
+          "actions": "Перед каждым поливом проверять наличие воды в баке. Если воды нет — не включать полив и уведомить.",
+          "location": "На линии полива.",
+          "type": "switch",
+          "entity_id": "switch.klubnika_poliv_verkh_switch_3",
+          "unit": "on/off",
+          "status": "active"
+        }
+      ]
+    },
+    {
+      "device_id": "35",
+      "logic_details": "**СИСТЕМА ПОЛИВА НИЗА.** Аналог устройства 34 для нижнего яруса.",
+      "actions": "",
+      "parent_id": "0",
+      "name": "Полив нижний ярус",
+      "device_type": "device - автоматический полив",
+      "location": "Нижний ярус, магистраль.",
+      "elements": [
+        {
+          "element_id": "35.90",
+          "name": "Полив низ (основной)",
+          "actions": "1️⃣ Проверяю среднюю влажность низа: (№35 + №32 + №41) / 3.\n2️⃣ Если <30% — пора поливать.\n3️⃣ Лимит: не больше 60 секунд в день.\n4️⃣ Включаю на 30-60 секунд.\n5️⃣ Записываю в лог.\n6️⃣ Не поливаю повторно минимум 24 часа.\n7️⃣ Лучше утром.",
+          "location": "Нижний ярус.",
+          "type": "switch",
+          "entity_id": "switch.klubnika_poliv_switch_1",
+          "unit": "on/off",
+          "status": "active"
+        },
+        {
+          "element_id": "35.91",
+          "name": "Полив низ (удобрения)",
+          "actions": "В дни внесения удобрений:\n1️⃣ Включаю вместо основной розетки.\n2️⃣ Длительность 30-60 секунд.\n3️⃣ Перед включением включаю насос перемешивания (№93) на 2 минуты.",
+          "location": "Нижний ярус, линия с удобрениями.",
+          "type": "switch",
+          "entity_id": "switch.klubnika_poliv_switch_2",
+          "unit": "on/off",
+          "status": "active"
+        },
+        {
+          "element_id": "35.92",
+          "name": "Полив низ (защита от сухого хода)",
+          "actions": "Перед каждым поливом низа проверять наличие воды в баке. Если воды нет — не включать полив и уведомить.",
+          "location": "На линии полива низа.",
+          "type": "switch",
+          "entity_id": "switch.klubnika_poliv_switch_3",
+          "unit": "on/off",
+          "status": "active"
+        }
+      ]
+    },
+    {
+      "device_id": "36",
+      "logic_details": "",
+      "actions": "",
+      "parent_id": "0",
+      "name": "Сетевой фильтр (3)",
+      "device_type": "device - питание вспомогательных устройств",
+      "elements": [
+        {
+          "element_id": "36.93",
+          "name": "Насос для перемешивания удобрений",
+          "actions": "Включать за 2 минуты до полива с удобрениями (№88 или №91):\n1️⃣ Включить насос.\n2️⃣ Подождать 2 минуты.\n3️⃣ Выключить насос (ДО начала полива).\n4️⃣ Включить полив с удобрениями.",
+          "location": "В зоне полива, рядом с баком для удобрений.",
+          "type": "switch",
+          "entity_id": "switch.smart_power_strip_eu_2_socket_4",
+          "unit": "on/off",
+          "status": "active"
+        },
+        {
+          "element_id": "36.94",
+          "name": "Розетка для увлажнителя",
+          "actions": "**Алгоритм включения:**\n1️⃣ Сначала включить эту розетку.\n2️⃣ Ждать 30 секунд.\n3️⃣ Включить сам увлажнитель (№5).\n**При выключении:**\n1️⃣ Сначала выключить увлажнитель (№5).\n2️⃣ Потом выключить эту розетку.",
+          "location": "Рядом с увлажнителем (устр 3).",
+          "type": "switch",
+          "entity_id": "switch.smart_power_strip_eu_2_socket_3",
+          "unit": "on/off",
+          "status": "active"
+        },
+        {
+          "element_id": "36.95",
+          "name": "USB датчик освещения",
+          "actions": "",
+          "location": "Питание датчика 30 (№82-83).",
+          "type": "switch",
+          "entity_id": "switch.smart_power_strip_eu_2_socket_5",
+          "unit": "on/off",
+          "status": "active"
+        }
+      ]
+    },
+    {
+      "device_id": "37",
+      "logic_details": "",
+      "actions": "",
+      "parent_id": "0",
+      "name": "Сетевой фильтр (2)",
+      "device_type": "device - питание основного оборудования",
+      "elements": [
+        {
+          "element_id": "37.96",
+          "name": "Свет верхний",
+          "actions": "1️⃣ Вкл/выкл по расписанию: 6:00 – 22:00 (16 часов).\n2️⃣ При пожаре — отключаю.\n3️⃣ При пропадании электричества — отключаю для экономии батареи.\n4️⃣ При возврате питания — включаю обратно, если по расписанию.",
+          "location": "Верхний ярус, основная лампа 300 Вт.",
+          "type": "light",
+          "entity_id": "switch.setevoi_filtr_klubnika_socket_2",
+          "unit": "on/off",
+          "status": "active"
+        },
+        {
+          "element_id": "37.97",
+          "name": "Насос полив верх",
+          "actions": "**Включать только вместе с поливом верха:**\n1️⃣ Включить насос.\n2️⃣ Подождать 30 секунд.\n3️⃣ Включить полив (№87 или №88).\n4️⃣ По окончании: выключить полив, подождать 2 сек, выключить насос.",
+          "location": "Питание насоса верхнего яруса.",
+          "type": "pump",
+          "entity_id": "switch.setevoi_filtr_klubnika_socket_4",
+          "unit": "on/off",
+          "status": "active"
+        },
+        {
+          "element_id": "37.98",
+          "name": "Насос полив низ",
+          "actions": "**Включать только вместе с поливом низа:**\n1️⃣ Включить насос.\n2️⃣ Подождать 30 секунд.\n3️⃣ Включить полив (№90 или №91).\n4️⃣ По окончании: выключить полив, подождать 2 сек, выключить насос.",
+          "location": "Питание насоса нижнего яруса.",
+          "type": "pump",
+          "entity_id": "switch.setevoi_filtr_klubnika_socket_3",
+          "unit": "on/off",
+          "status": "active"
+        },
+        {
+          "element_id": "37.99",
+          "name": "Питание камер",
+          "actions": "",
+          "location": "Питание 4 камер на стеллаже.",
+          "type": "socket",
+          "entity_id": "switch.setveoi_filtr_klubnika_socket_5",
+          "unit": "on/off",
+          "logic_details": "📌 **Мои действия (❗️ НОВАЯ ЛОГИКА, НУЖНО ПОДТВЕРЖДЕНИЕ):**\n1️⃣ Розетка по умолчанию выключена.\n2️⃣ Если нужно фото:\n- Включить розетку.\n- Подождать 30-60 сек (камеры загружаются).\n- Сделать фото.\n- Выключить розетку.\n3️⃣ Это экономит ресурс камер.",
+          "status": "need check"
+        }
+      ]
+    },
+    {
+      "device_id": "38",
+      "logic_details": "",
+      "actions": "",
+      "parent_id": "0",
+      "name": "Сетевой фильтр (1)",
+      "device_type": "device - вентиляция и доп. питание",
+      "elements": [
+        {
+          "element_id": "38.100",
+          "name": "Вентиляторы верх",
+          "actions": "**Включать при:**\n1️⃣ Влажности у листьев верха (№65) >75%\n2️⃣ Температуре у листьев верха (№66) >28°C\n3️⃣ Периодически для циркуляции\n**Режим работы:** 15 мин работы / 30 мин отдыха",
+          "location": "Верхний ярус, направлены на растения.",
+          "type": "fan",
+          "entity_id": "switch.setevoi_filtr_novyi_socket_1",
+          "unit": "on/off",
+          "status": "active"
+        },
+        {
+          "element_id": "38.101",
+          "name": "Вентиляторы низ (USB)",
+          "actions": "**Включать при:**\n1️⃣ Влажности у листьев низа (№62) >75%\n2️⃣ Температуре у листьев низа (№63) >28°C\n3️⃣ Периодически\n**Режим работы:** 15 мин / 30 мин отдыха",
+          "location": "Нижний ярус, USB-питание.",
+          "type": "fan",
+          "entity_id": "switch.setevoi_filtr_novyi_usb_1",
+          "unit": "on/off",
+          "status": "active"
+        },
+        {
+          "element_id": "38.102",
+          "name": "Питание датчика 24",
+          "actions": "",
+          "location": "Питание датчика 24 (№70-71).",
+          "type": "socket",
+          "entity_id": "switch.setevoi_filtr_Novyi_socket_2",
+          "unit": "on/off",
+          "status": "active"
+        },
+        {
+          "element_id": "38.103",
+          "name": "Питание датчика 4",
+          "actions": "",
+          "location": "Питание датчика 4 (№6-13).",
+          "type": "socket",
+          "entity_id": "switch.setevoi_filtr_novyi_socket_3",
+          "unit": "on/off",
+          "status": "active"
+        },
+        {
+          "element_id": "38.104",
+          "name": "Свет нижний ярус",
+          "actions": "1️⃣ Вкл/выкл по расписанию (синхронно с №96): 6:00 – 22:00.\n2️⃣ Отключать при пожаре и пропадании электричества.\n3️⃣ При возврате питания включать обратно.",
+          "location": "Нижний ярус, лампа 2×14 Вт.",
+          "type": "light",
+          "entity_id": "switch.setevoi_filtr_novyi_socket_4",
+          "unit": "on/off",
+          "status": "active"
+        }
+      ]
+    }
+  ]
+}

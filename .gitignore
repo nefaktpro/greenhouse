@@ -6,3 +6,27 @@ __pycache__/
 *.db
 data/runtime/
 data/logs/
+
+# runtime
+*.log
+decision_log.json
+
+# backups
+*.backup.json
+
+# temp tests
+test_*.py
+list_scenarios.py
+
+
+# runtime
+*.log
+decision_log.json
+
+# backups
+*.backup.json
+
+# temp tests
+test_*.py
+list_scenarios.py
+
