@@ -1,8 +1,12 @@
 __pycache__/
 *.pyc
-.env
-.env.*
 *.log
-data/runtime/*.json
-data/logs/*.json
-data/logs/*.log
+
+data/runtime/
+data/logs/
+data/memory/
+
+*.json
+!data/registry/*.json
+
+.env
