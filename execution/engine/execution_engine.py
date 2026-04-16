@@ -182,12 +182,21 @@ def _build_mode_flags() -> dict:
     if isinstance(raw, str):
         mode_name = raw.upper()
 
-        config = {}
+        defaults = {
+            "MANUAL": {"execute": True, "log": True, "ask": False, "ai_control": False},
+            "TEST": {"execute": False, "log": True, "ask": False, "ai_control": False},
+            "ASK": {"execute": False, "log": True, "ask": True, "ai_control": False},
+            "AUTO": {"execute": True, "log": True, "ask": False, "ai_control": False},
+            "AUTOPILOT": {"execute": True, "log": True, "ask": False, "ai_control": True},
+        }
+
+        config = defaults.get(mode_name, {}).copy()
         try:
             if hasattr(mode_manager, "get_mode_config"):
-                config = mode_manager.get_mode_config(mode_name) or {}
+                loaded = mode_manager.get_mode_config(mode_name) or {}
+                config.update(loaded)
         except Exception:
-            config = {}
+            pass
 
         return {
             "name": mode_name,

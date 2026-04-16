@@ -167,43 +167,20 @@ def register_handlers(bot):
 
     def _run_manual_executor(message, action_name, title):
         try:
-            current_mode = get_mode()
+            result = execute_decisions([{"action": action_name, "reason": "manual_test"}], dry_run=False)
+            item = result[0] if result else {}
 
-            if current_mode == "TEST":
-                bot.send_message(
-                    message.chat.id,
-                    f"{title}\n🧪 TEST: команда распознана, но не исполнена."
-                )
-                return
+            if item.get("blocked"):
+                msg = f"{title}\n🚫 Заблокировано: {item.get('block_reason', '-')}"
+            elif item.get("executed"):
+                extra = item.get("executor_message", "")
+                msg = f"{title}\n🟢 Выполнено" + (f"\n{extra}" if extra else "")
+            elif item.get("error"):
+                msg = f"{title}\n❌ Ошибка: {item.get('error')}"
+            else:
+                msg = f"{title}\n⚪ Не выполнено"
 
-            results = execute_action_key(action_name, force_execute=True)
-
-            success_count = sum(1 for r in results if getattr(r, "success", False))
-            total_count = len(results)
-
-            log_decisions(
-                mode=current_mode,
-                decisions=[{
-                    "action": action_name,
-                    "reason": "manual_command",
-                    "results": [str(r) for r in results],
-                }],
-                source="manual_command",
-            )
-
-            lines = [
-                title,
-                f"Режим: {current_mode}",
-                f"Успешно: {success_count}/{total_count}",
-            ]
-
-            for r in results:
-                icon = "✅" if getattr(r, "success", False) else "❌"
-                entity = getattr(r, "entity_id", None) or "-"
-                msg = getattr(r, "message", "") or "-"
-                lines.append(f"{icon} {entity} — {msg}")
-
-            bot.send_message(message.chat.id, "\n".join(lines))
+            bot.send_message(message.chat.id, msg)
         except Exception as e:
             safe_send(bot, str(message.chat.id), f"Ошибка manual fan command:\n{e}")
 
