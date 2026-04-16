@@ -10,3 +10,4 @@ data/memory/
 !data/registry/*.json
 
 .env
+.env*
