@@ -1,1 +1,42 @@
-{}
+{
+  "top_air_circulation": {
+    "allowed_actions": ["turn_on", "turn_off"],
+    "allowed_modes": ["MANUAL", "TEST", "ASK", "AUTO", "AUTOPILOT"],
+    "dependencies": [],
+    "constraints": {
+      "max_run_minutes": 120,
+      "cooldown_minutes": 1
+    },
+    "pre_checks": [
+      "device_available",
+      "no_fire_emergency"
+    ],
+    "post_checks": [
+      "entity_state_changed"
+    ],
+    "safety_flags": [
+      "disable_on_fire"
+    ],
+    "fallback_behavior": "log_and_notify"
+  },
+  "bottom_air_circulation": {
+    "allowed_actions": ["turn_on", "turn_off"],
+    "allowed_modes": ["MANUAL", "TEST", "ASK", "AUTO", "AUTOPILOT"],
+    "dependencies": [],
+    "constraints": {
+      "max_run_minutes": 120,
+      "cooldown_minutes": 1
+    },
+    "pre_checks": [
+      "device_available",
+      "no_fire_emergency"
+    ],
+    "post_checks": [
+      "entity_state_changed"
+    ],
+    "safety_flags": [
+      "disable_on_fire"
+    ],
+    "fallback_behavior": "log_and_notify"
+  }
+}

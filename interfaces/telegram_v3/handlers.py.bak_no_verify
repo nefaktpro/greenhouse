@@ -1,7 +1,11 @@
+import time
+import requests
+
 from telebot.types import ReplyKeyboardMarkup, KeyboardButton
 
 from execution.engine.execution_engine import execute_action_key
 from mode_manager import get_mode, set_mode
+from config import HOME_ASSISTANT_URL, HOME_ASSISTANT_TOKEN, REQUEST_TIMEOUT
 
 
 def build_main_menu():
@@ -21,7 +25,58 @@ def build_main_menu():
     return kb
 
 
-def _format_results(title: str, mode: str, results):
+def _ha_headers():
+    return {
+        "Authorization": f"Bearer {HOME_ASSISTANT_TOKEN}",
+        "Content-Type": "application/json",
+    }
+
+
+def read_entity_state(entity_id: str):
+    if not entity_id:
+        return None, "empty entity_id"
+
+    try:
+        r = requests.get(
+            f"{HOME_ASSISTANT_URL}/api/states/{entity_id}",
+            headers=_ha_headers(),
+            timeout=REQUEST_TIMEOUT,
+        )
+        r.raise_for_status()
+        data = r.json()
+        return data.get("state"), None
+    except Exception as e:
+        return None, str(e)
+
+
+def verify_entity_state(entity_id: str, expected_state: str, retries: int = 8, delay_seconds: float = 2.0):
+    last_state = None
+    last_error = None
+
+    for _ in range(retries):
+        state, err = read_entity_state(entity_id)
+        last_state = state
+        last_error = err
+
+        if err is None and str(state).lower() == expected_state.lower():
+            return True, state, None
+
+        time.sleep(delay_seconds)
+
+    return False, last_state, last_error
+
+
+def expected_state_for_action(action_key: str):
+    mapping = {
+        "fan_top_on": "on",
+        "fan_top_off": "off",
+        "fan_bottom_on": "on",
+        "fan_bottom_off": "off",
+    }
+    return mapping.get(action_key)
+
+
+def _format_results(title: str, mode: str, action_key: str, results):
     success_count = sum(1 for r in results if getattr(r, "success", False))
     total_count = len(results)
 
@@ -31,11 +86,37 @@ def _format_results(title: str, mode: str, results):
         f"Успешно: {success_count}/{total_count}",
     ]
 
+    expected_state = expected_state_for_action(action_key)
+
     for r in results:
-        icon = "✅" if getattr(r, "success", False) else "❌"
+        exec_ok = getattr(r, "success", False)
         entity = getattr(r, "entity_id", None) or "-"
         msg = getattr(r, "message", "") or "-"
-        lines.append(f"{icon} {entity} — {msg}")
+
+        if not exec_ok:
+            lines.append(f"❌ {entity} — {msg}")
+            continue
+
+        if not expected_state or entity == "-":
+            lines.append(f"✅ {entity} — {msg}")
+            continue
+
+        time.sleep(2.0)
+        verified, actual_state, verify_error = verify_entity_state(entity, expected_state)
+
+        if verified:
+            lines.append(f"✅ {entity} — Verified (state={actual_state})")
+        else:
+            if verify_error:
+                lines.append(
+                    f"⚠️ {entity} — Команда отправлена, но verify не подтвердился "
+                    f"(state={actual_state}, error={verify_error})"
+                )
+            else:
+                lines.append(
+                    f"⚠️ {entity} — Команда отправлена, но состояние не подтвердилось "
+                    f"(expected={expected_state}, actual={actual_state})"
+                )
 
     return "\n".join(lines)
 
@@ -101,7 +182,7 @@ def register_v3_handlers(bot):
         results = execute_action_key(action_key, force_execute=True)
         bot.send_message(
             message.chat.id,
-            _format_results(title, mode, results),
+            _format_results(title, mode, action_key, results),
             reply_markup=build_main_menu(),
         )
 

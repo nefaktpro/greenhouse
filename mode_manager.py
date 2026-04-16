@@ -10,7 +10,7 @@ DEFAULT_STATE = {
 
 MODE_CONFIG = {
     "MANUAL": {
-        "execute": False,
+        "execute": True,
         "log": False,
         "ask": False,
         "ai_control": False,

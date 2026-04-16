@@ -129,6 +129,8 @@ def execute_action_key(action_key: str, force_execute: bool = False) -> list[Exe
         try:
             domain, service, service_data = translate_operation_to_ha(operation, entity_id)
             raw = execute_ha_service(domain, service, service_data)
+            import time
+            time.sleep(2)
 
             results.append(
                 ExecutionResult(
