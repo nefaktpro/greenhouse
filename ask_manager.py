@@ -45,3 +45,34 @@ def build_ask_keyboard():
         types.InlineKeyboardButton("❌ Отмена", callback_data="ask|cancel"),
     )
     return kb
+
+
+def build_action_ask_payload(
+    *,
+    action_key: str,
+    target_role: str,
+    operation: str,
+    mode_flags: dict,
+    validation: dict,
+):
+    return {
+        "kind": "execution_action",
+        "action_key": action_key,
+        "target_role": target_role,
+        "operation": operation,
+        "mode_flags": mode_flags,
+        "validation": validation,
+        "status": "pending_confirmation",
+        "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+    }
+
+
+def get_pending_action_key():
+    state = load_ask_state()
+    if not state:
+        return None
+
+    if state.get("kind") != "execution_action":
+        return None
+
+    return state.get("action_key")

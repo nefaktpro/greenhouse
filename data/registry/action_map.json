@@ -46,5 +46,13 @@
   "watering_bottom_off": {
     "target_role": "watering_bottom_main_valve",
     "operation": "turn_off"
+  },
+  "fan_low_on": {
+    "target_role": "bottom_air_circulation",
+    "operation": "turn_on"
+  },
+  "fan_low_off": {
+    "target_role": "bottom_air_circulation",
+    "operation": "turn_off"
   }
 }

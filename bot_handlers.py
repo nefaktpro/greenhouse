@@ -21,6 +21,8 @@ from mode_manager import build_mode_text, build_mode_keyboard, set_mode, get_mod
 from test_mode import build_test_report
 from decision_logger import load_recent_logs, log_decisions
 from ask_manager import save_ask_state, load_ask_state, clear_ask_state, build_ask_keyboard
+from ask_manager import get_pending_action_key
+from execution.engine.execution_engine import execute_action_key
 from test_mode import get_ask_payload
 from action_executor import execute_decisions
 from ask_manager import load_ask_state
@@ -278,30 +280,76 @@ def register_handlers(bot):
             if action == "ok":
                 bot.answer_callback_query(call.id, "Подтверждено")
 
-                confirmed = execute_decisions(
-                    state.get("decisions", []),
-                    dry_run=True
-                )
+                if state.get("kind") == "execution_action":
+                    action_key = state.get("action_key")
+                    results = execute_action_key(action_key, force_execute=True)
 
-                log_decisions(
-                    mode="ASK",
-                    decisions=confirmed,
-                    source="ask_confirmed"
-                )
+                    success_count = sum(1 for r in results if getattr(r, "success", False))
+                    total_count = len(results)
 
-                bot.send_message(
-                    call.message.chat.id,
-                    "✅ Подтверждено. Dry-run: действия приняты к исполнению, но реально не отправлены."
-                )
+                    log_decisions(
+                        mode="ASK",
+                        decisions=[
+                            {
+                                "action": action_key,
+                                "reason": "ask_confirmed_execution_action",
+                                "results": [str(r) for r in results],
+                            }
+                        ],
+                        source="ask_confirmed"
+                    )
+
+                    lines = [
+                        "✅ Подтверждено.",
+                        f"Action: {action_key}",
+                        f"Успешно: {success_count}/{total_count}",
+                    ]
+
+                    for r in results:
+                        icon = "🟢" if getattr(r, "success", False) else "❌"
+                        entity = getattr(r, "entity_id", None) or "-"
+                        msg = getattr(r, "message", "")
+                        lines.append(f"{icon} {entity} — {msg}")
+
+                    bot.send_message(call.message.chat.id, "\n".join(lines))
+
+                else:
+                    confirmed = execute_decisions(
+                        state.get("decisions", []),
+                        dry_run=True
+                    )
+
+                    log_decisions(
+                        mode="ASK",
+                        decisions=confirmed,
+                        source="ask_confirmed"
+                    )
+
+                    bot.send_message(
+                        call.message.chat.id,
+                        "✅ Подтверждено. Dry-run: действия приняты к исполнению, но реально не отправлены."
+                    )
 
             elif action == "cancel":
                 bot.answer_callback_query(call.id, "Отменено")
 
-                log_decisions(
-                    mode="ASK",
-                    decisions=state.get("decisions", []),
-                    source="ask_cancelled"
-                )
+                if state.get("kind") == "execution_action":
+                    log_decisions(
+                        mode="ASK",
+                        decisions=[
+                            {
+                                "action": state.get("action_key"),
+                                "reason": "ask_cancelled_execution_action",
+                            }
+                        ],
+                        source="ask_cancelled"
+                    )
+                else:
+                    log_decisions(
+                        mode="ASK",
+                        decisions=state.get("decisions", []),
+                        source="ask_cancelled"
+                    )
 
                 bot.send_message(
                     call.message.chat.id,
@@ -627,6 +675,40 @@ def register_handlers(bot):
 
             # --- ВСЁ ОСТАЛЬНОЕ → ЧАТ ---
             response = handle_chat_message(text)
+
+            if response.response_type == "ask_candidate":
+                ask_payload = response.ask_payload or {}
+                save_ask_state(ask_payload)
+
+                bot.send_message(
+                    message.chat.id,
+                    response.reply_text,
+                    reply_markup=build_ask_keyboard(),
+                )
+                return
+
+            if response.response_type == "action_candidate":
+                action_payload = response.action_payload or {}
+                action_key = action_payload.get("action_key")
+
+                if not action_key:
+                    bot.send_message(message.chat.id, response.reply_text)
+                    return
+
+                results = execute_action_key(action_key)
+                lines = [response.reply_text, ""]
+
+                for r in results:
+                    icon = "🟢" if getattr(r, "success", False) else "❌"
+                    entity = getattr(r, "entity_id", None) or "-"
+                    msg = getattr(r, "message", "")
+                    lines.append(f"{icon} {entity} — {msg}")
+
+                bot.send_message(
+                    message.chat.id,
+                    "\n".join(lines),
+                )
+                return
 
             bot.send_message(
                 message.chat.id,

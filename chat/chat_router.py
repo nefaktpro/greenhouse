@@ -20,7 +20,7 @@ class ChatResponse:
 
 def _build_status_reply() -> str:
     mode = get_mode_config()
-    mode_name = mode.get("mode", "UNKNOWN")
+    mode_name = mode.get("title", "UNKNOWN")
     execute = "да" if mode.get("execute") else "нет"
     ask = "да" if mode.get("ask") else "нет"
     ai_control = "да" if mode.get("ai_control") else "нет"
@@ -65,7 +65,7 @@ def _build_memory_forget_reply(text: str) -> str:
 
 def _build_device_action_reply(parsed: ParsedIntent) -> ChatResponse:
     mode = get_mode_config()
-    mode_name = mode.get("mode", "UNKNOWN")
+    mode_name = mode.get("title", "UNKNOWN")
     target = parsed.target or "неизвестная цель"
     action = parsed.action or "unknown"
 
@@ -80,6 +80,15 @@ def _build_device_action_reply(parsed: ParsedIntent) -> ChatResponse:
         "turn_off": "выключить",
     }
 
+    action_key_map = {
+        ("turn_on", "fan_top"): "fan_top_on",
+        ("turn_off", "fan_top"): "fan_top_off",
+        ("turn_on", "fan_low"): "fan_low_on",
+        ("turn_off", "fan_low"): "fan_low_off",
+    }
+
+    action_key = action_key_map.get((action, target))
+
     human_target = human_target_map.get(target, target)
     human_action = human_action_map.get(action, action)
 
@@ -90,6 +99,15 @@ def _build_device_action_reply(parsed: ParsedIntent) -> ChatResponse:
         f"Режим системы: {mode_name}\n\n"
     )
 
+    if not action_key:
+        reply += "Для этой команды action_key пока не настроен."
+        return ChatResponse(
+            reply_text=reply,
+            parsed_intent=parsed,
+            response_type="message",
+            meta={"mode": mode_name, "unsupported_mapping": True},
+        )
+
     if mode_name == "TEST":
         reply += "Сейчас TEST-режим: я не выполняю действие, только показываю, что сделал бы."
         return ChatResponse(
@@ -97,34 +115,32 @@ def _build_device_action_reply(parsed: ParsedIntent) -> ChatResponse:
             parsed_intent=parsed,
             response_type="message",
             action_payload={
-                "action": action,
-                "target": target,
+                "action_key": action_key,
                 "dry_run": True,
             },
             meta={"mode": mode_name},
         )
 
     if mode.get("ask"):
-        reply += "Сейчас ASK-режим: следующим шагом это нужно будет отправлять в ASK-подтверждение."
+        reply += "Нужно подтверждение. Нажми OK или Отмена."
         return ChatResponse(
             reply_text=reply,
             parsed_intent=parsed,
             response_type="ask_candidate",
             ask_payload={
-                "action": action,
-                "target": target,
+                "kind": "execution_action",
+                "action_key": action_key,
             },
             meta={"mode": mode_name},
         )
 
-    reply += "Следующим шагом подключим реальное выполнение через existing executor."
+    reply += "Выполняю действие."
     return ChatResponse(
         reply_text=reply,
         parsed_intent=parsed,
         response_type="action_candidate",
         action_payload={
-            "action": action,
-            "target": target,
+            "action_key": action_key,
             "dry_run": False,
         },
         meta={"mode": mode_name},
