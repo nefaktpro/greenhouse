@@ -1,206 +1,5 @@
 [
   {
-    "timestamp": "2026-04-13 00:49:35",
-    "mode": "ASK",
-    "source": "ask_proposal",
-    "decisions": [
-      {
-        "type": "watering_low",
-        "sensor": "11",
-        "entity_id": "sensor.klubnika_poliv_niz_seryi_humidity",
-        "value": 24.0,
-        "threshold": 40,
-        "action": "water_low",
-        "reason": "Низ 24% < 40%",
-        "executed": false
-      },
-      {
-        "type": "watering_top",
-        "sensor": "16",
-        "entity_id": "sensor.datchik_vlazhnosti_spotifilum_humidity",
-        "value": 30.0,
-        "threshold": 33,
-        "action": "water_top",
-        "reason": "Верх 30% < 33%",
-        "executed": false
-      },
-      {
-        "type": "humidity_low",
-        "sensor": "21",
-        "entity_id": "sensor.temperature_and_humidity_sensor_humidity",
-        "value": 42.0,
-        "threshold": 50,
-        "action": "humidify",
-        "reason": "Листья низ 42% < 50%",
-        "executed": false
-      },
-      {
-        "type": "humidity_top",
-        "sensor": "22",
-        "entity_id": "sensor.temperature_and_humidity_sensor_2_humidity",
-        "value": 45.0,
-        "threshold": 50,
-        "action": "humidify",
-        "reason": "Листья верх 45% < 50%",
-        "executed": false
-      },
-      {
-        "type": "fan_low_off",
-        "sensor": "21",
-        "entity_id": "sensor.temperature_and_humidity_sensor_temperature",
-        "value": 15.0,
-        "threshold": 25,
-        "action": "fan_low_off",
-        "reason": "Температура низа 15.0°C < 25°C",
-        "executed": false
-      },
-      {
-        "type": "fan_top_off",
-        "sensor": "22",
-        "entity_id": "sensor.temperature_and_humidity_sensor_2_temperature",
-        "value": 15.0,
-        "threshold": 25,
-        "action": "fan_top_off",
-        "reason": "Температура верха 15.0°C < 25°C",
-        "executed": false
-      }
-    ]
-  },
-  {
-    "timestamp": "2026-04-13 01:19:35",
-    "mode": "ASK",
-    "source": "ask_proposal",
-    "decisions": [
-      {
-        "type": "watering_low",
-        "sensor": "11",
-        "entity_id": "sensor.klubnika_poliv_niz_seryi_humidity",
-        "value": 24.0,
-        "threshold": 40,
-        "action": "water_low",
-        "reason": "Низ 24% < 40%",
-        "executed": false
-      },
-      {
-        "type": "watering_top",
-        "sensor": "16",
-        "entity_id": "sensor.datchik_vlazhnosti_spotifilum_humidity",
-        "value": 30.0,
-        "threshold": 33,
-        "action": "water_top",
-        "reason": "Верх 30% < 33%",
-        "executed": false
-      },
-      {
-        "type": "humidity_low",
-        "sensor": "21",
-        "entity_id": "sensor.temperature_and_humidity_sensor_humidity",
-        "value": 42.0,
-        "threshold": 50,
-        "action": "humidify",
-        "reason": "Листья низ 42% < 50%",
-        "executed": false
-      },
-      {
-        "type": "humidity_top",
-        "sensor": "22",
-        "entity_id": "sensor.temperature_and_humidity_sensor_2_humidity",
-        "value": 45.0,
-        "threshold": 50,
-        "action": "humidify",
-        "reason": "Листья верх 45% < 50%",
-        "executed": false
-      },
-      {
-        "type": "fan_low_off",
-        "sensor": "21",
-        "entity_id": "sensor.temperature_and_humidity_sensor_temperature",
-        "value": 15.0,
-        "threshold": 25,
-        "action": "fan_low_off",
-        "reason": "Температура низа 15.0°C < 25°C",
-        "executed": false
-      },
-      {
-        "type": "fan_top_off",
-        "sensor": "22",
-        "entity_id": "sensor.temperature_and_humidity_sensor_2_temperature",
-        "value": 15.0,
-        "threshold": 25,
-        "action": "fan_top_off",
-        "reason": "Температура верха 15.0°C < 25°C",
-        "executed": false
-      }
-    ]
-  },
-  {
-    "timestamp": "2026-04-13 01:49:35",
-    "mode": "ASK",
-    "source": "ask_proposal",
-    "decisions": [
-      {
-        "type": "watering_low",
-        "sensor": "11",
-        "entity_id": "sensor.klubnika_poliv_niz_seryi_humidity",
-        "value": 24.0,
-        "threshold": 40,
-        "action": "water_low",
-        "reason": "Низ 24% < 40%",
-        "executed": false
-      },
-      {
-        "type": "watering_top",
-        "sensor": "16",
-        "entity_id": "sensor.datchik_vlazhnosti_spotifilum_humidity",
-        "value": 30.0,
-        "threshold": 33,
-        "action": "water_top",
-        "reason": "Верх 30% < 33%",
-        "executed": false
-      },
-      {
-        "type": "humidity_low",
-        "sensor": "21",
-        "entity_id": "sensor.temperature_and_humidity_sensor_humidity",
-        "value": 42.0,
-        "threshold": 50,
-        "action": "humidify",
-        "reason": "Листья низ 42% < 50%",
-        "executed": false
-      },
-      {
-        "type": "humidity_top",
-        "sensor": "22",
-        "entity_id": "sensor.temperature_and_humidity_sensor_2_humidity",
-        "value": 45.0,
-        "threshold": 50,
-        "action": "humidify",
-        "reason": "Листья верх 45% < 50%",
-        "executed": false
-      },
-      {
-        "type": "fan_low_off",
-        "sensor": "21",
-        "entity_id": "sensor.temperature_and_humidity_sensor_temperature",
-        "value": 15.0,
-        "threshold": 25,
-        "action": "fan_low_off",
-        "reason": "Температура низа 15.0°C < 25°C",
-        "executed": false
-      },
-      {
-        "type": "fan_top_off",
-        "sensor": "22",
-        "entity_id": "sensor.temperature_and_humidity_sensor_2_temperature",
-        "value": 15.0,
-        "threshold": 25,
-        "action": "fan_top_off",
-        "reason": "Температура верха 15.0°C < 25°C",
-        "executed": false
-      }
-    ]
-  },
-  {
     "timestamp": "2026-04-13 02:19:36",
     "mode": "ASK",
     "source": "ask_proposal",
@@ -12648,6 +12447,147 @@
         "results": [
           "ExecutionResult(success=True, action_key='fan_top_on', operation='turn_on', entity_id='switch.setevoi_filtr_novyi_socket_1', message='Executed', details={'raw': {'ok': True, 'domain': 'switch', 'service': 'turn_on', 'service_data': {'entity_id': 'switch.setevoi_filtr_novyi_socket_1'}}, 'device': {'device_id': '38.100', 'parent_id': '38', 'name': 'Вентиляторы верх', 'type': 'fan', 'entity_id': 'switch.setevoi_filtr_novyi_socket_1', 'unit': 'on/off', 'zone': 'utility_power', 'location': 'Верхний ярус', 'logical_role': 'top_air_circulation', 'is_enabled': 'true', 'is_virtual': 'false', 'criticality': 'normal', 'source': 'devices_source_full', 'notes': 'Обдув растений'}, 'validation': {'ok': True, 'failed_at': None, 'effective_action': 'execute', 'steps': [{'step': 'mode', 'ok': True, 'reason': 'ASK mode: confirmation required', 'code': 'ASK_REQUIRED', 'effective_action': 'ask'}, {'step': 'safety', 'ok': True, 'reason': 'safety validation passed', 'code': 'SAFETY_OK'}, {'step': 'cooldown', 'ok': True, 'reason': 'no cooldown configured', 'code': 'NO_COOLDOWN'}, {'step': 'conflict', 'ok': True, 'reason': 'no conflicts found', 'code': 'CONFLICTS_OK'}], 'confirmed_via_ask': True}, 'target_role': 'top_air_circulation'})"
         ]
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-04-16 19:51:23",
+    "mode": "ASK",
+    "source": "ask_proposal",
+    "decisions": [
+      {
+        "type": "watering_low",
+        "sensor": "11",
+        "entity_id": "sensor.klubnika_poliv_niz_seryi_humidity",
+        "value": 18.0,
+        "threshold": 40,
+        "action": "water_low",
+        "reason": "Низ 18% < 40%",
+        "executed": false
+      },
+      {
+        "type": "watering_top",
+        "sensor": "16",
+        "entity_id": "sensor.datchik_vlazhnosti_spotifilum_humidity",
+        "value": 1.0,
+        "threshold": 33,
+        "action": "water_top",
+        "reason": "Верх 1% < 33%",
+        "executed": false
+      },
+      {
+        "type": "humidity_low",
+        "sensor": "21",
+        "entity_id": "sensor.temperature_and_humidity_sensor_humidity",
+        "value": 41.0,
+        "threshold": 50,
+        "action": "humidify",
+        "reason": "Листья низ 41% < 50%",
+        "executed": false
+      },
+      {
+        "type": "humidity_top",
+        "sensor": "22",
+        "entity_id": "sensor.temperature_and_humidity_sensor_2_humidity",
+        "value": 25.0,
+        "threshold": 50,
+        "action": "humidify",
+        "reason": "Листья верх 25% < 50%",
+        "executed": false
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-04-16 19:51:48",
+    "mode": "ASK",
+    "source": "ask_proposal",
+    "decisions": [
+      {
+        "type": "watering_low",
+        "sensor": "11",
+        "entity_id": "sensor.klubnika_poliv_niz_seryi_humidity",
+        "value": 18.0,
+        "threshold": 40,
+        "action": "water_low",
+        "reason": "Низ 18% < 40%",
+        "executed": false
+      },
+      {
+        "type": "watering_top",
+        "sensor": "16",
+        "entity_id": "sensor.datchik_vlazhnosti_spotifilum_humidity",
+        "value": 1.0,
+        "threshold": 33,
+        "action": "water_top",
+        "reason": "Верх 1% < 33%",
+        "executed": false
+      },
+      {
+        "type": "humidity_low",
+        "sensor": "21",
+        "entity_id": "sensor.temperature_and_humidity_sensor_humidity",
+        "value": 41.0,
+        "threshold": 50,
+        "action": "humidify",
+        "reason": "Листья низ 41% < 50%",
+        "executed": false
+      },
+      {
+        "type": "humidity_top",
+        "sensor": "22",
+        "entity_id": "sensor.temperature_and_humidity_sensor_2_humidity",
+        "value": 25.0,
+        "threshold": 50,
+        "action": "humidify",
+        "reason": "Листья верх 25% < 50%",
+        "executed": false
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-04-16 19:52:08",
+    "mode": "ASK",
+    "source": "ask_cancelled",
+    "decisions": [
+      {
+        "type": "watering_low",
+        "sensor": "11",
+        "entity_id": "sensor.klubnika_poliv_niz_seryi_humidity",
+        "value": 18.0,
+        "threshold": 40,
+        "action": "water_low",
+        "reason": "Низ 18% < 40%",
+        "executed": false
+      },
+      {
+        "type": "watering_top",
+        "sensor": "16",
+        "entity_id": "sensor.datchik_vlazhnosti_spotifilum_humidity",
+        "value": 1.0,
+        "threshold": 33,
+        "action": "water_top",
+        "reason": "Верх 1% < 33%",
+        "executed": false
+      },
+      {
+        "type": "humidity_low",
+        "sensor": "21",
+        "entity_id": "sensor.temperature_and_humidity_sensor_humidity",
+        "value": 41.0,
+        "threshold": 50,
+        "action": "humidify",
+        "reason": "Листья низ 41% < 50%",
+        "executed": false
+      },
+      {
+        "type": "humidity_top",
+        "sensor": "22",
+        "entity_id": "sensor.temperature_and_humidity_sensor_2_humidity",
+        "value": 25.0,
+        "threshold": 50,
+        "action": "humidify",
+        "reason": "Листья верх 25% < 50%",
+        "executed": false
       }
     ]
   }

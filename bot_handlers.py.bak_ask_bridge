@@ -337,59 +337,21 @@ def register_handlers(bot):
                     bot.send_message(call.message.chat.id, "\n".join(lines))
 
                 else:
-                    from legacy.decision_action_bridge import extract_action_keys_from_decisions
+                    confirmed = execute_decisions(
+                        state.get("decisions", []),
+                        dry_run=True
+                    )
 
-                    decisions = state.get("decisions", []) or []
-                    action_keys = extract_action_keys_from_decisions(decisions)
+                    log_decisions(
+                        mode="ASK",
+                        decisions=confirmed,
+                        source="ask_confirmed"
+                    )
 
-                    if action_keys:
-                        execution_results = []
-                        lines = ["✅ ASK подтверждён. Запускаю через новый execution pipeline:"]
-
-                        for action_key in action_keys:
-                            results = execute_action_key(action_key, force_execute=True)
-                            execution_results.extend(results)
-
-                            for r in results:
-                                icon = "🟢" if getattr(r, "success", False) else "❌"
-                                entity = getattr(r, "entity_id", None) or "-"
-                                msg = getattr(r, "message", "") or "-"
-                                lines.append(f"{icon} {action_key} → {entity} — {msg}")
-
-                        log_decisions(
-                            mode="ASK",
-                            decisions=[
-                                {
-                                    "action": ak,
-                                    "reason": "ask_confirmed_bridge",
-                                }
-                                for ak in action_keys
-                            ],
-                            source="ask_confirmed_bridge"
-                        )
-
-                        bot.send_message(
-                            call.message.chat.id,
-                            "\n".join(lines),
-                        )
-
-                    else:
-                        confirmed = execute_decisions(
-                            decisions,
-                            dry_run=True
-                        )
-
-                        log_decisions(
-                            mode="ASK",
-                            decisions=confirmed,
-                            source="ask_confirmed_legacy_dry_run"
-                        )
-
-                        bot.send_message(
-                            call.message.chat.id,
-                            "⚠️ ASK подтверждён, но для этих решений ещё нет bridge в новый execution layer.\n"
-                            "Пока оставлен legacy dry-run fallback."
-                        )
+                    bot.send_message(
+                        call.message.chat.id,
+                        "✅ Подтверждено. Dry-run: действия приняты к исполнению, но реально не отправлены."
+                    )
 
             elif action == "cancel":
                 bot.answer_callback_query(call.id, "Отменено")
