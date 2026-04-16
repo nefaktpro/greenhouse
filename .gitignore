@@ -1,32 +1,8 @@
 __pycache__/
 *.pyc
-*.log
 .env
-*.sqlite
-*.db
-data/runtime/
-data/logs/
-
-# runtime
+.env.*
 *.log
-decision_log.json
-
-# backups
-*.backup.json
-
-# temp tests
-test_*.py
-list_scenarios.py
-
-
-# runtime
-*.log
-decision_log.json
-
-# backups
-*.backup.json
-
-# temp tests
-test_*.py
-list_scenarios.py
-
+data/runtime/*.json
+data/logs/*.json
+data/logs/*.log

@@ -1,8 +1,7 @@
 import json
 import os
-from services.paths import SYSTEM_STATE_PATH
 
-STATE_FILE = str(SYSTEM_STATE_PATH)
+STATE_FILE = "/home/mi/greenhouse_v2/system_state.json"
 
 DEFAULT_STATE = {
     "mode": "TEST"

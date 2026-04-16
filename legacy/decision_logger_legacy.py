@@ -1,9 +1,8 @@
 import json
 import os
 from datetime import datetime
-from services.paths import DECISION_LOG_PATH
 
-LOG_FILE = str(DECISION_LOG_PATH)
+LOG_FILE = "/home/mi/greenhouse_v2/decision_log.json"
 
 
 def log_decisions(mode, decisions, source="unknown"):

@@ -5,9 +5,8 @@ import json
 import os
 from datetime import datetime
 from telebot import types
-from services.paths import ASK_STATE_PATH
 
-ASK_STATE_FILE = str(ASK_STATE_PATH)
+ASK_STATE_FILE = "/home/mi/greenhouse_v2/ask_state.json"
 
 
 def save_ask_state(data):
