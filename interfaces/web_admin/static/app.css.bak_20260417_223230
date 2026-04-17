@@ -34,7 +34,9 @@ body {
   padding: 22px 18px;
 }
 
-.brand { margin-bottom: 24px; }
+.brand {
+  margin-bottom: 24px;
+}
 
 .brand-title {
   font-size: 20px;
@@ -62,7 +64,9 @@ body {
   padding: 12px 14px;
 }
 
-.menu a:hover { border-color: var(--accent); }
+.menu a:hover {
+  border-color: var(--accent);
+}
 
 .sidebar-box {
   background: var(--panel);
@@ -84,7 +88,6 @@ body {
 
 .main {
   padding: 24px;
-  min-width: 0;
 }
 
 .topbar {
@@ -92,7 +95,6 @@ body {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 22px;
-  gap: 12px;
 }
 
 .page-title {
@@ -107,20 +109,19 @@ body {
   margin-bottom: 18px;
 }
 
-.card,
-.hero-card {
+.card, .hero-card {
   background: linear-gradient(180deg, rgba(18,26,43,0.96) 0%, rgba(14,21,35,0.96) 100%);
   border: 1px solid var(--line);
   border-radius: 22px;
   padding: 20px;
   box-shadow: var(--shadow);
-  min-width: 0;
 }
 
-.hero-card.narrow { max-width: 620px; }
+.hero-card.narrow {
+  max-width: 620px;
+}
 
-.card-label,
-.hero-kicker {
+.card-label, .hero-kicker {
   color: var(--green);
   font-size: 12px;
   font-weight: 700;
@@ -129,9 +130,13 @@ body {
   margin-bottom: 10px;
 }
 
-h2, h3 { margin-top: 0; }
+h2, h3 {
+  margin-top: 0;
+}
 
-.muted { color: var(--muted); }
+.muted {
+  color: var(--muted);
+}
 
 .form-grid {
   display: grid;
@@ -155,7 +160,9 @@ input {
   outline: none;
 }
 
-input:focus { border-color: var(--accent); }
+input:focus {
+  border-color: var(--accent);
+}
 
 .button-row {
   display: flex;
@@ -164,9 +171,7 @@ input:focus { border-color: var(--accent); }
   margin-bottom: 14px;
 }
 
-button,
-.primary-btn,
-.ghost-btn-link {
+button, .primary-btn, .ghost-btn-link {
   appearance: none;
   text-decoration: none;
   border-radius: 14px;
@@ -182,8 +187,7 @@ button,
   border: 0;
 }
 
-.ghost-btn,
-.ghost-btn-link {
+.ghost-btn, .ghost-btn-link {
   background: transparent;
   color: var(--text);
   border: 1px solid var(--line);
@@ -198,14 +202,12 @@ button,
 .result-box {
   white-space: pre-wrap;
   word-break: break-word;
-  overflow-wrap: anywhere;
   margin: 0;
   padding: 14px;
   border-radius: 16px;
   background: #0a1020;
   border: 1px solid var(--line);
   min-height: 90px;
-  max-width: 100%;
   overflow: auto;
 }
 
@@ -216,53 +218,12 @@ button,
 }
 
 @media (max-width: 900px) {
-  body { grid-template-columns: 1fr; }
+  body {
+    grid-template-columns: 1fr;
+  }
+
   .sidebar {
     border-right: 0;
     border-bottom: 1px solid var(--line);
   }
-}
-
-.state-banner {
-  margin: 0 0 14px 0;
-  padding: 12px 14px;
-  border-radius: 14px;
-  border: 1px solid var(--line);
-  background: #0f1627;
-  color: var(--text);
-}
-
-.state-banner.ok {
-  border-color: rgba(102, 209, 143, 0.45);
-  background: rgba(35, 86, 56, 0.22);
-}
-
-.state-banner.warn {
-  border-color: rgba(255, 196, 92, 0.45);
-  background: rgba(120, 85, 20, 0.22);
-}
-
-.state-banner.error {
-  border-color: rgba(239, 107, 115, 0.45);
-  background: rgba(120, 32, 40, 0.22);
-}
-
-.pending-card {
-  margin: 0 0 14px 0;
-  padding: 16px;
-  border-radius: 18px;
-  border: 1px solid var(--line);
-  background: linear-gradient(180deg, rgba(25,34,53,0.96) 0%, rgba(13,20,34,0.96) 100%);
-}
-
-.pending-title {
-  font-size: 18px;
-  font-weight: 800;
-  margin-bottom: 8px;
-}
-
-.pending-meta {
-  color: var(--muted);
-  margin-bottom: 14px;
-  line-height: 1.5;
 }

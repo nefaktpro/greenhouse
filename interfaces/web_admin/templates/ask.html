@@ -1,66 +1,56 @@
-{% extends "base.html" %}
-{% block content %}
-<section class="card">
-  <div class="card-label">ASK control</div>
-  <h3>Подтверждение действий</h3>
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <title>Greenhouse v17 — ASK</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; margin: 24px; background: #0b1220; color: #eef2ff; }
+    .card { background: #141c2f; border: 1px solid #24314d; border-radius: 16px; padding: 16px; max-width: 900px; }
+    button { cursor: pointer; padding: 10px 14px; border-radius: 10px; border: 0; margin-right: 8px; font-weight: 600; }
+    .ok { background: #22c55e; color: #08120d; }
+    .cancel { background: #ef4444; color: white; }
+    .secondary { background: #334155; color: white; }
+    pre { white-space: pre-wrap; background: #0a0f1d; padding: 12px; border-radius: 12px; border: 1px solid #24314d; min-height: 220px; }
+    a { color: #c4b5fd; }
+  </style>
+</head>
+<body>
+  <h1>Greenhouse v17 — ASK</h1>
+  <p>
+    <a href="/control">Control</a> ·
+    <a href="/modes">Режимы</a>
+  </p>
 
-  <div class="button-row">
-    <button class="ghost-btn" onclick="loadAsk()">Обновить</button>
-    <button class="primary-btn" onclick="confirmAsk(true)">Подтвердить и выполнить</button>
-    <button class="ghost-btn" onclick="confirmAsk(false)">Подтвердить без выполнения</button>
-    <button class="danger-btn" onclick="cancelAsk()">Отменить</button>
+  <div class="card">
+    <p>
+      <button class="secondary" onclick="refreshAsk()">Обновить</button>
+      <button class="ok" onclick="confirmAsk()">Подтвердить</button>
+      <button class="cancel" onclick="cancelAsk()">Отменить</button>
+    </p>
+    <pre id="askState">Загрузка...</pre>
   </div>
 
-  <pre id="ask-current" class="result-box">Загрузка...</pre>
-  <pre id="ask-result" class="result-box"></pre>
-</section>
-{% endblock %}
+  <script>
+    async function refreshAsk() {
+      const r = await fetch('/api/ask/current');
+      const data = await r.json();
+      document.getElementById('askState').textContent = JSON.stringify(data, null, 2);
+    }
 
-{% block scripts %}
-<script>
-function authHeaders(withJson=true) {
-  const token = localStorage.getItem("gh_token");
-  if (!token) {
-    window.location.href = "/web/login";
-    throw new Error("not_authenticated");
-  }
-  const headers = { Authorization: "Bearer " + token };
-  if (withJson) headers["Content-Type"] = "application/json";
-  return headers;
-}
+    async function confirmAsk() {
+      const r = await fetch('/api/ask/confirm', {method: 'POST'});
+      const data = await r.json();
+      document.getElementById('askState').textContent = JSON.stringify(data, null, 2);
+    }
 
-async function loadAsk() {
-  const r = await fetch("/api/ask/current", { headers: authHeaders(false) });
-  const data = await r.json();
-  document.getElementById("ask-current").textContent = JSON.stringify(data, null, 2);
-}
+    async function cancelAsk() {
+      const r = await fetch('/api/ask/cancel', {method: 'POST'});
+      const data = await r.json();
+      document.getElementById('askState').textContent = JSON.stringify(data, null, 2);
+    }
 
-async function confirmAsk(executeFlag) {
-  const out = document.getElementById("ask-result");
-  out.textContent = "Выполняю confirm...";
-  const r = await fetch("/api/ask/confirm", {
-    method: "POST",
-    headers: authHeaders(true),
-    body: JSON.stringify({ execute: executeFlag })
-  });
-  const data = await r.json();
-  out.textContent = JSON.stringify(data, null, 2);
-  await loadAsk();
-}
-
-async function cancelAsk() {
-  const out = document.getElementById("ask-result");
-  out.textContent = "Выполняю cancel...";
-  const r = await fetch("/api/ask/cancel", {
-    method: "POST",
-    headers: authHeaders(true),
-    body: JSON.stringify({})
-  });
-  const data = await r.json();
-  out.textContent = JSON.stringify(data, null, 2);
-  await loadAsk();
-}
-
-loadAsk();
-</script>
-{% endblock %}
+    refreshAsk();
+  </script>
+</body>
+</html>

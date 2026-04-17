@@ -1,54 +1,55 @@
-{% extends "base.html" %}
-{% block content %}
-<section class="card">
-  <div class="card-label">Modes</div>
-  <h3>Управление режимами системы</h3>
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <title>Greenhouse v17 — Modes</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; margin: 24px; background: #0b1220; color: #eef2ff; }
+    .card { background: #141c2f; border: 1px solid #24314d; border-radius: 16px; padding: 16px; max-width: 900px; }
+    button { cursor: pointer; padding: 10px 14px; border-radius: 10px; border: 0; margin: 6px 8px 0 0; font-weight: 600; background: #8b5cf6; color: white; }
+    .secondary { background: #334155; }
+    pre { white-space: pre-wrap; background: #0a0f1d; padding: 12px; border-radius: 12px; border: 1px solid #24314d; min-height: 200px; }
+    a { color: #c4b5fd; }
+  </style>
+</head>
+<body>
+  <h1>Greenhouse v17 — Modes</h1>
+  <p>
+    <a href="/control">Control</a> ·
+    <a href="/ask">ASK</a>
+  </p>
 
-  <div class="button-row">
-    <button class="ghost-btn" onclick="loadMode()">Обновить</button>
-    <button class="primary-btn" onclick="setMode('MANUAL')">MANUAL</button>
-    <button class="ghost-btn" onclick="setMode('TEST')">TEST</button>
-    <button class="ghost-btn" onclick="setMode('ASK')">ASK</button>
-    <button class="ghost-btn" onclick="setMode('AUTO')">AUTO</button>
+  <div class="card">
+    <p>
+      <button onclick="setMode('MANUAL')">MANUAL</button>
+      <button onclick="setMode('TEST')">TEST</button>
+      <button onclick="setMode('ASK')">ASK</button>
+      <button onclick="setMode('AUTO')">AUTO</button>
+      <button onclick="setMode('AUTOPILOT')">AUTOPILOT</button>
+      <button class="secondary" onclick="refreshMode()">Обновить</button>
+    </p>
+    <pre id="modeState">Загрузка...</pre>
   </div>
 
-  <pre id="mode-current" class="result-box">Загрузка...</pre>
-  <pre id="mode-result" class="result-box"></pre>
-</section>
-{% endblock %}
+  <script>
+    async function refreshMode() {
+      const r = await fetch('/api/modes/current');
+      const data = await r.json();
+      document.getElementById('modeState').textContent = JSON.stringify(data, null, 2);
+    }
 
-{% block scripts %}
-<script>
-function authHeaders(withJson=true) {
-  const token = localStorage.getItem("gh_token");
-  if (!token) {
-    window.location.href = "/web/login";
-    throw new Error("not_authenticated");
-  }
-  const headers = { Authorization: "Bearer " + token };
-  if (withJson) headers["Content-Type"] = "application/json";
-  return headers;
-}
+    async function setMode(mode) {
+      const r = await fetch('/api/modes/set', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({mode})
+      });
+      const data = await r.json();
+      document.getElementById('modeState').textContent = JSON.stringify(data, null, 2);
+    }
 
-async function loadMode() {
-  const r = await fetch("/api/modes/current", { headers: authHeaders(false) });
-  const data = await r.json();
-  document.getElementById("mode-current").textContent = JSON.stringify(data, null, 2);
-}
-
-async function setMode(mode) {
-  const out = document.getElementById("mode-result");
-  out.textContent = "Переключаю режим...";
-  const r = await fetch("/api/modes/set", {
-    method: "POST",
-    headers: authHeaders(true),
-    body: JSON.stringify({ mode })
-  });
-  const data = await r.json();
-  out.textContent = JSON.stringify(data, null, 2);
-  await loadMode();
-}
-
-loadMode();
-</script>
-{% endblock %}
+    refreshMode();
+  </script>
+</body>
+</html>
