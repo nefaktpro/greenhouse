@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="cards-grid">
+  <article class="card">
+    <div class="card-label">Registry</div>
+    <h3>Devices</h3>
+    <pre id="devices-box" class="result-box">Загрузка...</pre>
+  </article>
+
+  <article class="card">
+    <div class="card-label">Registry</div>
+    <h3>Capabilities</h3>
+    <pre id="capabilities-box" class="result-box">Загрузка...</pre>
+  </article>
+
+  <article class="card">
+    <div class="card-label">Registry</div>
+    <h3>Scenarios</h3>
+    <pre id="scenarios-box" class="result-box">Загрузка...</pre>
+  </article>
+
+  <article class="card">
+    <div class="card-label">Registry</div>
+    <h3>Actions</h3>
+    <pre id="actions-box" class="result-box">Загрузка...</pre>
+  </article>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function loadRegistry() {
+  const token = localStorage.getItem("gh_token");
+  if (!token) {
+    window.location.href = "/web/login";
+    return;
+  }
+
+  const headers = { Authorization: "Bearer " + token };
+
+  const [d, c, s, a] = await Promise.all([
+    fetch("/api/registry/devices", { headers }),
+    fetch("/api/registry/capabilities", { headers }),
+    fetch("/api/registry/scenarios", { headers }),
+    fetch("/api/registry/actions", { headers })
+  ]);
+
+  document.getElementById("devices-box").textContent = JSON.stringify(await d.json(), null, 2);
+  document.getElementById("capabilities-box").textContent = JSON.stringify(await c.json(), null, 2);
+  document.getElementById("scenarios-box").textContent = JSON.stringify(await s.json(), null, 2);
+  document.getElementById("actions-box").textContent = JSON.stringify(await a.json(), null, 2);
+}
+loadRegistry();
+</script>
+{% endblock %}

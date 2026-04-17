@@ -1,0 +1,65 @@
+{% set page_id = 'modes' %}
+{% extends "base.html" %}
+
+{% block title %}Greenhouse v17 — Modes{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="eyebrow">Modes</div>
+  <h2 style="font-size:24px;">Управление режимами системы</h2>
+
+  <div class="modes-grid" style="margin:18px 0 16px 0;">
+    <button class="btn mode-btn" onclick="loadMode()">Обновить</button>
+    <button class="btn mode-btn" onclick="setMode('MANUAL')">MANUAL</button>
+    <button class="btn mode-btn" onclick="setMode('TEST')">TEST</button>
+    <button class="btn mode-btn" onclick="setMode('ASK')">ASK</button>
+    <button class="btn mode-btn" onclick="setMode('AUTO')">AUTO</button>
+    <button class="btn mode-btn" onclick="setMode('AUTOPILOT')">AUTOPILOT</button>
+  </div>
+
+  <div id="modeHuman" class="result">Загрузка...</div>
+  <div id="modeResult" class="result"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  async function loadMode() {
+    const box = document.getElementById("modeHuman");
+    try {
+      const mode = await GH.api("/api/modes/current");
+      box.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px;">
+          <div style="font-size:22px;font-weight:800;">${(mode.mode || "—").toUpperCase()}</div>
+          ${GH.modeChip(mode.mode)}
+        </div>
+        ${GH.renderModeFlags(mode.flags || {})}
+        <div class="kv">
+          <div>name</div><div>${mode.flags?.name || mode.mode || "—"}</div>
+          <div>mode</div><div>${mode.mode || "—"}</div>
+        </div>
+      `;
+    } catch (e) {
+      box.textContent = `Ошибка загрузки режима: ${e.message}`;
+    }
+  }
+
+  async function setMode(mode) {
+    const result = document.getElementById("modeResult");
+    try {
+      GH.showResult(result, `Переключаю в ${mode}...`, "warn");
+      const data = await GH.postFirstOk([
+        { url: `/api/modes/set/${mode}` },
+        { url: `/api/modes/${mode}` },
+        { url: `/api/modes/set`, body: { mode } }
+      ]);
+      GH.showResult(result, `Режим переключён: ${data.mode || mode}`, "ok");
+      await loadMode();
+    } catch (e) {
+      GH.showResult(result, `Ошибка переключения режима: ${e.message}`, "error");
+    }
+  }
+
+  loadMode();
+</script>
+{% endblock %}

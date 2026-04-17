@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <title>Greenhouse v17 — ASK</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; margin: 24px; background: #0b1220; color: #eef2ff; }
+    .card { background: #141c2f; border: 1px solid #24314d; border-radius: 16px; padding: 16px; max-width: 900px; }
+    button { cursor: pointer; padding: 10px 14px; border-radius: 10px; border: 0; margin-right: 8px; font-weight: 600; }
+    .ok { background: #22c55e; color: #08120d; }
+    .cancel { background: #ef4444; color: white; }
+    .secondary { background: #334155; color: white; }
+    pre { white-space: pre-wrap; background: #0a0f1d; padding: 12px; border-radius: 12px; border: 1px solid #24314d; min-height: 220px; }
+    a { color: #c4b5fd; }
+  </style>
+</head>
+<body>
+  <h1>Greenhouse v17 — ASK</h1>
+  <p>
+    <a href="/control">Control</a> ·
+    <a href="/modes">Режимы</a>
+  </p>
+
+  <div class="card">
+    <p>
+      <button class="secondary" onclick="refreshAsk()">Обновить</button>
+      <button class="ok" onclick="confirmAsk()">Подтвердить</button>
+      <button class="cancel" onclick="cancelAsk()">Отменить</button>
+    </p>
+    <pre id="askState">Загрузка...</pre>
+  </div>
+
+  <script>
+    async function refreshAsk() {
+      const r = await fetch('/api/ask/current');
+      const data = await r.json();
+      document.getElementById('askState').textContent = JSON.stringify(data, null, 2);
+    }
+
+    async function confirmAsk() {
+      const r = await fetch('/api/ask/confirm', {method: 'POST'});
+      const data = await r.json();
+      document.getElementById('askState').textContent = JSON.stringify(data, null, 2);
+    }
+
+    async function cancelAsk() {
+      const r = await fetch('/api/ask/cancel', {method: 'POST'});
+      const data = await r.json();
+      document.getElementById('askState').textContent = JSON.stringify(data, null, 2);
+    }
+
+    refreshAsk();
+  </script>
+</body>
+</html>

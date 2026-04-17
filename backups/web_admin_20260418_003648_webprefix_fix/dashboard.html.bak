@@ -1,0 +1,88 @@
+{% set page_id = 'dashboard' %}
+{% extends "base.html" %}
+
+{% block title %}Greenhouse v17 — Dashboard{% endblock %}
+
+{% block content %}
+<div class="chips" style="margin-bottom:18px;">
+  <span id="chipMode" class="chip">Mode: ...</span>
+  <span id="chipExec" class="chip">Execution: ...</span>
+  <span id="chipAsk" class="chip">Pending ASK: ...</span>
+  <span class="chip ok">Core: online</span>
+</div>
+
+<div class="layout-grid">
+  <section class="card">
+    <div class="eyebrow">Система</div>
+    <h2>Текущий режим</h2>
+    <div id="modeBox" class="result">Загрузка...</div>
+  </section>
+
+  <section class="card">
+    <div class="eyebrow">Исполнение</div>
+    <h2>Текущий ASK</h2>
+    <div id="askBox" class="result">Загрузка...</div>
+  </section>
+
+  <section class="card">
+    <div class="eyebrow">Возможности</div>
+    <h2>Что уже есть</h2>
+    <div class="list" style="margin-top:14px;">
+      <div class="row"><div><div class="name">ASK current / confirm / cancel</div></div></div>
+      <div class="row"><div><div class="name">Режимы системы</div></div></div>
+      <div class="row"><div><div class="name">Registry / actions / capabilities / scenarios</div></div></div>
+      <div class="row"><div><div class="name">Execution + verify через общий v17 pipeline</div></div></div>
+      <div class="row"><div><div class="name">Telegram и Web поверх одного контура</div></div></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="eyebrow">Навигация</div>
+    <h2>Быстрые действия</h2>
+    <div class="cta-grid" style="margin-top:14px;">
+      <a class="btn" href="/control">Открыть Control</a>
+      <a class="btn" href="/ask">Открыть ASK</a>
+      <a class="btn" href="/modes">Modes</a>
+      <a class="btn" href="/registry">Registry</a>
+    </div>
+  </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  async function loadDashboard() {
+    const modeBox = document.getElementById("modeBox");
+    const askBox = document.getElementById("askBox");
+    try {
+      const [mode, ask] = await Promise.all([
+        GH.api("/api/modes/current"),
+        GH.api("/api/ask/current")
+      ]);
+
+      document.getElementById("chipMode").outerHTML =
+        `<span id="chipMode" class="chip">Mode: ${(mode.mode || "—").toUpperCase()}</span>`;
+      document.getElementById("chipExec").outerHTML =
+        `<span id="chipExec" class="chip ${mode.flags?.execute ? "ok" : ""}">Execution: ${GH.fmtBool(!!mode.flags?.execute)}</span>`;
+      document.getElementById("chipAsk").outerHTML =
+        `<span id="chipAsk" class="chip ${ask.has_pending ? "warn" : ""}">Pending ASK: ${ask.has_pending ? "yes" : "no"}</span>`;
+
+      modeBox.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px;">
+          <div style="font-size:22px;font-weight:800;">${(mode.mode || "—").toUpperCase()}</div>
+          ${GH.modeChip(mode.mode)}
+        </div>
+        ${GH.renderModeFlags(mode.flags || {})}
+      `;
+
+      askBox.innerHTML = ask.has_pending
+        ? GH.renderAskCard(ask.item)
+        : `<div class="empty">Сейчас нет pending ASK. Это хорошо для спокойного состояния системы.</div>`;
+    } catch (e) {
+      modeBox.textContent = `Ошибка: ${e.message}`;
+      askBox.textContent = `Ошибка: ${e.message}`;
+    }
+  }
+  loadDashboard();
+</script>
+{% endblock %}

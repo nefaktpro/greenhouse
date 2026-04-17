@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <title>Greenhouse v17 — Control</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; margin: 24px; background: #0b1220; color: #eef2ff; }
+    h1, h2 { margin: 0 0 12px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+    .card { background: #141c2f; border: 1px solid #24314d; border-radius: 16px; padding: 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.25); }
+    button { cursor: pointer; padding: 10px 14px; border-radius: 10px; border: 0; margin: 6px 8px 0 0; font-weight: 600; }
+    .primary { background: #8b5cf6; color: white; }
+    .secondary { background: #334155; color: white; }
+    .warn { background: #f59e0b; color: black; }
+    pre { white-space: pre-wrap; background: #0a0f1d; padding: 12px; border-radius: 12px; border: 1px solid #24314d; min-height: 140px; }
+    .row { margin-top: 12px; }
+    a { color: #c4b5fd; }
+  </style>
+</head>
+<body>
+  <h1>Greenhouse v17 — Control</h1>
+  <p>
+    <a href="/modes">Режимы</a> ·
+    <a href="/ask">ASK</a>
+  </p>
+
+  <div class="grid">
+    <div class="card">
+      <h2>Вентиляторы</h2>
+      <div class="row">
+        <button class="primary" onclick="execAction('fan_top_on')">Верх ON</button>
+        <button class="secondary" onclick="execAction('fan_top_off')">Верх OFF</button>
+      </div>
+      <div class="row">
+        <button class="primary" onclick="execAction('fan_bottom_on')">Низ ON</button>
+        <button class="secondary" onclick="execAction('fan_bottom_off')">Низ OFF</button>
+      </div>
+      <div class="row">
+        <button class="warn" onclick="askAction('fan_top_on', 'Верх: включить вентиляторы')">ASK верх ON</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Результат</h2>
+      <pre id="result">Здесь появится ответ API...</pre>
+    </div>
+  </div>
+
+  <script>
+    async function execAction(actionKey) {
+      const r = await fetch('/api/actions/execute', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({action_key: actionKey, ask: false})
+      });
+      const data = await r.json();
+      document.getElementById('result').textContent = JSON.stringify(data, null, 2);
+    }
+
+    async function askAction(actionKey, title) {
+      const r = await fetch('/api/actions/execute', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({action_key: actionKey, ask: true, title})
+      });
+      const data = await r.json();
+      document.getElementById('result').textContent = JSON.stringify(data, null, 2);
+    }
+  </script>
+</body>
+</html>

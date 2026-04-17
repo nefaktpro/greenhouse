@@ -54,5 +54,29 @@
   "fan_low_off": {
     "target_role": "bottom_air_circulation",
     "operation": "turn_off"
+  },
+  "curtain_open": {
+    "target_role": "main_curtain",
+    "operation": "open"
+  },
+  "curtain_close": {
+    "target_role": "main_curtain",
+    "operation": "close"
+  },
+  "light_top_on": {
+    "target_role": "light_top_main",
+    "operation": "turn_on"
+  },
+  "light_top_off": {
+    "target_role": "light_top_main",
+    "operation": "turn_off"
+  },
+  "light_bottom_on": {
+    "target_role": "light_bottom_main",
+    "operation": "turn_on"
+  },
+  "light_bottom_off": {
+    "target_role": "light_bottom_main",
+    "operation": "turn_off"
   }
 }

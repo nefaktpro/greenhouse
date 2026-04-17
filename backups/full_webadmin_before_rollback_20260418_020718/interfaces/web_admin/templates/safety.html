@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Safety — Greenhouse v17{% endblock %}
+
+{% block content %}
+<h1>Safety</h1>
+<p class="muted">Критичные состояния и текущая safety-сводка.</p>
+
+<div class="grid">
+  <section class="card">
+    <h2>Safety API</h2>
+    <pre id="safetyApiBox">Загрузка...</pre>
+  </section>
+
+  <section class="card">
+    <h2>Подсказка</h2>
+    <p>При пожарной логике сначала отключается <strong>щиток веранда</strong>, затем резервный выключатель веранды. Это закреплённое правило проекта. :contentReference[oaicite:0]{index=0}</p>
+  </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function loadSafety() {
+  try {
+    const r = await fetch('/api/monitoring/safety');
+    const data = await r.json();
+    document.getElementById('safetyApiBox').textContent = JSON.stringify(data, null, 2);
+  } catch (e) {
+    document.getElementById('safetyApiBox').textContent = "Ошибка загрузки: " + e;
+  }
+}
+
+loadSafety();
+</script>
+{% endblock %}
