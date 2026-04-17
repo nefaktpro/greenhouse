@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <title>Greenhouse v17 — Control</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="/static/app.css">
+  <style>
+    .control-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); gap:16px; }
+    .control-actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:12px; }
+    .result-box { min-height:220px; white-space:pre-wrap; font-family:monospace; }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header class="hero">
+      <div>
+        <h1>Control</h1>
+        <p>Точечный экран действий. Основной сайт не заменяет.</p>
+      </div>
+      <nav class="topnav">
+        <a href="/web/">Главная</a>
+        <a href="/web/monitoring">Мониторинг</a>
+        <a href="/web/registry">Реестр</a>
+        <a href="/web/safety">Safety</a>
+        <a href="/web/modes">Режимы</a>
+        <a href="/web/ask">ASK</a>
+      </nav>
+    </header>
+
+    <section class="cards control-grid">
+      <article class="card">
+        <h2>Вентиляторы</h2>
+        <div class="control-actions">
+          <button onclick="execAction('fan_top_on')">Верх ON</button>
+          <button class="secondary" onclick="execAction('fan_top_off')">Верх OFF</button>
+          <button onclick="execAction('fan_bottom_on')">Низ ON</button>
+          <button class="secondary" onclick="execAction('fan_bottom_off')">Низ OFF</button>
+          <button class="warn" onclick="askAction('fan_top_on','Верх: включить вентиляторы')">ASK верх ON</button>
+        </div>
+      </article>
+
+      <article class="card">
+        <h2>Результат</h2>
+        <pre id="result" class="result-box">Здесь появится ответ API...</pre>
+      </article>
+    </section>
+  </div>
+
+  <script>
+    async function execAction(actionKey) {
+      const r = await fetch('/api/actions/execute', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({action_key: actionKey, ask: false})
+      });
+      const data = await r.json();
+      document.getElementById('result').textContent = JSON.stringify(data, null, 2);
+    }
+
+    async function askAction(actionKey, title) {
+      const r = await fetch('/api/actions/execute', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({action_key: actionKey, ask: true, title})
+      });
+      const data = await r.json();
+      document.getElementById('result').textContent = JSON.stringify(data, null, 2);
+    }
+  </script>
+</body>
+</html>

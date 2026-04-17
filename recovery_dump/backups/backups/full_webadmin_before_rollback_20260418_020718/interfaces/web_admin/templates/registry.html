@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Реестр — Greenhouse v17{% endblock %}
+
+{% block content %}
+<h1>Реестр</h1>
+<p class="muted">Устройства и capability-слой.</p>
+
+<div class="grid">
+  <section class="card">
+    <h2>Устройства</h2>
+    <div style="overflow:auto;">
+      <table id="devicesTable">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Имя</th>
+            <th>Тип</th>
+            <th>Зона</th>
+            <th>Entity</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Capabilities</h2>
+    <pre id="capBox">Загрузка...</pre>
+  </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function loadDevices() {
+  const tbody = document.querySelector('#devicesTable tbody');
+  try {
+    const r = await fetch('/api/registry/devices');
+    const data = await r.json();
+    const items = data.items || data.devices || [];
+    tbody.innerHTML = '';
+    for (const item of items.slice(0, 200)) {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${item.device_id ?? item.id ?? ''}</td>
+        <td>${item.name ?? ''}</td>
+        <td>${item.type ?? ''}</td>
+        <td>${item.zone ?? item.location ?? ''}</td>
+        <td>${item.entity_id ?? ''}</td>
+      `;
+      tbody.appendChild(tr);
+    }
+    if (!items.length) {
+      tbody.innerHTML = '<tr><td colspan="5" class="muted">Нет данных</td></tr>';
+    }
+  } catch (e) {
+    tbody.innerHTML = `<tr><td colspan="5">Ошибка: ${e}</td></tr>`;
+  }
+}
+
+async function loadCaps() {
+  try {
+    const r = await fetch('/api/registry/capabilities');
+    const data = await r.json();
+    document.getElementById('capBox').textContent = JSON.stringify(data, null, 2);
+  } catch (e) {
+    document.getElementById('capBox').textContent = "Ошибка загрузки: " + e;
+  }
+}
+
+loadDevices();
+loadCaps();
+</script>
+{% endblock %}

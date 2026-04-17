@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="card">
+  <div class="card-label">ASK control</div>
+  <h3>Подтверждение действий</h3>
+
+  <div class="button-row">
+    <button class="ghost-btn" onclick="loadAsk()">Обновить</button>
+    <button class="primary-btn" onclick="confirmAsk(true)">Подтвердить и выполнить</button>
+    <button class="ghost-btn" onclick="confirmAsk(false)">Подтвердить без выполнения</button>
+    <button class="danger-btn" onclick="cancelAsk()">Отменить</button>
+  </div>
+
+  <pre id="ask-current" class="result-box">Загрузка...</pre>
+  <pre id="ask-result" class="result-box" style="display:none;"></pre>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function authHeaders(withJson = true) {
+  const token = localStorage.getItem("gh_token");
+  if (!token) {
+    window.location.href = "/web/login";
+    throw new Error("not_authenticated");
+  }
+  const headers = { Authorization: "Bearer " + token };
+  if (withJson) headers["Content-Type"] = "application/json";
+  return headers;
+}
+
+async function loadAsk() {
+  const r = await fetch("/api/ask/current", { headers: authHeaders(false) });
+  const data = await r.json();
+  document.getElementById("ask-current").textContent = JSON.stringify(data, null, 2);
+}
+
+async function confirmAsk(execute) {
+  const box = document.getElementById("ask-result");
+  box.style.display = "block";
+  box.textContent = "Обрабатываю подтверждение...";
+
+  const r = await fetch("/api/ask/confirm", {
+    method: "POST",
+    headers: authHeaders(true),
+    body: JSON.stringify({ execute })
+  });
+
+  const data = await r.json();
+  box.textContent = JSON.stringify(data, null, 2);
+  await loadAsk();
+}
+
+async function cancelAsk() {
+  const box = document.getElementById("ask-result");
+  box.style.display = "block";
+  box.textContent = "Отменяю pending ASK...";
+
+  const r = await fetch("/api/ask/cancel", {
+    method: "POST",
+    headers: authHeaders(true)
+  });
+
+  const data = await r.json();
+  box.textContent = JSON.stringify(data, null, 2);
+  await loadAsk();
+}
+
+loadAsk();
+</script>
+{% endblock %}

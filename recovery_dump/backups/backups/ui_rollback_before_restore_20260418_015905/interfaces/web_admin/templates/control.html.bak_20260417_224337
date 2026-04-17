@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="cards-grid">
+  <section class="card">
+    <div class="card-label">Control</div>
+    <h3>Тестовые действия через v17 execution</h3>
+
+    <div class="button-row">
+      <button class="primary-btn" onclick="runAction('fan_top_on')">Верх: включить вентиляторы</button>
+      <button class="ghost-btn" onclick="runAction('fan_top_off')">Верх: выключить вентиляторы</button>
+    </div>
+
+    <div class="button-row">
+      <button class="primary-btn" onclick="runAction('fan_bottom_on')">Низ: включить вентиляторы</button>
+      <button class="ghost-btn" onclick="runAction('fan_bottom_off')">Низ: выключить вентиляторы</button>
+    </div>
+
+    <pre id="control-result" class="result-box">Нажми кнопку действия.</pre>
+  </section>
+
+  <section class="card">
+    <div class="card-label">Mode + ASK</div>
+    <h3>Состояние перед тестом</h3>
+    <div class="button-row">
+      <button class="ghost-btn" onclick="loadControlState()">Обновить состояние</button>
+    </div>
+    <pre id="control-state" class="result-box">Загрузка...</pre>
+  </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function authHeaders(withJson = true) {
+  const token = localStorage.getItem("gh_token");
+  if (!token) {
+    window.location.href = "/web/login";
+    throw new Error("not_authenticated");
+  }
+  const headers = { Authorization: "Bearer " + token };
+  if (withJson) headers["Content-Type"] = "application/json";
+  return headers;
+}
+
+async function loadControlState() {
+  const [modeResp, askResp] = await Promise.all([
+    fetch("/api/modes/current", { headers: authHeaders(false) }),
+    fetch("/api/ask/current", { headers: authHeaders(false) }),
+  ]);
+
+  const modeData = await modeResp.json();
+  const askData = await askResp.json();
+
+  document.getElementById("control-state").textContent = JSON.stringify({
+    mode: modeData,
+    ask: askData
+  }, null, 2);
+}
+
+async function runAction(actionKey) {
+  const box = document.getElementById("control-result");
+  box.textContent = "Выполняю " + actionKey + "...";
+
+  const r = await fetch("/api/actions/execute", {
+    method: "POST",
+    headers: authHeaders(true),
+    body: JSON.stringify({ action_key: actionKey })
+  });
+
+  const data = await r.json();
+  box.textContent = JSON.stringify(data, null, 2);
+
+  await loadControlState();
+}
+
+loadControlState();
+</script>
+{% endblock %}

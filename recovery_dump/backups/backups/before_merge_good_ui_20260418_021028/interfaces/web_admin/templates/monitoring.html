@@ -1,0 +1,91 @@
+{% set page_id = 'monitoring' %}
+{% extends "base.html" %}
+
+{% block title %}Greenhouse v17 — Monitoring{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="eyebrow">Monitoring</div>
+  <h2 style="font-size:24px;">Климат, почва, воздух, CO₂, улица, свет</h2>
+  <input id="monitorSearch" class="search" placeholder="Поиск по name / entity_id / zone / category" style="margin:16px 0;" />
+  <div id="monitorMeta" class="chips" style="margin-bottom:14px;"></div>
+  <div id="monitorChips" class="chips" style="margin-bottom:16px;"></div>
+  <div id="monitorList" class="list">Загрузка...</div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  let MON_ITEMS = [];
+  let MON_FILTER = "";
+
+  function monText(x) {
+    return [
+      x.device_id, x.name, x.entity_id, x.zone, x.category, x.logical_role, x.location
+    ].join(" ").toLowerCase();
+  }
+
+  function fmtVal(x) {
+    const v = x.value ?? "—";
+    return `${v}${x.unit ? " " + x.unit : ""}`;
+  }
+
+  function renderMonitoring() {
+    const q = document.getElementById("monitorSearch").value.trim().toLowerCase();
+    let items = MON_ITEMS.filter(x => !q || monText(x).includes(q));
+    if (MON_FILTER) items = items.filter(x => x.category === MON_FILTER);
+
+    document.getElementById("monitorMeta").innerHTML = `
+      <span class="chip ok">count: ${MON_ITEMS.length}</span>
+      <span class="chip">filtered: ${items.length}</span>
+    `;
+
+    const cats = [...new Set(MON_ITEMS.map(x => x.category))];
+    document.getElementById("monitorChips").innerHTML =
+      `<button class="btn ${!MON_FILTER ? 'btn-primary' : ''}" onclick="setMonFilter('')">Все</button>` +
+      cats.map(c => `<button class="btn ${MON_FILTER===c ? 'btn-primary' : ''}" onclick="setMonFilter('${c}')">${c}</button>`).join("");
+
+    const root = document.getElementById("monitorList");
+    if (!items.length) {
+      root.innerHTML = `<div class="empty">Нет датчиков по текущему фильтру.</div>`;
+      return;
+    }
+
+    root.innerHTML = items.map(x => `
+      <div class="row" style="align-items:flex-start;">
+        <div style="width:100%;">
+          <div class="name">${x.name || "—"}</div>
+          <div class="sub">${x.category} · ${x.zone || "—"} · ${x.type || "—"}</div>
+          <div class="kv" style="margin-top:10px;">
+            <div>value</div><div>${fmtVal(x)}</div>
+            <div>entity_id</div><div class="mono">${x.entity_id || "—"}</div>
+            <div>location</div><div>${x.location || "—"}</div>
+            <div>logical_role</div><div>${x.logical_role || "—"}</div>
+            <div>available</div><div>${x.available ? "yes" : "no"}</div>
+            <div>updated</div><div>${x.last_updated || "—"}</div>
+          </div>
+        </div>
+      </div>
+    `).join("");
+  }
+
+  function setMonFilter(v) {
+    MON_FILTER = v;
+    renderMonitoring();
+  }
+
+  async function loadMonitoring() {
+    const root = document.getElementById("monitorList");
+    try {
+      const data = await GH.api("/api/monitoring/overview");
+      MON_ITEMS = Array.isArray(data.items) ? data.items : [];
+      renderMonitoring();
+    } catch (e) {
+      root.innerHTML = `<div class="empty">Ошибка загрузки monitoring: ${e.message}</div>`;
+    }
+  }
+
+  document.getElementById("monitorSearch").addEventListener("input", renderMonitoring);
+  loadMonitoring();
+</script>
+{% endblock %}

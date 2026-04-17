@@ -1,0 +1,76 @@
+{% set page_id = 'control' %}
+{% extends "base.html" %}
+
+{% block title %}Greenhouse v17 — Control{% endblock %}
+
+{% block content %}
+<div class="two-col">
+  <section class="card">
+    <div class="eyebrow">Control</div>
+    <h2 style="font-size:24px;">Тестовые действия через v17 execution</h2>
+
+    <div class="control-grid" style="margin:18px 0 16px 0;flex-direction:column;align-items:flex-start;">
+      <button class="btn action-btn on" onclick="runAction('fan_top_on')">Верх: включить вентиляторы</button>
+      <button class="btn action-btn" onclick="runAction('fan_top_off')">Верх: выключить вентиляторы</button>
+      <button class="btn action-btn on" onclick="runAction('fan_bottom_on')">Низ: включить вентиляторы</button>
+      <button class="btn action-btn" onclick="runAction('fan_bottom_off')">Низ: выключить вентиляторы</button>
+    </div>
+
+    <div id="controlResult" class="result">Нажми кнопку действия.</div>
+  </section>
+
+  <section class="card">
+    <div class="eyebrow">Mode + ASK</div>
+    <h2 style="font-size:24px;">Состояние перед тестом</h2>
+    <div class="cta-grid" style="margin:18px 0 16px 0;">
+      <button class="btn" onclick="loadControlState()">Обновить состояние</button>
+    </div>
+    <div id="controlState" class="result">Загрузка...</div>
+  </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  async function loadControlState() {
+    const box = document.getElementById("controlState");
+    try {
+      const [mode, ask] = await Promise.all([
+        GH.api("/api/modes/current"),
+        GH.api("/api/ask/current")
+      ]);
+      box.innerHTML = `
+        <div style="margin-bottom:14px;">
+          <div class="muted" style="margin-bottom:8px;">Текущий режим</div>
+          <div style="font-size:22px;font-weight:800;">${(mode.mode || "—").toUpperCase()}</div>
+          ${GH.renderModeFlags(mode.flags || {})}
+        </div>
+        <div>
+          <div class="muted" style="margin-bottom:8px;">ASK статус</div>
+          ${ask.has_pending ? GH.renderAskCard(ask.item) : `<div class="empty">Pending ASK нет.</div>`}
+        </div>
+      `;
+    } catch (e) {
+      box.textContent = `Ошибка загрузки состояния: ${e.message}`;
+    }
+  }
+
+  async function runAction(actionKey) {
+    const result = document.getElementById("controlResult");
+    try {
+      GH.showResult(result, `Отправляю ${actionKey}...`, "warn");
+      const data = await GH.postFirstOk([
+        { url: `/api/actions/${actionKey}` },
+        { url: `/api/control/${actionKey}` },
+        { url: `/api/actions/run`, body: { action_key: actionKey } }
+      ]);
+      GH.showResult(result, `Ответ: ${JSON.stringify(data)}`, "ok");
+      await loadControlState();
+    } catch (e) {
+      GH.showResult(result, `Ошибка действия ${actionKey}: ${e.message}`, "error");
+    }
+  }
+
+  loadControlState();
+</script>
+{% endblock %}

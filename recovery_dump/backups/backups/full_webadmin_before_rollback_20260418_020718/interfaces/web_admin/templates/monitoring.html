@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Мониторинг — Greenhouse v17{% endblock %}
+
+{% block content %}
+<h1>Мониторинг</h1>
+<p class="muted">Обзор состояния и safety-слоя.</p>
+
+<div class="grid">
+  <section class="card">
+    <h2>Overview</h2>
+    <pre id="overviewBox">Загрузка...</pre>
+  </section>
+
+  <section class="card">
+    <h2>Safety</h2>
+    <pre id="safetyBox">Загрузка...</pre>
+  </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function loadJson(url, targetId) {
+  try {
+    const r = await fetch(url);
+    const data = await r.json();
+    document.getElementById(targetId).textContent = JSON.stringify(data, null, 2);
+  } catch (e) {
+    document.getElementById(targetId).textContent = "Ошибка загрузки: " + e;
+  }
+}
+
+loadJson('/api/monitoring/overview', 'overviewBox');
+loadJson('/api/monitoring/safety', 'safetyBox');
+</script>
+{% endblock %}

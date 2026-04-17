@@ -1,0 +1,143 @@
+device_id,parent_id,name,type,entity_id,unit,zone,location,logical_role,is_enabled,is_virtual,criticality,source,notes
+1,0,Датчик дыма (центр веранды),device,,,veranda,Веранда (центр),device_1,true,true,low,devices_source_full,Пожарная безопасность
+1.1,1,Дым,smoke,binary_sensor.1_datchik_dyma_smoke,on/off,veranda,Внутри датчика,fire_smoke_main,true,false,critical,devices_source_full,Основной сигнал пожара
+1.2,1,Батарея,battery,sensor.dymovoi_signalizator_battery,%,veranda,Внутри датчика,батарея_battery,true,false,normal,devices_source_full,Питание датчика
+1.3,1,Tamper,tamper,binary_sensor.dymovoi_signalizator_tamper,on/off,veranda,Внутри датчика,tamper_sensor,true,false,low,devices_source_full,Датчик вскрытия
+2,0,Камера общий план,device,,,veranda,Веранда,device_2,true,true,low,devices_source_full,Видеонаблюдение
+2.4,2,Видео,camera,camera.smart_camera_2,,veranda,Веранда,видео_camera,true,false,normal,devices_source_full,Общий план стеллажа
+3,0,Увлажнитель,device,,,veranda,Пол веранды,device_3,true,true,low,devices_source_full,Увлажнение воздуха
+3.5,3,Вкл/выкл,switch,switch.uviazhnitel_,on/off,veranda,Пол веранды,main_humidifier,true,false,normal,devices_source_full,Управление увлажнителем
+4,0,Качество воздуха (верхний ярус),device,,,top_rack,Верхний ярус,device_4,true,true,low,devices_source_full,Мониторинг воздуха
+4.6,4,CO₂,sensor,sensor.nobito_carbon_dioxide,ppm,top_rack,Верхний ярус,co2_sensor,true,false,normal,devices_source_full,Углекислый газ
+4.7,4,VOC,sensor,sensor.nobito_volatile_organic_compounds,mg/m³,top_rack,Верхний ярус,voc_sensor,true,false,normal,devices_source_full,Летучие органические соединения
+4.8,4,PM10,sensor,sensor.nobito_pm10,µg/m³,top_rack,Верхний ярус,pm10_sensor,true,false,normal,devices_source_full,Крупная пыль
+4.9,4,Влажность,sensor,sensor.nobito_humidity,%,top_rack,Верхний ярус,влажность_sensor,true,false,normal,devices_source_full,Общая влажность воздуха
+4.10,4,Формальдегид,sensor,sensor.nobito_formaldehyde,mg/m³,top_rack,Верхний ярус,формальдегид_sensor,true,false,normal,devices_source_full,Вредные испарения
+4.11,4,PM2.5,sensor,sensor.nobito_pm2_5,µg/m³,top_rack,Верхний ярус,pm25_sensor,true,false,normal,devices_source_full,Мелкая пыль
+4.12,4,Температура,sensor,sensor.kachestvo_vozdukha_temperature,°C,top_rack,Верхний ярус,температура_sensor,true,false,normal,devices_source_full,Общая температура воздуха
+4.13,4,Индекс качества,sensor,sensor.nobito_air_quality_index,,top_rack,Верхний ярус,индекс_качества_sensor,true,false,normal,devices_source_full,Обобщённый индекс
+5,0,Щиток веранда,device,,,power_system,Щиток,device_5,true,true,low,devices_source_full,Главное электропитание
+5.14,5,Выключатель,switch,switch.shchitok_veranda_switch,on/off,power_system,Щиток,veranda_main_power_cutoff,true,false,normal,devices_source_full,Главный рубильник
+5.15,5,Всего энергия,sensor,sensor.shchitok_veranda_total_energy,kWh,power_system,Щиток,всего_энергия_sensor,true,false,normal,devices_source_full,Суммарное потребление
+5.16,5,Мощность,sensor,sensor.shchitok_veranda_power,Вт,power_system,Щиток,мощность_sensor,true,false,normal,devices_source_full,Текущая мощность
+5.17,5,Напряжение,sensor,sensor.shchitok_veranda_voltage,В,power_system,Щиток,напряжение_sensor,true,false,normal,devices_source_full,Напряжение в сети
+5.18,5,Ток,sensor,sensor.shchitok_veranda_current,А,power_system,Щиток,ток_sensor,true,false,normal,devices_source_full,Сила тока
+6,0,Термостат веранда,device,,,veranda,Веранда,device_6,true,true,low,devices_source_full,Климат-контроль
+6.19,6,Основной,climate,climate.termostat_veranda,,veranda,Веранда,основной_climate,true,false,high,devices_source_full,Управление тёплым полом
+6.20,6,Frost protection,switch,switch.termostat_veranda_frost_protection,on/off,veranda,Веранда,frost_protection_switch,true,false,normal,devices_source_full,Защита от замерзания
+6.21,6,Temperature correction,number,number.termostat_veranda_temperature_correction,,veranda,Веранда,temperature_correction_number,true,false,low,devices_source_full,Калибровка температуры
+7,0,Зашторивание,device,,,window_zone,Окно,device_7,true,true,low,devices_source_full,Управление шторой
+7.22,7,Штора,cover,cover.wifi_curtain_driver_converter_curtain,open/closed,window_zone,Окно,main_curtain,true,false,normal,devices_source_full,Светоотражающая штора
+7.23,7,Режим двигателя,select,select.wifi_curtain_driver_converter_motor_mode,,window_zone,Окно,режим_двигателя_select,true,false,low,devices_source_full,Настройки привода
+8,0,Датчик дыма у щитка,device,,,power_system,Над щитком,device_8,true,true,low,devices_source_full,Пожарная безопасность
+8.24,8,Дым,smoke,binary_sensor.dymovoi_signalizator_2_smoke,on/off,power_system,Над щитком,fire_smoke_panel,true,false,critical,devices_source_full,Сигнал пожара
+8.25,8,Батарея,battery,sensor.dymovoi_signalizator_2_battery,%,power_system,Внутри датчика,батарея_battery,true,false,normal,devices_source_full,Питание
+8.26,8,Tamper,tamper,binary_sensor.dymovoi_signalizator_2_tamper,on/off,power_system,Внутри датчика,tamper_sensor,true,false,low,devices_source_full,Вскрытие
+9,0,Датчик утечки воды,device,,,water_system,Пол у канистр,device_9,true,true,low,devices_source_full,Защита от протечек
+9.27,9,Влага,moisture,binary_sensor.datchik_utechki_vody_moisture,on/off,water_system,Пол,main_leak_sensor,true,false,critical,devices_source_full,Обнаружение воды
+9.28,9,Батарея,battery,sensor.datchik_utechki_vody_battery,%,water_system,Внутри датчика,батарея_battery,true,false,normal,devices_source_full,Питание
+10,0,Датчик поверхности (низ большой белый),device,,,low_rack,Большой белый горшок,device_10,true,true,low,devices_source_full,Мониторинг почвы
+10.29,10,Влажность,sensor,sensor.ogurets_vertikalnyi_humidity,%,low_rack,Поверхность грунта,влажность_sensor,true,false,normal,devices_source_full,Верхний слой почвы
+10.30,10,Температура,sensor,sensor.ogurets_vertikalnyi_temperature,°C,low_rack,Поверхность грунта,температура_sensor,true,false,normal,devices_source_full,Температура поверхности
+10.31,10,Батарея,battery,sensor.ogurets_vertikalnyi_battery,%,low_rack,Внутри датчика,батарея_battery,true,false,normal,devices_source_full,Питание
+11,0,Серый горшок (низ основной),device,,,low_rack,Серый горшок,device_11,true,true,low,devices_source_full,Мониторинг почвы
+11.32,11,Влажность,sensor,sensor.klubnika_poliv_niz_seryi_humidity,%,low_rack,Внутри грунта,влажность_sensor,true,false,normal,devices_source_full,Основная влажность
+11.33,11,Батарея,battery,sensor.klubnika_poliv_niz_seryi_battery,%,low_rack,Внутри датчика,батарея_battery,true,false,normal,devices_source_full,Питание
+11.34,11,Температура,sensor,sensor.klubnika_poliv_niz_seryi_temperature,°C,low_rack,Внутри грунта,температура_sensor,true,false,normal,devices_source_full,Температура почвы
+12,0,Большой белый (низ основной),device,,,low_rack,Большой белый горшок,device_12,true,true,low,devices_source_full,Мониторинг почвы
+12.35,12,Влажность,sensor,sensor.klubnika_vlazhnost_niz_belyi_humidity,%,low_rack,Внутри грунта,влажность_sensor,true,false,normal,devices_source_full,Основная влажность
+12.36,12,Температура,sensor,sensor.klubnika_vlazhnost_niz_belyi_temperature,°C,low_rack,Внутри грунта,температура_sensor,true,false,normal,devices_source_full,Температура почвы
+12.37,12,Батарея,battery,sensor.klubnika_vlazhnost_niz_belyi_battery,%,low_rack,Внутри датчика,батарея_battery,true,false,normal,devices_source_full,Питание
+13,0,Воздух у корней (низ большой белый),device,,,low_rack,Большой белый горшок,device_13,true,true,low,devices_source_full,Мониторинг воздуха
+13.38,13,Влажность воздуха,sensor,sensor.vlazhnost_nizhnii_gorshok_belyi_humidity,%,low_rack,Поверхность грунта,влажность_воздуха_sensor,true,false,normal,devices_source_full,Прикорневая влажность
+13.39,13,Температура воздуха,sensor,sensor.vlazhnost_nizhnii_gorshok_belyi_temperature,°C,low_rack,Поверхность грунта,температура_воздуха_sensor,true,false,normal,devices_source_full,Температура у корней
+13.40,13,Батарея,battery,sensor.vlazhnost_nizhnii_gorshok_belyi_battery,%,low_rack,Внутри датчика,батарея_battery,true,false,normal,devices_source_full,Питание
+14,0,Круглый горшок у окна (низ),device,,,low_rack_window,Круглый горшок,device_14,true,true,low,devices_source_full,Мониторинг почвы
+14.41,14,Влажность,sensor,sensor.sgs01_4_humidity,%,low_rack_window,Внутри грунта,влажность_sensor,true,false,normal,devices_source_full,Основная влажность
+14.42,14,Температура,sensor,sensor.sgs01_4_temperature,°C,low_rack_window,Внутри грунта,температура_sensor,true,false,normal,devices_source_full,Температура почвы
+14.43,14,Батарея,battery,sensor.sgs01_4_battery,%,low_rack_window,Внутри датчика,батарея_battery,true,false,normal,devices_source_full,Питание
+15,0,Верх дальний (поверхность),device,,,top_rack,Дальний горшок верха,device_15,true,true,low,devices_source_full,Мониторинг почвы
+15.44,15,Влажность,sensor,sensor.vlazhnost_klubnika_verkh_chernyi_humidity,%,top_rack,Поверхность грунта,влажность_sensor,true,false,normal,devices_source_full,Верхний слой
+15.45,15,Температура,sensor,sensor.vlazhnost_klubnika_verkh_chernyi_temperature,°C,top_rack,Поверхность грунта,температура_sensor,true,false,normal,devices_source_full,Температура поверхности
+15.46,15,Батарея,battery,sensor.vlazhnost_klubnika_verkh_chernyi_battery,%,top_rack,Внутри датчика,батарея_battery,true,false,normal,devices_source_full,Питание
+16,0,Верх дальний (основной),device,,,top_rack,Дальний горшок верха,device_16,true,true,low,devices_source_full,Мониторинг почвы
+16.47,16,Влажность,sensor,sensor.datchik_vlazhnosti_spotifilum_humidity,%,top_rack,Внутри грунта,влажность_sensor,true,false,normal,devices_source_full,Основная влажность
+16.48,16,Температура,sensor,sensor.datchik_vlazhnosti_spotifilum_temperature,°C,top_rack,Внутри грунта,температура_sensor,true,false,normal,devices_source_full,Температура почвы
+16.49,16,Батарея,battery,sensor.datchik_vlazhnosti_spotifilum_battery,%,top_rack,Внутри датчика,батарея_battery,true,false,normal,devices_source_full,Питание
+17,0,Низ круглый (поверхность),device,,,low_rack,Круглый горшок низа,device_17,true,true,low,devices_source_full,Мониторинг почвы
+17.50,17,Влажность,sensor,sensor.vlazhnost_humidity,%,low_rack,Поверхность грунта,влажность_sensor,true,false,normal,devices_source_full,Верхний слой
+17.51,17,Температура,sensor,sensor.vlazhnost_temperature,°C,low_rack,Поверхность грунта,температура_sensor,true,false,normal,devices_source_full,Температура поверхности
+17.52,17,Батарея,battery,sensor.vlazhnost_battery,%,low_rack,Внутри датчика,батарея_battery,true,false,normal,devices_source_full,Питание
+18,0,Верх у окна (поверхность),device,,,top_rack_window,Горшок у окна верха,device_18,true,true,low,devices_source_full,Мониторинг почвы
+18.53,18,Влажность,sensor,sensor.chernyi_poverkhnost_u_okna_humidity,%,top_rack_window,Поверхность грунта,влажность_sensor,true,false,normal,devices_source_full,Верхний слой
+18.54,18,Температура,sensor,sensor.chernyi_poverkhnost_u_okna_temperature,°C,top_rack_window,Поверхность грунта,температура_sensor,true,false,normal,devices_source_full,Температура поверхности
+18.55,18,Батарея,battery,sensor.chernyi_poverkhnost_u_okna_battery,%,top_rack_window,Внутри датчика,батарея_battery,true,false,normal,devices_source_full,Питание
+19,0,Верх у окна (основной),device,,,top_rack_window,Горшок у окна верха,device_19,true,true,low,devices_source_full,Мониторинг почвы
+19.56,19,Влажность,sensor,sensor.klubnika_verkh_u_okna_humidity,%,top_rack_window,Внутри грунта,влажность_sensor,true,false,normal,devices_source_full,Основная влажность
+19.57,19,Температура,sensor,sensor.klubnika_verkh_u_okna_temperature,°C,top_rack_window,Внутри грунта,температура_sensor,true,false,normal,devices_source_full,Температура почвы
+19.58,19,Батарея,battery,sensor.klubnika_verkh_u_okna_battery,%,top_rack_window,Внутри датчика,батарея_battery,true,false,normal,devices_source_full,Питание
+20,0,Верх дальний (воздух у корней),device,,,top_rack,Дальний горшок верха,device_20,true,true,low,devices_source_full,Мониторинг воздуха
+20.59,20,Влажность воздуха,sensor,sensor.datchik_vlazhnosti_verkh_humidity,%,top_rack,Поверхность грунта,влажность_воздуха_sensor,true,false,normal,devices_source_full,Прикорневая влажность
+20.60,20,Температура воздуха,sensor,sensor.datchik_vlazhnosti_verkh_temperature,°C,top_rack,Поверхность грунта,температура_воздуха_sensor,true,false,normal,devices_source_full,Температура у корней
+20.61,20,Батарея,battery,sensor.datchik_vlazhnosti_verkh_battery,%,top_rack,Внутри датчика,батарея_battery,true,false,normal,devices_source_full,Питание
+21,0,Микроклимат низа (у листьев),device,,,low_rack,Нижний ярус,device_21,true,true,low,devices_source_full,Климат у листьев
+21.62,21,Влажность у листьев,sensor,sensor.temperature_and_humidity_sensor_humidity,%,low_rack,Над кустом,leaf_humidity_low,true,false,normal,devices_source_full,Влажность воздуха
+21.63,21,Температура у листьев,sensor,sensor.temperature_and_humidity_sensor_temperature,°C,low_rack,Над кустом,leaf_temperature_low,true,false,normal,devices_source_full,Температура воздуха
+21.64,21,Батарея,battery,sensor.temperature_and_humidity_sensor_battery,%,low_rack,Внутри датчика,батарея_battery,true,false,normal,devices_source_full,Питание
+22,0,Микроклимат верха (у листьев),device,,,top_rack,Верхний ярус,device_22,true,true,low,devices_source_full,Климат у листьев
+22.65,22,Влажность у листьев,sensor,sensor.temperature_and_humidity_sensor_2_humidity,%,top_rack,Над кустом,leaf_humidity_high,true,false,normal,devices_source_full,Самый важный датчик
+22.66,22,Температура у листьев,sensor,sensor.temperature_and_humidity_sensor_2_temperature,°C,top_rack,Над кустом,leaf_temperature_high,true,false,normal,devices_source_full,Температура воздуха
+22.67,22,Батарея,battery,sensor.temperature_and_humidity_sensor_2_battery,%,top_rack,Внутри датчика,батарея_battery,true,false,normal,devices_source_full,Критическое питание
+23,0,Датчик освещения низ,device,,,low_rack,Нижний ярус,device_23,true,true,low,devices_source_full,Тестовый датчик
+23.68,23,Освещенность,sensor,sensor.luminance_sensor_illuminance,lx,low_rack,Нижний ярус,освещенность_sensor,true,false,normal,devices_source_full,Только для проверки
+23.69,23,Батарея,battery,sensor.luminance_sensor_battery,%,low_rack,Внутри датчика,батарея_battery,true,false,normal,devices_source_full,Питание
+24,0,Датчик T/H общий низ,device,,,low_rack,Нижний ярус,device_24,true,true,low,devices_source_full,Общий климат
+24.70,24,Температура общая,sensor,sensor.datchik_temeratury_i_vlazhnosti_temperature,°C,low_rack,Центр низа,температура_общая_sensor,true,false,normal,devices_source_full,Общая температура
+24.71,24,Влажность общая,sensor,sensor.datchik_temeratury_i_vlazhnosti_humidity,%,low_rack,Центр низа,влажность_общая_sensor,true,false,normal,devices_source_full,Общая влажность
+25,0,Датчик электричества,device,,,power_system,Ввод питания,device_25,true,true,low,devices_source_full,Контроль напряжения
+25.72,25,Питание,binary_sensor,binary_sensor.25_datchik_elektrichestva_door,on/off,power_system,Ввод,main_power_state_sensor,true,false,high,devices_source_full,Наличие сети
+25.73,25,Батарея,battery,sensor.datchik_elektrichestva_battery,%,power_system,Внутри датчика,батарея_battery,true,false,normal,devices_source_full,Питание датчика
+26,0,Датчики улица,device,,,outside,Снаружи,device_26,true,true,low,devices_source_full,Погодные условия
+26.74,26,Выключатель,switch,switch.temperature_and_humidity_alarm_switch,on/off,outside,Снаружи,выключатель_switch,true,false,normal,devices_source_full,Питание
+26.75,26,Влажность улица,sensor,sensor.temperature_and_humidity_alarm_humidity,%,outside,Снаружи,влажность_улица_sensor,true,false,normal,devices_source_full,Не используется
+26.76,26,Освещенность улица,sensor,sensor.temperature_and_humidity_alarm_illuminance,lx,outside,Снаружи,outside_illuminance,true,false,normal,devices_source_full,Для шторы
+26.77,26,Температура улица,sensor,sensor.temperature_and_humidity_alarm_temperature,°C,outside,Снаружи,outside_temperature,true,false,normal,devices_source_full,Для прогноза
+26.78,26,Батарея улица,sensor,sensor.temperature_and_humidity_alarm_battery_state,low/ok,outside,Снаружи,батарея_улица_sensor,true,false,normal,devices_source_full,Состояние
+27,0,Камера верхний правый,device,,,top_rack,Верхний ярус справа,device_27,true,true,low,devices_source_full,Видеонаблюдение
+27.79,27,Видео,camera,camera.kamera_verkhnii_stellazh_obshchii_plan,,top_rack,Верхний ярус,видео_camera,true,false,normal,devices_source_full,Дальний горшок
+28,0,Камера верхний левый,device,,,top_rack_window,Верхний ярус слева,device_28,true,true,low,devices_source_full,Видеонаблюдение
+28.80,28,Видео,camera,camera.kamera_na_ogurtsy,,top_rack_window,Верхний ярус,видео_camera,true,false,normal,devices_source_full,Горшок у окна
+29,0,Резервный выключатель,device,,,power_system,Щиток,device_29,true,true,low,devices_source_full,Резервное питание
+29.81,29,Выключатель,switch,switch.wifi_perekliuchatel_na_din_reiku_2_switch,on/off,power_system,Щиток,veranda_reserve_power_cutoff,true,false,normal,devices_source_full,Дублёр щитка
+30,0,Датчик освещения верх,device,,,top_rack,Верхний ярус,device_30,true,true,low,devices_source_full,Тестовый датчик
+30.82,30,Освещенность,sensor,sensor.lightsensor_illuminance,lx,top_rack,Верхний ярус,освещенность_sensor,true,false,normal,devices_source_full,Для проверки
+30.83,30,Светимость,sensor,sensor.lightsensor_luminosity,,top_rack,Верхний ярус,светимость_sensor,true,false,normal,devices_source_full,Не используется
+31,0,Zigbee хаб,device,,,veranda,Веранда,device_31,true,true,low,devices_source_full,Координатор сети
+31.84,31,Проблема,binary_sensor,binary_sensor.multimode_gateway_mini_problem,on/off,veranda,Хаб,проблема_sensor,true,false,high,devices_source_full,Статус связи
+32,0,Камера нижний левый,device,,,low_rack,Нижний ярус слева,device_32,true,true,low,devices_source_full,Видеонаблюдение
+32.85,32,Видео,camera,camera.security_camera_4_2,,low_rack,Нижний ярус,видео_camera,true,false,normal,devices_source_full,Серый горшок
+33,0,Камера нижний правый,device,,,low_rack,Нижний ярус справа,device_33,true,true,low,devices_source_full,Видеонаблюдение
+33.86,33,Видео,camera,camera.kamera_vertikalnaia_pomidor,,low_rack,Нижний ярус,видео_camera,true,false,normal,devices_source_full,Большой белый
+34,0,Полив верхний ярус,device,,,water_system_top,Верхний ярус,device_34,true,true,low,devices_source_full,Система полива
+34.87,34,Клапан основной,switch,switch.klubnika_poliv_verkh_switch_1,on/off,water_system_top,Верхний ярус,watering_top_main_valve,true,false,normal,devices_source_full,Главный клапан
+34.88,34,Клапан удобрения,switch,switch.klubnika_poliv_verkh_switch_2,on/off,water_system_top,Верхний ярус,watering_top_fertilizer_valve,true,false,normal,devices_source_full,С удобрениями
+34.89,34,Защита,switch,switch.klubnika_poliv_verkh_switch_3,on/off,water_system_top,Верхний ярус,watering_top_dry_run_protection,true,false,normal,devices_source_full,От сухого хода
+35,0,Полив нижний ярус,device,,,water_system_bottom,Нижний ярус,device_35,true,true,low,devices_source_full,Система полива
+35.90,35,Клапан основной,switch,switch.klubnika_poliv_switch_1,on/off,water_system_bottom,Нижний ярус,watering_bottom_main_valve,true,false,normal,devices_source_full,Главный клапан
+35.91,35,Клапан удобрения,switch,switch.klubnika_poliv_switch_2,on/off,water_system_bottom,Нижний ярус,watering_bottom_fertilizer_valve,true,false,normal,devices_source_full,С удобрениями
+35.92,35,Защита,switch,switch.klubnika_poliv_switch_3,on/off,water_system_bottom,Нижний ярус,watering_bottom_dry_run_protection,true,false,normal,devices_source_full,От сухого хода
+36,0,Сетевой фильтр (3),device,,,utility_power,Зона полива,device_36,true,true,low,devices_source_full,Вспомогательное питание
+36.93,36,Насос удобрений,switch,switch.smart_power_strip_eu_2_socket_4,on/off,utility_power,Зона полива,fertilizer_mix_pump,true,false,normal,devices_source_full,Перемешивание
+36.94,36,Розетка увлажнителя,switch,switch.smart_power_strip_eu_2_socket_3,on/off,utility_power,Пол,humidifier_power,true,false,normal,devices_source_full,Питание увлажнителя
+36.95,36,USB датчик освещения,switch,switch.smart_power_strip_eu_2_socket_5,on/off,utility_power,Верхний ярус,usb_датчик_освещения_switch,true,false,normal,devices_source_full,Питание датчика
+37,0,Сетевой фильтр (2),device,,,utility_power,Верхний ярус,device_37,true,true,low,devices_source_full,Основное питание
+37.96,37,Свет верхний,light,switch.setevoi_filtr_klubnika_socket_2,on/off,utility_power,Верхний ярус,light_top_main,true,false,normal,devices_source_full,Лампа 300Вт
+37.97,37,Насос полив верх,pump,switch.setevoi_filtr_klubnika_socket_4,on/off,utility_power,Зона полива,watering_top_pump_power,true,false,high,devices_source_full,Насос верха
+37.98,37,Насос полив низ,pump,switch.setevoi_filtr_klubnika_socket_3,on/off,utility_power,Зона полива,watering_bottom_pump_power,true,false,high,devices_source_full,Насос низа
+37.99,37,Питание камер,socket,switch.setveoi_filtr_klubnika_socket_5,on/off,utility_power,Стеллаж,cameras_power,true,false,normal,devices_source_full,Питание 4 камер
+38,0,Сетевой фильтр (1),device,,,utility_power,Вентиляция,device_38,true,true,low,devices_source_full,Управление воздухом
+38.100,38,Вентиляторы верх,fan,switch.setevoi_filtr_novyi_socket_1,on/off,utility_power,Верхний ярус,top_air_circulation,true,false,normal,devices_source_full,Обдув растений
+38.101,38,Вентиляторы низ,fan,switch.setevoi_filtr_novyi_usb_1,on/off,utility_power,Нижний ярус,bottom_air_circulation,true,false,normal,devices_source_full,Обдув растений
+38.102,38,Питание датчика 24,socket,switch.setevoi_filtr_Novyi_socket_2,on/off,utility_power,Нижний ярус,low_general_sensor_power,true,false,normal,devices_source_full,Питание T/H датчика
+38.103,38,Питание датчика 4,socket,switch.setevoi_filtr_novyi_socket_3,on/off,utility_power,Верхний ярус,top_air_quality_sensor_power,true,false,normal,devices_source_full,Питание CO₂ датчика
+38.104,38,Свет нижний,light,switch.setevoi_filtr_novyi_socket_4,on/off,utility_power,Нижний ярус,light_bottom_main,true,false,normal,devices_source_full,300 ватт
