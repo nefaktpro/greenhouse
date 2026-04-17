@@ -4,6 +4,7 @@ from fastapi.responses import JSONResponse
 from interfaces.web_admin.routes.auth import router as auth_router
 from interfaces.web_admin.routes.registry import router as registry_router
 from interfaces.web_admin.routes.modes import router as modes_router
+from interfaces.web_admin.routes.ask import router as ask_router
 
 app = FastAPI(
     title="Greenhouse v17 Web Admin",
@@ -32,3 +33,4 @@ async def unhandled_exception_handler(request, exc):
 app.include_router(auth_router, prefix="/api/auth", tags=["auth"])
 app.include_router(registry_router, prefix="/api/registry", tags=["registry"])
 app.include_router(modes_router, prefix="/api/modes", tags=["modes"])
+app.include_router(ask_router, prefix="/api/ask", tags=["ask"])
