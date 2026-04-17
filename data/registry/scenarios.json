@@ -1,486 +1,491 @@
 {
-  "meta": {
-    "source_file": "Контекст устройств.docx",
-    "status": "seed_from_user_context_needs_review",
-    "design_principle": "editable_roles_not_hardcoded_entity_ids"
-  },
-  "scenarios": {
-    "emergency_fire_smoke": {
-      "description": "Пожарная тревога от любого дымового датчика",
-      "trigger_roles": [
-        "smoke_center",
-        "smoke_panel"
-      ],
-      "priority": "critical",
-      "halt_other_automation": true,
-      "steps": [
-        {
-          "action": "turn_off",
-          "target_role": "main_power"
-        },
-        {
-          "action": "delay",
-          "seconds": 5
-        },
-        {
-          "action": "verify_state",
-          "target_role": "power_sensor",
-          "expected": "off",
-          "note": "нужно подтвердить трактовку on/off у датчика питания"
-        },
-        {
-          "action": "conditional_if_verify_failed",
-          "then": [
+  "version": 1,
+  "items": [
+    {
+      "meta": {
+        "source_file": "Контекст устройств.docx",
+        "status": "seed_from_user_context_needs_review",
+        "design_principle": "editable_roles_not_hardcoded_entity_ids"
+      },
+      "scenarios": {
+        "emergency_fire_smoke": {
+          "description": "Пожарная тревога от любого дымового датчика",
+          "trigger_roles": [
+            "smoke_center",
+            "smoke_panel"
+          ],
+          "priority": "critical",
+          "halt_other_automation": true,
+          "steps": [
             {
               "action": "turn_off",
-              "target_role": "backup_power"
-            }
-          ]
-        },
-        {
-          "action": "notify",
-          "channel": "telegram",
-          "message": "⚠️ ПОЖАРНАЯ ТРЕВОГА! Сработал датчик дыма. Питание веранды отключено. Срочно проверь."
-        }
-      ],
-      "repeat_until_manual_clear": {
-        "interval_sec": 60
-      },
-      "manual_clear_commands": [
-        "отбой пожарной тревоги",
-        "сброс тревоги"
-      ]
-    },
-    "emergency_leak": {
-      "description": "Протечка воды",
-      "trigger_roles": [
-        "leak_sensor"
-      ],
-      "priority": "critical",
-      "steps": [
-        {
-          "action": "turn_off",
-          "target_role": "watering_all"
-        },
-        {
-          "action": "notify",
-          "channel": "telegram",
-          "message": "💧 ПРОТЕЧКА! Весь полив отключён. Проверь канистры и шланги!"
-        }
-      ],
-      "repeat_check": {
-        "interval_sec": 600,
-        "check": "leak_sensor_dry"
-      },
-      "restore_policy": "manual_only"
-    },
-    "humidifier_start": {
-      "description": "Безопасный запуск увлажнителя",
-      "preconditions": [
-        "leaf_humidity_top < 55 OR leaf_humidity_bottom < 55",
-        "not fire_emergency",
-        "not leak_emergency",
-        "humidifier_has_water SHOULD exist later as real check"
-      ],
-      "steps": [
-        {
-          "action": "turn_on",
-          "target_role": "humidifier_power"
-        },
-        {
-          "action": "delay",
-          "seconds": 30
-        },
-        {
-          "action": "turn_on",
-          "target_role": "humidifier"
-        }
-      ],
-      "constraints": {
-        "max_continuous_run_minutes": 60,
-        "preferred_cycle": "60m_on_60m_off"
-      },
-      "stop_conditions": [
-        "leaf_humidity_top >= 70",
-        "leaf_humidity_bottom >= 70"
-      ]
-    },
-    "humidifier_stop": {
-      "description": "Останов увлажнителя",
-      "steps": [
-        {
-          "action": "turn_off",
-          "target_role": "humidifier"
-        },
-        {
-          "action": "turn_off",
-          "target_role": "humidifier_power"
-        }
-      ]
-    },
-    "fans_top_enable": {
-      "description": "Вентиляторы верхнего яруса",
-      "trigger_conditions": [
-        "leaf_humidity_top > 75",
-        "leaf_temp_top > 28",
-        "periodic_circulation"
-      ],
-      "steps": [
-        {
-          "action": "turn_on",
-          "target_role": "fan_top"
-        }
-      ],
-      "constraints": {
-        "cycle": "15m_on_30m_off"
-      }
-    },
-    "fans_bottom_enable": {
-      "description": "Вентиляторы нижнего яруса",
-      "trigger_conditions": [
-        "leaf_humidity_bottom > 75",
-        "leaf_temp_bottom > 28",
-        "periodic_circulation"
-      ],
-      "steps": [
-        {
-          "action": "turn_on",
-          "target_role": "fan_bottom"
-        }
-      ],
-      "constraints": {
-        "cycle": "15m_on_30m_off"
-      }
-    },
-    "watering_top_main": {
-      "description": "Основной полив верхнего яруса",
-      "preconditions": [
-        "avg(soil_top_avg_inputs) < 30",
-        "not leak_emergency",
-        "watering_top_protection OK"
-      ],
-      "steps": [
-        {
-          "action": "turn_on",
-          "target_role": "pump_top"
-        },
-        {
-          "action": "delay",
-          "seconds": 30
-        },
-        {
-          "action": "turn_on",
-          "target_role": "watering_top_main_valve"
-        },
-        {
-          "action": "delay",
-          "seconds": 30,
-          "note": "в docx допуск 30-60 секунд"
-        },
-        {
-          "action": "turn_off",
-          "target_role": "watering_top_main_valve"
-        },
-        {
-          "action": "delay",
-          "seconds": 2
-        },
-        {
-          "action": "turn_off",
-          "target_role": "pump_top"
-        },
-        {
-          "action": "log_event",
-          "event": "watering_top_main"
-        }
-      ],
-      "constraints": {
-        "max_daily_runtime_seconds": 60,
-        "min_interval_hours": 24,
-        "preferred_time": "morning"
-      }
-    },
-    "watering_top_fertilizer": {
-      "description": "Полив верха с удобрениями",
-      "preconditions": [
-        "fertilizer_day",
-        "not leak_emergency"
-      ],
-      "steps": [
-        {
-          "action": "turn_on",
-          "target_role": "fertilizer_mixer"
-        },
-        {
-          "action": "delay",
-          "seconds": 120
-        },
-        {
-          "action": "turn_off",
-          "target_role": "fertilizer_mixer"
-        },
-        {
-          "action": "turn_on",
-          "target_role": "pump_top"
-        },
-        {
-          "action": "delay",
-          "seconds": 30
-        },
-        {
-          "action": "turn_on",
-          "target_role": "watering_top_fertilizer_valve"
-        },
-        {
-          "action": "delay",
-          "seconds": 30
-        },
-        {
-          "action": "turn_off",
-          "target_role": "watering_top_fertilizer_valve"
-        },
-        {
-          "action": "delay",
-          "seconds": 2
-        },
-        {
-          "action": "turn_off",
-          "target_role": "pump_top"
-        },
-        {
-          "action": "log_event",
-          "event": "watering_top_fertilizer"
-        }
-      ],
-      "constraints": {
-        "max_frequency": "weekly"
-      }
-    },
-    "watering_bottom_main": {
-      "description": "Основной полив нижнего яруса",
-      "preconditions": [
-        "avg(soil_low_avg_inputs) < 30",
-        "not leak_emergency",
-        "watering_bottom_protection OK"
-      ],
-      "steps": [
-        {
-          "action": "turn_on",
-          "target_role": "pump_bottom"
-        },
-        {
-          "action": "delay",
-          "seconds": 30
-        },
-        {
-          "action": "turn_on",
-          "target_role": "watering_bottom_main_valve"
-        },
-        {
-          "action": "delay",
-          "seconds": 30
-        },
-        {
-          "action": "turn_off",
-          "target_role": "watering_bottom_main_valve"
-        },
-        {
-          "action": "delay",
-          "seconds": 2
-        },
-        {
-          "action": "turn_off",
-          "target_role": "pump_bottom"
-        },
-        {
-          "action": "log_event",
-          "event": "watering_bottom_main"
-        }
-      ],
-      "constraints": {
-        "max_daily_runtime_seconds": 60,
-        "min_interval_hours": 24,
-        "preferred_time": "morning"
-      }
-    },
-    "watering_bottom_fertilizer": {
-      "description": "Полив низа с удобрениями",
-      "preconditions": [
-        "fertilizer_day",
-        "not leak_emergency"
-      ],
-      "steps": [
-        {
-          "action": "turn_on",
-          "target_role": "fertilizer_mixer"
-        },
-        {
-          "action": "delay",
-          "seconds": 120
-        },
-        {
-          "action": "turn_off",
-          "target_role": "fertilizer_mixer"
-        },
-        {
-          "action": "turn_on",
-          "target_role": "pump_bottom"
-        },
-        {
-          "action": "delay",
-          "seconds": 30
-        },
-        {
-          "action": "turn_on",
-          "target_role": "watering_bottom_fertilizer_valve"
-        },
-        {
-          "action": "delay",
-          "seconds": 30
-        },
-        {
-          "action": "turn_off",
-          "target_role": "watering_bottom_fertilizer_valve"
-        },
-        {
-          "action": "delay",
-          "seconds": 2
-        },
-        {
-          "action": "turn_off",
-          "target_role": "pump_bottom"
-        },
-        {
-          "action": "log_event",
-          "event": "watering_bottom_fertilizer"
-        }
-      ]
-    },
-    "curtain_day_open": {
-      "description": "Открытие шторы днём",
-      "preconditions": [
-        "daytime_by_sunrise_sunset",
-        "street_light > threshold OR threshold_review_needed"
-      ],
-      "steps": [
-        {
-          "action": "open_cover",
-          "target_role": "curtain"
-        },
-        {
-          "action": "delay",
-          "seconds": 30
-        }
-      ]
-    },
-    "curtain_night_close": {
-      "description": "Закрытие шторы ночью",
-      "preconditions": [
-        "nighttime_by_sunrise_sunset"
-      ],
-      "steps": [
-        {
-          "action": "close_cover",
-          "target_role": "curtain"
-        },
-        {
-          "action": "delay",
-          "seconds": 30
-        }
-      ]
-    },
-    "power_loss_shed_load": {
-      "description": "Пропадание основного питания",
-      "trigger_conditions": [
-        "power_sensor indicates power loss"
-      ],
-      "steps": [
-        {
-          "action": "turn_off",
-          "target_role": "light_top"
-        },
-        {
-          "action": "turn_off",
-          "target_role": "light_bottom"
-        },
-        {
-          "action": "turn_off",
-          "target_role": "humidifier"
-        },
-        {
-          "action": "turn_off",
-          "target_role": "humidifier_power"
-        },
-        {
-          "action": "turn_off",
-          "target_role": "pump_top"
-        },
-        {
-          "action": "turn_off",
-          "target_role": "pump_bottom"
-        },
-        {
-          "action": "turn_off",
-          "target_role": "fan_top"
-        },
-        {
-          "action": "turn_off",
-          "target_role": "fan_bottom"
-        },
-        {
-          "action": "notify",
-          "channel": "telegram",
-          "message": "⚡ Пропало питание. Энергоёмкие нагрузки отключены, система перешла в экономный режим."
-        }
-      ],
-      "keep_alive": [
-        "thermostat",
-        "critical_sensors",
-        "bot"
-      ]
-    },
-    "camera_snapshot_on_demand": {
-      "description": "Фото по запросу с возможным включением питания камер",
-      "steps": [
-        {
-          "action": "conditional",
-          "condition": "camera_power_model_review_needed",
-          "then": [
-            {
-              "action": "turn_on",
-              "target_role": "camera_power"
+              "target_role": "main_power"
             },
             {
               "action": "delay",
-              "seconds": 60
+              "seconds": 5
+            },
+            {
+              "action": "verify_state",
+              "target_role": "power_sensor",
+              "expected": "off",
+              "note": "нужно подтвердить трактовку on/off у датчика питания"
+            },
+            {
+              "action": "conditional_if_verify_failed",
+              "then": [
+                {
+                  "action": "turn_off",
+                  "target_role": "backup_power"
+                }
+              ]
+            },
+            {
+              "action": "notify",
+              "channel": "telegram",
+              "message": "⚠️ ПОЖАРНАЯ ТРЕВОГА! Сработал датчик дыма. Питание веранды отключено. Срочно проверь."
+            }
+          ],
+          "repeat_until_manual_clear": {
+            "interval_sec": 60
+          },
+          "manual_clear_commands": [
+            "отбой пожарной тревоги",
+            "сброс тревоги"
+          ]
+        },
+        "emergency_leak": {
+          "description": "Протечка воды",
+          "trigger_roles": [
+            "leak_sensor"
+          ],
+          "priority": "critical",
+          "steps": [
+            {
+              "action": "turn_off",
+              "target_role": "watering_all"
+            },
+            {
+              "action": "notify",
+              "channel": "telegram",
+              "message": "💧 ПРОТЕЧКА! Весь полив отключён. Проверь канистры и шланги!"
+            }
+          ],
+          "repeat_check": {
+            "interval_sec": 600,
+            "check": "leak_sensor_dry"
+          },
+          "restore_policy": "manual_only"
+        },
+        "humidifier_start": {
+          "description": "Безопасный запуск увлажнителя",
+          "preconditions": [
+            "leaf_humidity_top < 55 OR leaf_humidity_bottom < 55",
+            "not fire_emergency",
+            "not leak_emergency",
+            "humidifier_has_water SHOULD exist later as real check"
+          ],
+          "steps": [
+            {
+              "action": "turn_on",
+              "target_role": "humidifier_power"
+            },
+            {
+              "action": "delay",
+              "seconds": 30
+            },
+            {
+              "action": "turn_on",
+              "target_role": "humidifier"
+            }
+          ],
+          "constraints": {
+            "max_continuous_run_minutes": 60,
+            "preferred_cycle": "60m_on_60m_off"
+          },
+          "stop_conditions": [
+            "leaf_humidity_top >= 70",
+            "leaf_humidity_bottom >= 70"
+          ]
+        },
+        "humidifier_stop": {
+          "description": "Останов увлажнителя",
+          "steps": [
+            {
+              "action": "turn_off",
+              "target_role": "humidifier"
+            },
+            {
+              "action": "turn_off",
+              "target_role": "humidifier_power"
             }
           ]
         },
-        {
-          "action": "capture_photo",
-          "target_role": "camera_overview"
+        "fans_top_enable": {
+          "description": "Вентиляторы верхнего яруса",
+          "trigger_conditions": [
+            "leaf_humidity_top > 75",
+            "leaf_temp_top > 28",
+            "periodic_circulation"
+          ],
+          "steps": [
+            {
+              "action": "turn_on",
+              "target_role": "fan_top"
+            }
+          ],
+          "constraints": {
+            "cycle": "15m_on_30m_off"
+          }
+        },
+        "fans_bottom_enable": {
+          "description": "Вентиляторы нижнего яруса",
+          "trigger_conditions": [
+            "leaf_humidity_bottom > 75",
+            "leaf_temp_bottom > 28",
+            "periodic_circulation"
+          ],
+          "steps": [
+            {
+              "action": "turn_on",
+              "target_role": "fan_bottom"
+            }
+          ],
+          "constraints": {
+            "cycle": "15m_on_30m_off"
+          }
+        },
+        "watering_top_main": {
+          "description": "Основной полив верхнего яруса",
+          "preconditions": [
+            "avg(soil_top_avg_inputs) < 30",
+            "not leak_emergency",
+            "watering_top_protection OK"
+          ],
+          "steps": [
+            {
+              "action": "turn_on",
+              "target_role": "pump_top"
+            },
+            {
+              "action": "delay",
+              "seconds": 30
+            },
+            {
+              "action": "turn_on",
+              "target_role": "watering_top_main_valve"
+            },
+            {
+              "action": "delay",
+              "seconds": 30,
+              "note": "в docx допуск 30-60 секунд"
+            },
+            {
+              "action": "turn_off",
+              "target_role": "watering_top_main_valve"
+            },
+            {
+              "action": "delay",
+              "seconds": 2
+            },
+            {
+              "action": "turn_off",
+              "target_role": "pump_top"
+            },
+            {
+              "action": "log_event",
+              "event": "watering_top_main"
+            }
+          ],
+          "constraints": {
+            "max_daily_runtime_seconds": 60,
+            "min_interval_hours": 24,
+            "preferred_time": "morning"
+          }
+        },
+        "watering_top_fertilizer": {
+          "description": "Полив верха с удобрениями",
+          "preconditions": [
+            "fertilizer_day",
+            "not leak_emergency"
+          ],
+          "steps": [
+            {
+              "action": "turn_on",
+              "target_role": "fertilizer_mixer"
+            },
+            {
+              "action": "delay",
+              "seconds": 120
+            },
+            {
+              "action": "turn_off",
+              "target_role": "fertilizer_mixer"
+            },
+            {
+              "action": "turn_on",
+              "target_role": "pump_top"
+            },
+            {
+              "action": "delay",
+              "seconds": 30
+            },
+            {
+              "action": "turn_on",
+              "target_role": "watering_top_fertilizer_valve"
+            },
+            {
+              "action": "delay",
+              "seconds": 30
+            },
+            {
+              "action": "turn_off",
+              "target_role": "watering_top_fertilizer_valve"
+            },
+            {
+              "action": "delay",
+              "seconds": 2
+            },
+            {
+              "action": "turn_off",
+              "target_role": "pump_top"
+            },
+            {
+              "action": "log_event",
+              "event": "watering_top_fertilizer"
+            }
+          ],
+          "constraints": {
+            "max_frequency": "weekly"
+          }
+        },
+        "watering_bottom_main": {
+          "description": "Основной полив нижнего яруса",
+          "preconditions": [
+            "avg(soil_low_avg_inputs) < 30",
+            "not leak_emergency",
+            "watering_bottom_protection OK"
+          ],
+          "steps": [
+            {
+              "action": "turn_on",
+              "target_role": "pump_bottom"
+            },
+            {
+              "action": "delay",
+              "seconds": 30
+            },
+            {
+              "action": "turn_on",
+              "target_role": "watering_bottom_main_valve"
+            },
+            {
+              "action": "delay",
+              "seconds": 30
+            },
+            {
+              "action": "turn_off",
+              "target_role": "watering_bottom_main_valve"
+            },
+            {
+              "action": "delay",
+              "seconds": 2
+            },
+            {
+              "action": "turn_off",
+              "target_role": "pump_bottom"
+            },
+            {
+              "action": "log_event",
+              "event": "watering_bottom_main"
+            }
+          ],
+          "constraints": {
+            "max_daily_runtime_seconds": 60,
+            "min_interval_hours": 24,
+            "preferred_time": "morning"
+          }
+        },
+        "watering_bottom_fertilizer": {
+          "description": "Полив низа с удобрениями",
+          "preconditions": [
+            "fertilizer_day",
+            "not leak_emergency"
+          ],
+          "steps": [
+            {
+              "action": "turn_on",
+              "target_role": "fertilizer_mixer"
+            },
+            {
+              "action": "delay",
+              "seconds": 120
+            },
+            {
+              "action": "turn_off",
+              "target_role": "fertilizer_mixer"
+            },
+            {
+              "action": "turn_on",
+              "target_role": "pump_bottom"
+            },
+            {
+              "action": "delay",
+              "seconds": 30
+            },
+            {
+              "action": "turn_on",
+              "target_role": "watering_bottom_fertilizer_valve"
+            },
+            {
+              "action": "delay",
+              "seconds": 30
+            },
+            {
+              "action": "turn_off",
+              "target_role": "watering_bottom_fertilizer_valve"
+            },
+            {
+              "action": "delay",
+              "seconds": 2
+            },
+            {
+              "action": "turn_off",
+              "target_role": "pump_bottom"
+            },
+            {
+              "action": "log_event",
+              "event": "watering_bottom_fertilizer"
+            }
+          ]
+        },
+        "curtain_day_open": {
+          "description": "Открытие шторы днём",
+          "preconditions": [
+            "daytime_by_sunrise_sunset",
+            "street_light > threshold OR threshold_review_needed"
+          ],
+          "steps": [
+            {
+              "action": "open_cover",
+              "target_role": "curtain"
+            },
+            {
+              "action": "delay",
+              "seconds": 30
+            }
+          ]
+        },
+        "curtain_night_close": {
+          "description": "Закрытие шторы ночью",
+          "preconditions": [
+            "nighttime_by_sunrise_sunset"
+          ],
+          "steps": [
+            {
+              "action": "close_cover",
+              "target_role": "curtain"
+            },
+            {
+              "action": "delay",
+              "seconds": 30
+            }
+          ]
+        },
+        "power_loss_shed_load": {
+          "description": "Пропадание основного питания",
+          "trigger_conditions": [
+            "power_sensor indicates power loss"
+          ],
+          "steps": [
+            {
+              "action": "turn_off",
+              "target_role": "light_top"
+            },
+            {
+              "action": "turn_off",
+              "target_role": "light_bottom"
+            },
+            {
+              "action": "turn_off",
+              "target_role": "humidifier"
+            },
+            {
+              "action": "turn_off",
+              "target_role": "humidifier_power"
+            },
+            {
+              "action": "turn_off",
+              "target_role": "pump_top"
+            },
+            {
+              "action": "turn_off",
+              "target_role": "pump_bottom"
+            },
+            {
+              "action": "turn_off",
+              "target_role": "fan_top"
+            },
+            {
+              "action": "turn_off",
+              "target_role": "fan_bottom"
+            },
+            {
+              "action": "notify",
+              "channel": "telegram",
+              "message": "⚡ Пропало питание. Энергоёмкие нагрузки отключены, система перешла в экономный режим."
+            }
+          ],
+          "keep_alive": [
+            "thermostat",
+            "critical_sensors",
+            "bot"
+          ]
+        },
+        "camera_snapshot_on_demand": {
+          "description": "Фото по запросу с возможным включением питания камер",
+          "steps": [
+            {
+              "action": "conditional",
+              "condition": "camera_power_model_review_needed",
+              "then": [
+                {
+                  "action": "turn_on",
+                  "target_role": "camera_power"
+                },
+                {
+                  "action": "delay",
+                  "seconds": 60
+                }
+              ]
+            },
+            {
+              "action": "capture_photo",
+              "target_role": "camera_overview"
+            }
+          ],
+          "post_steps_optional": [
+            {
+              "action": "turn_off",
+              "target_role": "camera_power"
+            }
+          ],
+          "status": "needs_review"
+        },
+        "thermostat_adjustment": {
+          "description": "Медленная корректировка уставки термостата",
+          "preconditions": [
+            "check every 30 minutes",
+            "abs(current_temp - target_temp) > 1"
+          ],
+          "strategy": {
+            "step_limit_celsius": 0.5,
+            "max_wait_hours": 2,
+            "street_temp_cold_threshold": 5,
+            "street_temp_warm_threshold": 15
+          }
         }
-      ],
-      "post_steps_optional": [
-        {
-          "action": "turn_off",
-          "target_role": "camera_power"
-        }
-      ],
-      "status": "needs_review"
-    },
-    "thermostat_adjustment": {
-      "description": "Медленная корректировка уставки термостата",
-      "preconditions": [
-        "check every 30 minutes",
-        "abs(current_temp - target_temp) > 1"
-      ],
-      "strategy": {
-        "step_limit_celsius": 0.5,
-        "max_wait_hours": 2,
-        "street_temp_cold_threshold": 5,
-        "street_temp_warm_threshold": 15
       }
     }
-  }
+  ]
 }

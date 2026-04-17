@@ -1,25 +1,26 @@
 {
-  "registry_version": "1.0",
+  "version": 1,
+  "description": "Canonical registry manifest for GREENHOUSE v17",
   "files": {
     "devices": {
       "path": "data/registry/devices.csv",
-      "source_of_truth": true,
-      "editable": true
-    },
-    "capabilities": {
-      "path": "data/registry/device_capabilities.json",
-      "source_of_truth": true,
-      "editable": true
+      "role": "canonical_source_of_truth",
+      "editable_via_interfaces": true
     },
     "action_map": {
       "path": "data/registry/action_map.json",
-      "source_of_truth": true,
-      "editable": true
+      "role": "canonical_action_mapping",
+      "editable_via_interfaces": true
     },
-    "zones": {
-      "path": "data/registry/zones.json",
-      "source_of_truth": true,
-      "editable": true
+    "device_capabilities": {
+      "path": "data/registry/device_capabilities.json",
+      "role": "engineering_capabilities_layer",
+      "editable_via_interfaces": true
+    },
+    "scenarios": {
+      "path": "data/registry/scenarios.json",
+      "role": "scenario_registry",
+      "editable_via_interfaces": true
     }
   }
 }

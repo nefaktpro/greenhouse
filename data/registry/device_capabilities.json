@@ -1,7 +1,16 @@
 {
   "top_air_circulation": {
-    "allowed_actions": ["turn_on", "turn_off"],
-    "allowed_modes": ["MANUAL", "TEST", "ASK", "AUTO", "AUTOPILOT"],
+    "allowed_actions": [
+      "turn_on",
+      "turn_off"
+    ],
+    "allowed_modes": [
+      "MANUAL",
+      "TEST",
+      "ASK",
+      "AUTO",
+      "AUTOPILOT"
+    ],
     "dependencies": [],
     "constraints": {
       "max_run_minutes": 120,
@@ -20,8 +29,17 @@
     "fallback_behavior": "log_and_notify"
   },
   "bottom_air_circulation": {
-    "allowed_actions": ["turn_on", "turn_off"],
-    "allowed_modes": ["MANUAL", "TEST", "ASK", "AUTO", "AUTOPILOT"],
+    "allowed_actions": [
+      "turn_on",
+      "turn_off"
+    ],
+    "allowed_modes": [
+      "MANUAL",
+      "TEST",
+      "ASK",
+      "AUTO",
+      "AUTOPILOT"
+    ],
     "dependencies": [],
     "constraints": {
       "max_run_minutes": 120,
@@ -38,5 +56,62 @@
       "disable_on_fire"
     ],
     "fallback_behavior": "log_and_notify"
+  },
+  "main_humidifier": {
+    "allowed_actions": [
+      "turn_on",
+      "turn_off"
+    ],
+    "allowed_modes": [
+      "MANUAL",
+      "TEST",
+      "ASK",
+      "AUTO",
+      "AUTOPILOT"
+    ],
+    "dependencies": [
+      "main_humidifier_power"
+    ],
+    "constraints": {
+      "max_run_minutes": 60,
+      "cooldown_minutes": 15
+    },
+    "pre_checks": [
+      "device_available",
+      "no_fire_emergency"
+    ],
+    "post_checks": [
+      "entity_state_changed",
+      "leaf_humidity_followup"
+    ],
+    "safety_flags": [
+      "disable_on_fire"
+    ],
+    "fallback_behavior": "log_and_notify"
+  },
+  "veranda_main_power_cutoff": {
+    "allowed_actions": [
+      "turn_on",
+      "turn_off"
+    ],
+    "allowed_modes": [
+      "MANUAL",
+      "TEST",
+      "ASK"
+    ],
+    "dependencies": [],
+    "constraints": {
+      "critical_action": true
+    },
+    "pre_checks": [
+      "device_available"
+    ],
+    "post_checks": [
+      "power_state_followup"
+    ],
+    "safety_flags": [
+      "critical_power_cutoff"
+    ],
+    "fallback_behavior": "notify_only"
   }
 }

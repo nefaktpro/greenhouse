@@ -1,33 +1,59 @@
-from telebot.types import ReplyKeyboardMarkup, KeyboardButton
+from __future__ import annotations
 
+from telebot.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
+
+from greenhouse_v17.core.intent.intent_router import route_text
 from greenhouse_v17.services.mode_service import get_mode, set_mode
-from greenhouse_v17.services.ha_client import call_switch
-from greenhouse_v17.registry.loader import resolve_action_to_entity
-
+from greenhouse_v17.services.action_service import execute_action
+from greenhouse_v17.services.ask_service import load_ask_state, clear_ask_state
 
 def build_main_menu():
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
     kb.row(KeyboardButton("📊 Статус"), KeyboardButton("🤖 Режим"))
-    kb.row(KeyboardButton("🌬 Верх ВКЛ"), KeyboardButton("🛑 Верх ВЫКЛ"))
-    kb.row(KeyboardButton("🌬 Низ ВКЛ"), KeyboardButton("🛑 Низ ВЫКЛ"))
+    kb.row(KeyboardButton("🌬 Верх ВКЛ"), KeyboardButton("🌬 Верх ВЫКЛ"))
+    kb.row(KeyboardButton("🌬 Низ ВКЛ"), KeyboardButton("🌬 Низ ВЫКЛ"))
+    kb.row(KeyboardButton("💧 Увлажнитель ВКЛ"), KeyboardButton("💧 Увлажнитель ВЫКЛ"))
     return kb
 
+def build_ask_keyboard(action_key: str):
+    kb = InlineKeyboardMarkup()
+    kb.row(
+        InlineKeyboardButton("✅ Подтвердить", callback_data=f"ask:confirm:{action_key}"),
+        InlineKeyboardButton("❌ Отмена", callback_data="ask:cancel"),
+    )
+    return kb
 
-def _run_action(action_key: str):
-    resolved = resolve_action_to_entity(action_key)
-    entity_id = resolved["entity_id"]
-    operation = resolved["operation"]
+def _format_execution_result(res):
+    status = res.get("status")
+    mode = res.get("mode")
+    msg = res.get("message", "")
+    entity_id = res.get("entity_id")
 
-    result = call_switch(entity_id, turn_on=(operation == "turn_on"))
-    return resolved, result
-
+    if status == "ask":
+        return f"{msg}\nРежим: {mode}\nТребуется подтверждение."
+    if status == "dry_run":
+        return f"{msg}\nРежим: {mode}\n🧪 TEST: команда распознана, но не исполнена."
+    if status == "blocked":
+        return f"⛔ {msg}\nРежим: {mode}"
+    if status == "unsupported":
+        return f"⚠️ {msg}\nРежим: {mode}"
+    if status in ("executed", "degraded"):
+        verify = res.get("verify", {})
+        verify_line = "✅ verify ok" if verify.get("ok") else f"⚠️ verify failed (actual={verify.get('actual_state')})"
+        return (
+            f"{msg}\n"
+            f"Режим: {mode}\n"
+            f"Устройство: {entity_id}\n"
+            f"{verify_line}"
+        )
+    return str(res)
 
 def register_v3_handlers(bot):
     @bot.message_handler(commands=["start"])
     def cmd_start(message):
         bot.send_message(
             message.chat.id,
-            "GREENHOUSE v17 / TG v3\n\nЧистый новый пакетный контур запущен.",
+            "GREENHOUSE v17 / TG v3\n\nЕдиный router + ASK + execution + verify.",
             reply_markup=build_main_menu(),
         )
 
@@ -36,93 +62,123 @@ def register_v3_handlers(bot):
         bot.send_message(
             message.chat.id,
             f"Текущий режим: {get_mode()}\n\n"
-            "/mode_manual\n/mode_test\n/mode_ask\n/mode_auto\n/mode_autopilot"
+            "/mode_manual\n/mode_test\n/mode_ask\n/mode_auto\n/mode_autopilot",
+            reply_markup=build_main_menu(),
         )
 
     @bot.message_handler(commands=["mode_manual"])
     def cmd_mode_manual(message):
         set_mode("MANUAL")
-        bot.send_message(message.chat.id, "Режим переключен: MANUAL")
+        bot.send_message(message.chat.id, "Режим переключен: MANUAL", reply_markup=build_main_menu())
 
     @bot.message_handler(commands=["mode_test"])
     def cmd_mode_test(message):
         set_mode("TEST")
-        bot.send_message(message.chat.id, "Режим переключен: TEST")
+        bot.send_message(message.chat.id, "Режим переключен: TEST", reply_markup=build_main_menu())
 
     @bot.message_handler(commands=["mode_ask"])
     def cmd_mode_ask(message):
         set_mode("ASK")
-        bot.send_message(message.chat.id, "Режим переключен: ASK")
+        bot.send_message(message.chat.id, "Режим переключен: ASK", reply_markup=build_main_menu())
 
     @bot.message_handler(commands=["mode_auto"])
     def cmd_mode_auto(message):
         set_mode("AUTO")
-        bot.send_message(message.chat.id, "Режим переключен: AUTO")
+        bot.send_message(message.chat.id, "Режим переключен: AUTO", reply_markup=build_main_menu())
 
     @bot.message_handler(commands=["mode_autopilot"])
     def cmd_mode_autopilot(message):
         set_mode("AUTOPILOT")
-        bot.send_message(message.chat.id, "Режим переключен: AUTOPILOT")
+        bot.send_message(message.chat.id, "Режим переключен: AUTOPILOT", reply_markup=build_main_menu())
 
-    def run_action(message, action_key: str, title: str):
-        mode = get_mode()
-
-        if mode == "TEST":
-            bot.send_message(message.chat.id, f"{title}\n🧪 TEST: команда распознана, но не исполнена.")
+    @bot.callback_query_handler(func=lambda c: c.data.startswith("ask:"))
+    def on_ask_callback(call):
+        if call.data == "ask:cancel":
+            clear_ask_state()
+            bot.answer_callback_query(call.id, "Отменено")
+            bot.edit_message_reply_markup(call.message.chat.id, call.message.message_id, reply_markup=None)
+            bot.send_message(call.message.chat.id, "ASK отменён.", reply_markup=build_main_menu())
             return
 
-        if mode == "ASK":
-            bot.send_message(message.chat.id, f"{title}\n⛔ ASK пока не подключен в новом пакете. Переключись в MANUAL.")
+        parts = call.data.split(":")
+        if len(parts) != 3 or parts[1] != "confirm":
+            bot.answer_callback_query(call.id, "Неверный callback")
             return
 
-        try:
-            resolved, result = _run_action(action_key)
-            bot.send_message(
-                message.chat.id,
-                f"{title}\n"
-                f"Режим: {mode}\n"
-                f"✅ {resolved['entity_id']} — HA command sent ({result['service']})",
-                reply_markup=build_main_menu(),
-            )
-        except Exception as e:
-            bot.send_message(
-                message.chat.id,
-                f"{title}\n❌ Ошибка: {e}",
-                reply_markup=build_main_menu(),
-            )
+        action_key = parts[2]
+        stored = load_ask_state()
+        if not stored or stored.get("action_key") != action_key:
+            bot.answer_callback_query(call.id, "ASK state не найден")
+            bot.send_message(call.message.chat.id, "Не найдено ожидающее ASK-состояние.", reply_markup=build_main_menu())
+            return
 
-    @bot.message_handler(commands=["fan_top_on"])
-    def cmd_fan_top_on(message):
-        run_action(message, "fan_top_on", "🌬 Верх: включить вентиляторы")
-
-    @bot.message_handler(commands=["fan_top_off"])
-    def cmd_fan_top_off(message):
-        run_action(message, "fan_top_off", "🛑 Верх: выключить вентиляторы")
-
-    @bot.message_handler(commands=["fan_low_on"])
-    def cmd_fan_low_on(message):
-        run_action(message, "fan_bottom_on", "🌬 Низ: включить вентиляторы")
-
-    @bot.message_handler(commands=["fan_low_off"])
-    def cmd_fan_low_off(message):
-        run_action(message, "fan_bottom_off", "🛑 Низ: выключить вентиляторы")
+        res = execute_action(action_key, force_execute=True)
+        clear_ask_state()
+        bot.answer_callback_query(call.id, "Подтверждено")
+        bot.edit_message_reply_markup(call.message.chat.id, call.message.message_id, reply_markup=None)
+        bot.send_message(call.message.chat.id, _format_execution_result(res), reply_markup=build_main_menu())
 
     @bot.message_handler(func=lambda m: True, content_types=["text"])
-    def handle_buttons(message):
-        text = (message.text or "").strip()
+    def handle_any_text(message):
+        routed = route_text(message.text or "")
+        intent_type = routed.get("intent_type")
+        action_key = routed.get("action_key")
 
-        if text == "🤖 Режим":
+        if intent_type == "mode_status":
             return cmd_mode(message)
-        if text == "🌬 Верх ВКЛ":
-            return run_action(message, "fan_top_on", "🌬 Верх: включить вентиляторы")
-        if text == "🛑 Верх ВЫКЛ":
-            return run_action(message, "fan_top_off", "🛑 Верх: выключить вентиляторы")
-        if text == "🌬 Низ ВКЛ":
-            return run_action(message, "fan_bottom_on", "🌬 Низ: включить вентиляторы")
-        if text == "🛑 Низ ВЫКЛ":
-            return run_action(message, "fan_bottom_off", "🛑 Низ: выключить вентиляторы")
-        if text == "📊 Статус":
-            bot.send_message(message.chat.id, "📊 Новый status layer будет подключен следующим шагом.", reply_markup=build_main_menu())
+
+        if intent_type == "status":
+            bot.send_message(
+                message.chat.id,
+                "Status layer ещё упрощён. Следующий шаг — нормальный status/snapshot поверх нового Core.",
+                reply_markup=build_main_menu(),
+            )
             return
 
-        bot.send_message(message.chat.id, "Команда пока не подключена в новом пакете.", reply_markup=build_main_menu())
+        if intent_type == "device_action" and action_key:
+            res = execute_action(action_key)
+            if res.get("status") == "ask":
+                bot.send_message(
+                    message.chat.id,
+                    _format_execution_result(res),
+                    reply_markup=build_main_menu(),
+                )
+                bot.send_message(
+                    message.chat.id,
+                    f"Подтвердить действие: {action_key}",
+                    reply_markup=build_main_menu(),
+                )
+                bot.send_message(
+                    message.chat.id,
+                    "Нажми подтверждение ниже:",
+                    reply_markup=build_main_menu(),
+                )
+                bot.send_message(
+                    message.chat.id,
+                    "ASK pending",
+                    reply_markup=build_main_menu(),
+                )
+                bot.send_message(
+                    message.chat.id,
+                    f"Действие: {action_key}",
+                    reply_markup=build_main_menu(),
+                )
+                bot.send_message(
+                    message.chat.id,
+                    "Подтверждение:",
+                    reply_markup=build_ask_keyboard(action_key),
+                )
+                return
+
+            bot.send_message(
+                message.chat.id,
+                _format_execution_result(res),
+                reply_markup=build_main_menu(),
+            )
+            return
+
+        bot.send_message(
+            message.chat.id,
+            "Команда пока не подключена в новом пакете.",
+            reply_markup=build_main_menu(),
+        )
