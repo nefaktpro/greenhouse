@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="cards-grid">
+  <article class="card">
+    <div class="card-label">Manual actions</div>
+    <h3>Быстрые control-кнопки</h3>
+    <div class="button-row wrap">
+      <button class="primary-btn" onclick="runAction('fan_top_on')">fan_top_on</button>
+      <button class="ghost-btn" onclick="runAction('fan_top_off')">fan_top_off</button>
+      <button class="primary-btn" onclick="runAction('fan_bottom_on')">fan_bottom_on</button>
+      <button class="ghost-btn" onclick="runAction('fan_bottom_off')">fan_bottom_off</button>
+    </div>
+    <p class="muted">
+      Это ручной control-слой. Полный список устройств должен идти через Registry, а не через эти 4 кнопки.
+    </p>
+  </article>
+
+  <article class="card">
+    <div class="card-label">Custom action</div>
+    <h3>Запуск по action_key</h3>
+    <div class="form-grid">
+      <label>
+        <span>action_key</span>
+        <input id="action-key" type="text" value="fan_top_on">
+      </label>
+      <button class="primary-btn" onclick="runCustomAction()">Выполнить</button>
+    </div>
+  </article>
+</section>
+
+<section class="cards-grid">
+  <article class="card wide">
+    <div class="card-label">Result</div>
+    <h3>Результат действия</h3>
+    <pre id="action-result" class="result-box">Ожидание...</pre>
+  </article>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function runAction(actionKey) {
+  if (!requireAuth()) return;
+  document.getElementById("action-result").textContent = "Запуск " + actionKey + "...";
+  const result = await ghRunAction(actionKey);
+  pretty("action-result", result);
+}
+
+function runCustomAction() {
+  const actionKey = document.getElementById("action-key").value.trim();
+  if (!actionKey) return;
+  runAction(actionKey);
+}
+</script>
+{% endblock %}

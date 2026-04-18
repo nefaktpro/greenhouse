@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="cards-grid">
+  <article class="card">
+    <div class="card-label">Current</div>
+    <h3>Текущий режим</h3>
+    <pre id="mode-current-box" class="result-box">Загрузка...</pre>
+  </article>
+
+  <article class="card">
+    <div class="card-label">Switch</div>
+    <h3>Переключение режима</h3>
+    <div class="button-row wrap">
+      <button class="ghost-btn" onclick="setMode('MANUAL')">MANUAL</button>
+      <button class="ghost-btn" onclick="setMode('TEST')">TEST</button>
+      <button class="ghost-btn" onclick="setMode('ASK')">ASK</button>
+      <button class="ghost-btn" onclick="setMode('AUTO')">AUTO</button>
+      <button class="ghost-btn" onclick="setMode('AUTOPILOT')">AUTOPILOT</button>
+      <button class="ghost-btn" onclick="setMode('PROGRAM')">PROGRAM</button>
+    </div>
+    <pre id="mode-set-box" class="result-box">Ожидание...</pre>
+  </article>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function loadMode() {
+  if (!requireAuth()) return;
+  const result = await ghApi("/api/modes/current", { method: "GET" });
+  pretty("mode-current-box", result.data);
+}
+
+async function setMode(modeName) {
+  const variants = [
+    { url: "/api/modes/set", body: { mode: modeName } },
+    { url: "/api/modes/switch", body: { mode: modeName } },
+    { url: "/api/modes/" + encodeURIComponent(modeName), body: {} },
+  ];
+  const result = await ghTryPostVariants(variants);
+  pretty("mode-set-box", result);
+  await loadMode();
+}
+
+loadMode();
+</script>
+{% endblock %}

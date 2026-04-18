@@ -1,32 +1,364 @@
 {% extends "base.html" %}
 {% block content %}
-<section class="cards-grid">
-  <article class="card">
-    <div class="card-label">Registry</div>
-    <h3>Devices</h3>
-    <pre id="devices-box" class="result-box">Загрузка...</pre>
-  </article>
+<style>
+  .registry-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+    margin: 16px 0 18px 0;
+  }
 
-  <article class="card">
+  .registry-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .registry-tab-btn {
+    border: 1px solid #284a86;
+    background: #0b1731;
+    color: #dbe8ff;
+    border-radius: 14px;
+    padding: 12px 18px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .registry-tab-btn.active {
+    background: linear-gradient(180deg, #4f8cff 0%, #2f6ee5 100%);
+    color: #fff;
+    box-shadow: 0 8px 22px rgba(47,110,229,.35);
+  }
+
+  .registry-summary {
+    margin: 8px 0 18px 0;
+    color: #c7d5ee;
+    line-height: 1.5;
+  }
+
+  .registry-panel {
+    display: none;
+  }
+
+  .registry-panel.active {
+    display: block;
+  }
+
+  .registry-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 16px;
+    align-items: center;
+  }
+
+  .registry-filters input,
+  .registry-filters select {
+    border: 1px solid #284a86;
+    background: #091226;
+    color: #e8f0ff;
+    border-radius: 12px;
+    padding: 10px 12px;
+    min-width: 220px;
+  }
+
+  .registry-table-wrap {
+    overflow: auto;
+    border: 1px solid #223659;
+    border-radius: 16px;
+  }
+
+  .registry-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 980px;
+    background: rgba(8,15,30,.9);
+  }
+
+  .registry-table th,
+  .registry-table td {
+    padding: 12px 14px;
+    border-bottom: 1px solid #1e3153;
+    vertical-align: top;
+    text-align: left;
+    color: #e7eeff;
+    font-size: 14px;
+    line-height: 1.35;
+  }
+
+  .registry-table th {
+    color: #8fb3ff;
+    font-weight: 700;
+    background: #0d1a34;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+  }
+
+  .registry-table tr:hover td {
+    background: rgba(31,61,110,.18);
+  }
+
+  .mono {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 13px;
+  }
+
+  .mini-card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 14px;
+  }
+
+  .mini-card h3 {
+    margin-bottom: 8px;
+  }
+
+  .mini-line {
+    margin-bottom: 6px;
+    color: #d9e5ff;
+    line-height: 1.4;
+    font-size: 14px;
+  }
+
+  .mini-line span {
+    color: #8fb3ff;
+    font-weight: 700;
+  }
+</style>
+
+<section class="cards-grid">
+  <article class="card wide">
     <div class="card-label">Registry</div>
-    <h3>Capabilities</h3>
-    <pre id="caps-box" class="result-box">Загрузка...</pre>
+    <h3>Каталог системы</h3>
+    <p class="muted">
+      Здесь живёт source of truth: devices, actions, capabilities и scenarios.
+    </p>
+
+    <div class="registry-toolbar">
+      <button class="primary-btn" onclick="loadRegistryAll()">Обновить registry</button>
+
+      <div class="registry-tabs">
+        <button id="registry-tab-btn-devices" class="registry-tab-btn active" onclick="switchRegistryTab('devices')">Devices</button>
+        <button id="registry-tab-btn-actions" class="registry-tab-btn" onclick="switchRegistryTab('actions')">Actions</button>
+        <button id="registry-tab-btn-capabilities" class="registry-tab-btn" onclick="switchRegistryTab('capabilities')">Capabilities</button>
+        <button id="registry-tab-btn-scenarios" class="registry-tab-btn" onclick="switchRegistryTab('scenarios')">Scenarios</button>
+      </div>
+    </div>
+
+    <div id="registry-summary" class="registry-summary">Загрузка...</div>
+
+    <div id="registry-panel-devices" class="registry-panel active">
+      <div class="registry-filters">
+        <input id="devices-search" type="text" placeholder="Поиск: имя, id, entity, zone..." oninput="renderDevicesPanel()">
+        <select id="devices-type-filter" onchange="renderDevicesPanel()">
+          <option value="">Все типы</option>
+        </select>
+      </div>
+      <div id="devices-table-box">Загрузка...</div>
+    </div>
+
+    <div id="registry-panel-actions" class="registry-panel">
+      <div id="actions-box">Загрузка...</div>
+    </div>
+
+    <div id="registry-panel-capabilities" class="registry-panel">
+      <div id="capabilities-box">Загрузка...</div>
+    </div>
+
+    <div id="registry-panel-scenarios" class="registry-panel">
+      <div id="scenarios-box">Загрузка...</div>
+    </div>
   </article>
 </section>
 {% endblock %}
 
 {% block scripts %}
 <script>
-(async function loadRegistry() {
+let REGISTRY_STATE = {
+  devices: [],
+  actions: null,
+  capabilities: null,
+  scenarios: null,
+};
+
+function esc(text) {
+  return String(text ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;");
+}
+
+function switchRegistryTab(tabName) {
+  for (const name of ["devices", "actions", "capabilities", "scenarios"]) {
+    const btn = document.getElementById("registry-tab-btn-" + name);
+    const panel = document.getElementById("registry-panel-" + name);
+    if (btn) btn.classList.toggle("active", name === tabName);
+    if (panel) panel.classList.toggle("active", name === tabName);
+  }
+}
+
+function getItemsFromPayload(payload) {
+  if (Array.isArray(payload?.items)) return payload.items;
+  if (Array.isArray(payload?.data?.items)) return payload.data.items;
+  if (Array.isArray(payload)) return payload;
+  return [];
+}
+
+function fillTypeFilter(items) {
+  const select = document.getElementById("devices-type-filter");
+  if (!select) return;
+
+  const types = [...new Set(items.map(x => String(x.type || "").trim()).filter(Boolean))].sort();
+
+  select.innerHTML = '<option value="">Все типы</option>' +
+    types.map(t => `<option value="${esc(t)}">${esc(t)}</option>`).join("");
+}
+
+function buildSummary(items) {
+  const counts = {};
+  for (const item of items) {
+    const t = String(item.type || "unknown").trim() || "unknown";
+    counts[t] = (counts[t] || 0) + 1;
+  }
+
+  const ordered = Object.entries(counts)
+    .sort((a, b) => b[1] - a[1])
+    .map(([k, v]) => `${k}: ${v}`)
+    .join(" | ");
+
+  document.getElementById("registry-summary").textContent =
+    `Всего записей: ${items.length}` + (ordered ? ` | ${ordered}` : "");
+}
+
+function row(item) {
+  return `
+    <tr>
+      <td class="mono">${esc(item.device_id || "")}</td>
+      <td class="mono">${esc(item.parent_id || "")}</td>
+      <td>${esc(item.name || "")}</td>
+      <td>${esc(item.type || "")}</td>
+      <td>${esc(item.zone || "")}</td>
+      <td>${esc(item.location || "")}</td>
+      <td class="mono">${esc(item.entity_id || "")}</td>
+      <td class="mono">${esc(item.logical_role || "")}</td>
+    </tr>
+  `;
+}
+
+function renderDevicesPanel() {
+  const items = REGISTRY_STATE.devices || [];
+  const q = (document.getElementById("devices-search")?.value || "").trim().toLowerCase();
+  const typeFilter = (document.getElementById("devices-type-filter")?.value || "").trim().toLowerCase();
+
+  const filtered = items.filter(item => {
+    const matchesType = !typeFilter || String(item.type || "").trim().toLowerCase() === typeFilter;
+
+    const blob = [
+      item.device_id,
+      item.parent_id,
+      item.name,
+      item.type,
+      item.zone,
+      item.location,
+      item.entity_id,
+      item.logical_role,
+      item.notes,
+      item.source
+    ].map(v => String(v || "").toLowerCase()).join(" | ");
+
+    const matchesSearch = !q || blob.includes(q);
+    return matchesType && matchesSearch;
+  });
+
+  const box = document.getElementById("devices-table-box");
+  if (!filtered.length) {
+    box.innerHTML = `<div class="card">Ничего не найдено</div>`;
+    return;
+  }
+
+  box.innerHTML = `
+    <div class="registry-table-wrap">
+      <table class="registry-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Parent</th>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Zone</th>
+            <th>Location</th>
+            <th>Entity</th>
+            <th>Role</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${filtered.map(row).join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function renderObjectPanel(boxId, payload, titleKeyFallback) {
+  const box = document.getElementById(boxId);
+
+  if (!payload || payload.ok === false && !payload.data) {
+    box.innerHTML = `<div class="card">Нет данных</div>`;
+    return;
+  }
+
+  let obj = payload.data ?? payload;
+  if (obj && typeof obj === "object" && !Array.isArray(obj)) {
+    const entries = Object.entries(obj);
+    if (!entries.length) {
+      box.innerHTML = `<div class="card">Пусто</div>`;
+      return;
+    }
+
+    box.innerHTML = `
+      <div class="mini-card-grid">
+        ${entries.map(([key, value]) => `
+          <article class="card mini-card">
+            <div class="card-label">${esc(titleKeyFallback)}</div>
+            <h3>${esc(key)}</h3>
+            <div class="mini-line"><span>Value:</span></div>
+            <pre class="result-box">${esc(JSON.stringify(value, null, 2))}</pre>
+          </article>
+        `).join("")}
+      </div>
+    `;
+    return;
+  }
+
+  box.innerHTML = `<pre class="result-box">${esc(JSON.stringify(obj, null, 2))}</pre>`;
+}
+
+async function loadRegistryAll() {
   if (!requireAuth()) return;
 
-  const [devices, caps] = await Promise.all([
-    ghApi("/api/registry/devices", { method: "GET", headers: ghHeaders(false) }),
-    ghApi("/api/registry/capabilities", { method: "GET", headers: ghHeaders(false) })
+  const [devices, actions, capabilities, scenarios] = await Promise.all([
+    ghTryGetVariants(["/api/registry/devices", "/api/registry/list_devices", "/api/registry/items"]),
+    ghTryGetVariants(["/api/registry/actions", "/api/registry/action_map"]),
+    ghTryGetVariants(["/api/registry/capabilities", "/api/registry/device_capabilities"]),
+    ghTryGetVariants(["/api/registry/scenarios"])
   ]);
 
-  pretty("devices-box", devices.data);
-  pretty("caps-box", caps.data);
-})();
+  REGISTRY_STATE.devices = getItemsFromPayload(devices.data);
+  REGISTRY_STATE.actions = actions;
+  REGISTRY_STATE.capabilities = capabilities;
+  REGISTRY_STATE.scenarios = scenarios;
+
+  fillTypeFilter(REGISTRY_STATE.devices);
+  buildSummary(REGISTRY_STATE.devices);
+  renderDevicesPanel();
+  renderObjectPanel("actions-box", REGISTRY_STATE.actions, "Actions");
+  renderObjectPanel("capabilities-box", REGISTRY_STATE.capabilities, "Capabilities");
+  renderObjectPanel("scenarios-box", REGISTRY_STATE.scenarios, "Scenarios");
+}
+
+loadRegistryAll();
 </script>
 {% endblock %}

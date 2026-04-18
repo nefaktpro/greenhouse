@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="cards-grid">
+  <article class="card">
+    <div class="card-label">Devices</div>
+    <h3>Все устройства</h3>
+    <button class="primary-btn" onclick="loadDevices()">Обновить devices</button>
+    <pre id="devices-box" class="result-box">Ожидание...</pre>
+  </article>
+
+  <article class="card">
+    <div class="card-label">Actions</div>
+    <h3>Action map</h3>
+    <button class="primary-btn" onclick="loadActions()">Обновить actions</button>
+    <pre id="actions-box" class="result-box">Ожидание...</pre>
+  </article>
+</section>
+
+<section class="cards-grid">
+  <article class="card">
+    <div class="card-label">Capabilities</div>
+    <h3>Capabilities</h3>
+    <button class="primary-btn" onclick="loadCapabilities()">Обновить capabilities</button>
+    <pre id="capabilities-box" class="result-box">Ожидание...</pre>
+  </article>
+
+  <article class="card">
+    <div class="card-label">Scenarios</div>
+    <h3>Scenarios</h3>
+    <button class="primary-btn" onclick="loadScenarios()">Обновить scenarios</button>
+    <pre id="scenarios-box" class="result-box">Ожидание...</pre>
+  </article>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function loadDevices() {
+  const result = await ghLoadRegistryDevices();
+  pretty("devices-box", result);
+}
+
+async function loadActions() {
+  const result = await ghLoadRegistryActions();
+  pretty("actions-box", result);
+}
+
+async function loadCapabilities() {
+  const result = await ghLoadRegistryCapabilities();
+  pretty("capabilities-box", result);
+}
+
+async function loadScenarios() {
+  const result = await ghLoadRegistryScenarios();
+  pretty("scenarios-box", result);
+}
+
+(async function() {
+  if (!requireAuth()) return;
+  await Promise.all([loadDevices(), loadActions(), loadCapabilities(), loadScenarios()]);
+})();
+</script>
+{% endblock %}

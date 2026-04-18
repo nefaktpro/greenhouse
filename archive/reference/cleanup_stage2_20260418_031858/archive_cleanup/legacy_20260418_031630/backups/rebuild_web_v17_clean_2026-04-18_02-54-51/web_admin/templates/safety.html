@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card">
+  <div class="card-label">Safety</div>
+  <h3>Safety state</h3>
+  <pre id="safety-box" class="result-box">Загрузка...</pre>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(async function loadSafety() {
+  if (!requireAuth()) return;
+  const { data } = await ghApi("/api/monitoring/safety", {
+    method: "GET",
+    headers: ghHeaders(false)
+  });
+  pretty("safety-box", data);
+})();
+</script>
+{% endblock %}

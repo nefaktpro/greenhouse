@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="hero-card narrow">
+  <div class="hero-kicker">Web Admin Login</div>
+  <h2>Вход в панель</h2>
+  <p class="muted">Нормальный вход в тот же backend, без пустых разделов.</p>
+
+  <form id="login-form" class="form-grid">
+    <label>
+      <span>Логин</span>
+      <input id="username" type="text" value="Mi" autocomplete="username">
+    </label>
+    <label>
+      <span>Пароль</span>
+      <input id="password" type="password" autocomplete="current-password">
+    </label>
+    <button type="submit" class="primary-btn">Войти</button>
+  </form>
+
+  <pre id="login-result" class="result-box"></pre>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById("login-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const result = document.getElementById("login-result");
+  result.textContent = "Выполняю вход...";
+
+  const { resp, data } = await ghApi("/api/auth/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      username: document.getElementById("username").value,
+      password: document.getElementById("password").value
+    })
+  });
+
+  if (!resp.ok || !data.access_token) {
+    result.textContent = JSON.stringify(data, null, 2);
+    return;
+  }
+
+  result.textContent = "Успешный вход";
+  window.location.href = "/web/";
+});
+</script>
+{% endblock %}

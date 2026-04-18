@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="card">
+  <h3>ASK — подтверждение</h3>
+  <div id="askBox">Загрузка...</div>
+</div>
+
+<script>
+async function loadAsk() {
+  let res = await fetch("/api/ask/current").then(r=>r.json())
+
+  if (!res.data.has_pending) {
+    document.getElementById("askBox").innerHTML = "Нет действий"
+    return
+  }
+
+  let item = res.data.item
+
+  document.getElementById("askBox").innerHTML = `
+    <b>${item.title}</b><br><br>
+    <button onclick="confirmAsk()">Подтвердить</button>
+  `
+}
+
+async function confirmAsk() {
+  await fetch("/api/ask/confirm", {method: "POST"})
+  loadAsk()
+}
+
+loadAsk()
+</script>
+
+{% endblock %}

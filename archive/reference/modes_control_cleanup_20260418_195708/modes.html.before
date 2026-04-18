@@ -1,0 +1,302 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+  .modes-grid {
+    display: grid;
+    grid-template-columns: 1.15fr 1fr;
+    gap: 18px;
+  }
+
+  .mode-current-card {
+    background: rgba(9,18,38,.92);
+    border: 1px solid #223659;
+    border-radius: 18px;
+    padding: 20px;
+  }
+
+  .mode-name {
+    font-size: 34px;
+    font-weight: 800;
+    line-height: 1.1;
+    margin: 8px 0 12px 0;
+    color: #ffffff;
+  }
+
+  .mode-desc {
+    color: #c7d5ee;
+    line-height: 1.5;
+    margin-bottom: 16px;
+  }
+
+  .mode-flags {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .flag-box {
+    background: rgba(12,22,44,.88);
+    border: 1px solid #203456;
+    border-radius: 14px;
+    padding: 14px;
+  }
+
+  .flag-k {
+    color: #8fb3ff;
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+    letter-spacing: .04em;
+  }
+
+  .flag-v {
+    font-size: 20px;
+    font-weight: 800;
+  }
+
+  .flag-on { color: #7ee787; }
+  .flag-off { color: #ff7b72; }
+
+  .mode-switch-card {
+    background: rgba(9,18,38,.92);
+    border: 1px solid #223659;
+    border-radius: 18px;
+    padding: 20px;
+  }
+
+  .mode-buttons {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 10px;
+  }
+
+  .mode-btn {
+    border: 1px solid #284a86;
+    background: #0b1731;
+    color: #dbe8ff;
+    border-radius: 14px;
+    padding: 14px 16px;
+    font-weight: 800;
+    cursor: pointer;
+    text-align: center;
+  }
+
+  .mode-btn:hover {
+    background: #112246;
+  }
+
+  .mode-btn.primary {
+    background: linear-gradient(180deg, #4f8cff 0%, #2f6ee5 100%);
+    color: #fff;
+    box-shadow: 0 8px 22px rgba(47,110,229,.35);
+  }
+
+  .mode-result {
+    margin-top: 16px;
+  }
+
+  .mode-help-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 14px;
+    margin-top: 18px;
+  }
+
+  .mode-help-card {
+    background: rgba(9,18,38,.92);
+    border: 1px solid #223659;
+    border-radius: 16px;
+    padding: 16px;
+  }
+
+  .mode-help-card h3 {
+    margin-bottom: 8px;
+  }
+
+  .mode-help-card p {
+    color: #c7d5ee;
+    line-height: 1.45;
+    margin: 0;
+  }
+
+  @media (max-width: 900px) {
+    .modes-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .mode-buttons {
+      grid-template-columns: 1fr;
+    }
+
+    .mode-flags {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
+<section class="modes-grid">
+  <article class="mode-current-card">
+    <div class="card-label">Current mode</div>
+    <h2>Текущий режим</h2>
+    <div id="mode-name" class="mode-name">Загрузка...</div>
+    <div id="mode-desc" class="mode-desc">Загрузка описания...</div>
+
+    <div class="mode-flags">
+      <div class="flag-box">
+        <div class="flag-k">Execution</div>
+        <div id="flag-execute" class="flag-v">—</div>
+      </div>
+      <div class="flag-box">
+        <div class="flag-k">Logging</div>
+        <div id="flag-log" class="flag-v">—</div>
+      </div>
+      <div class="flag-box">
+        <div class="flag-k">Ask confirm</div>
+        <div id="flag-ask" class="flag-v">—</div>
+      </div>
+      <div class="flag-box">
+        <div class="flag-k">AI control</div>
+        <div id="flag-ai" class="flag-v">—</div>
+      </div>
+    </div>
+  </article>
+
+  <article class="mode-switch-card">
+    <div class="card-label">Switch</div>
+    <h2>Переключение режима</h2>
+    <p class="muted">
+      Переключение идёт через текущий API режимов.
+    </p>
+
+    <div class="mode-buttons">
+      <button class="mode-btn" onclick="setMode('MANUAL')">MANUAL</button>
+      <button class="mode-btn" onclick="setMode('TEST')">TEST</button>
+      <button class="mode-btn" onclick="setMode('ASK')">ASK</button>
+      <button class="mode-btn" onclick="setMode('AUTO')">AUTO</button>
+      <button class="mode-btn" onclick="setMode('AUTOPILOT')">AUTOPILOT</button>
+      <button class="mode-btn" onclick="setMode('PROGRAM')">PROGRAM</button>
+    </div>
+
+    <div class="mode-result">
+      <pre id="mode-set-box" class="result-box">Ожидание...</pre>
+    </div>
+  </article>
+</section>
+
+<section class="mode-help-grid">
+  <article class="mode-help-card">
+    <h3>MANUAL</h3>
+    <p>Ручной режим. Пользователь управляет системой сам.</p>
+  </article>
+
+  <article class="mode-help-card">
+    <h3>TEST</h3>
+    <p>Система считает и логирует, но не должна реально выполнять действия.</p>
+  </article>
+
+  <article class="mode-help-card">
+    <h3>ASK</h3>
+    <p>Система предлагает действие, а выполнение идёт после подтверждения.</p>
+  </article>
+
+  <article class="mode-help-card">
+    <h3>AUTO</h3>
+    <p>Автоматическое выполнение по правилам и разрешённому execution-контуру.</p>
+  </article>
+
+  <article class="mode-help-card">
+    <h3>AUTOPILOT</h3>
+    <p>Режим с AI-control логикой, но всё равно через общий Core / Validation / Execution.</p>
+  </article>
+
+  <article class="mode-help-card">
+    <h3>PROGRAM</h3>
+    <p>Будущий или расширенный режим пользовательских сценариев и правил, если поддерживается текущим API.</p>
+  </article>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function modeDescription(modeName) {
+  const m = String(modeName || "").toUpperCase();
+  const map = {
+    MANUAL: "Ручное управление без автоматического исполнения.",
+    TEST: "Расчёт и логирование без реального исполнения действий.",
+    ASK: "Предложение действия с ожиданием подтверждения.",
+    AUTO: "Автоматическое исполнение по rules / validation / execution pipeline.",
+    AUTOPILOT: "AI-driven режим поверх общего Core и safety-ограничений.",
+    PROGRAM: "Пользовательские сценарии и программная логика, если поддерживаются.",
+  };
+  return map[m] || "Описание режима не найдено.";
+}
+
+function flagHtml(value) {
+  const yes = value === true;
+  return `<span class="${yes ? 'flag-on' : 'flag-off'}">${yes ? 'ON' : 'OFF'}</span>`;
+}
+
+function extractModePayload(result) {
+  if (!result || !result.ok) return null;
+
+  const data = result.data || {};
+  if (data.state && typeof data.state === "object") return data.state;
+  if (data.mode && typeof data.mode === "object") return data.mode;
+  if (data.data && typeof data.data === "object") return data.data;
+
+  return data;
+}
+
+async function loadMode() {
+  if (!requireAuth()) return;
+
+  const result = await ghTryGetVariants([
+    "/api/modes/current",
+    "/api/modes"
+  ]);
+
+  const payload = extractModePayload(result) || {};
+  const modeName =
+    payload.mode ||
+    payload.name ||
+    payload.current_mode ||
+    payload.current ||
+    "UNKNOWN";
+
+  document.getElementById("mode-name").textContent = String(modeName).toUpperCase();
+  document.getElementById("mode-desc").textContent =
+    payload.description || modeDescription(modeName);
+
+  document.getElementById("flag-execute").innerHTML = flagHtml(
+    payload.execute ?? payload.flags?.execute ?? false
+  );
+  document.getElementById("flag-log").innerHTML = flagHtml(
+    payload.log ?? payload.logging ?? payload.flags?.log ?? false
+  );
+  document.getElementById("flag-ask").innerHTML = flagHtml(
+    payload.ask ?? payload.require_confirm ?? payload.flags?.ask ?? false
+  );
+  document.getElementById("flag-ai").innerHTML = flagHtml(
+    payload.ai_control ?? payload.ai ?? payload.flags?.ai_control ?? false
+  );
+}
+
+async function setMode(modeName) {
+  if (!requireAuth()) return;
+
+  const result = await ghTryPostVariants([
+    { url: "/api/modes/set", body: { mode: modeName } },
+    { url: "/api/modes/set", body: { mode_name: modeName } },
+    { url: "/api/modes/switch", body: { mode: modeName } },
+    { url: "/api/modes/" + encodeURIComponent(modeName), body: {} }
+  ]);
+
+  pretty("mode-set-box", result);
+  await loadMode();
+}
+
+loadMode();
+</script>
+{% endblock %}

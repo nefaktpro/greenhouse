@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card">
+  <div class="card-label">Execution</div>
+  <h3>Control</h3>
+  <p class="muted">Запуск действий через общий v17 pipeline.</p>
+  <div id="actions-grid" class="actions-grid"></div>
+  <pre id="control-result" class="result-box">Загрузка action map...</pre>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function executeAction(actionKey) {
+  const out = document.getElementById("control-result");
+  out.textContent = "Выполняю: " + actionKey;
+
+  let res = await ghApi("/api/actions/execute", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action_key: actionKey })
+  });
+
+  if (!res.resp.ok) {
+    res = await ghApi("/api/actions/run", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action_key: actionKey })
+    });
+  }
+
+  pretty("control-result", res.data);
+}
+
+(async function () {
+  const grid = document.getElementById("actions-grid");
+  const out = document.getElementById("control-result");
+
+  let mapRes = await ghApi("/api/actions/debug/action-map");
+  if (!mapRes.resp.ok) {
+    mapRes = await ghApi("/api/actions/action-map");
+  }
+
+  const data = mapRes.data;
+  pretty("control-result", data);
+
+  const src = data.items || data.actions || data.action_map || data || [];
+  const items = Array.isArray(src)
+    ? src
+    : Object.entries(src).map(([key, val]) => ({ action_key: key, ...(val || {}) }));
+
+  if (!items.length) {
+    grid.innerHTML = '<div class="muted">Action map пустой или другой структуры.</div>';
+    return;
+  }
+
+  grid.innerHTML = items.map((item) => {
+    const key = item.action_key || item.key || item.name || "unknown_action";
+    const title = item.title || item.label || key;
+    const role = item.logical_role || item.role || "-";
+    const op = item.operation || "-";
+
+    return `
+      <div class="action-card">
+        <div class="action-title">${esc(title)}</div>
+        <div class="action-meta">
+          <div><b>action_key:</b> ${esc(key)}</div>
+          <div><b>role:</b> ${esc(role)}</div>
+          <div><b>operation:</b> ${esc(op)}</div>
+        </div>
+        <div class="action-row">
+          <button class="primary-btn" onclick="executeAction('${String(key).replaceAll("'", "\\'")}')">Выполнить</button>
+        </div>
+      </div>
+    `;
+  }).join("");
+})();
+</script>
+{% endblock %}

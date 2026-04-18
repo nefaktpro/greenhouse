@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="cards-grid">
+  <article class="card wide">
+    <div class="card-label">Overview</div>
+    <h3>Мониторинг системы</h3>
+    <div class="button-row">
+      <button class="primary-btn" onclick="loadOverview()">Обновить overview</button>
+      <button class="ghost-btn" onclick="loadSafety()">Обновить safety</button>
+    </div>
+    <pre id="monitoring-overview-box" class="result-box">Загрузка...</pre>
+  </article>
+</section>
+
+<section class="cards-grid">
+  <article class="card wide">
+    <div class="card-label">Safety monitoring</div>
+    <h3>Сводка безопасности</h3>
+    <pre id="monitoring-safety-box" class="result-box">Загрузка...</pre>
+  </article>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function loadOverview() {
+  const result = await ghLoadOverview();
+  pretty("monitoring-overview-box", result.data);
+}
+
+async function loadSafety() {
+  const result = await ghLoadSafety();
+  pretty("monitoring-safety-box", result.data);
+}
+
+(async function() {
+  if (!requireAuth()) return;
+  await Promise.all([loadOverview(), loadSafety()]);
+})();
+</script>
+{% endblock %}

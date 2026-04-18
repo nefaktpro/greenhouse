@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="cards-grid">
+  <article class="card">
+    <div class="card-label">System</div>
+    <h3>Текущий режим</h3>
+    <pre id="mode-box" class="result-box">Загрузка...</pre>
+  </article>
+
+  <article class="card">
+    <div class="card-label">ASK</div>
+    <h3>Текущее ожидание</h3>
+    <pre id="ask-box" class="result-box">Загрузка...</pre>
+  </article>
+</section>
+
+<section class="cards-grid">
+  <article class="card">
+    <div class="card-label">Monitoring</div>
+    <h3>Overview</h3>
+    <pre id="overview-box" class="result-box">Загрузка...</pre>
+  </article>
+
+  <article class="card">
+    <div class="card-label">Safety</div>
+    <h3>Safety summary</h3>
+    <pre id="safety-box" class="result-box">Загрузка...</pre>
+  </article>
+</section>
+
+<section class="cards-grid">
+  <article class="card">
+    <div class="card-label">Registry</div>
+    <h3>Краткая сводка устройств</h3>
+    <pre id="registry-brief-box" class="result-box">Загрузка...</pre>
+  </article>
+
+  <article class="card">
+    <div class="card-label">Health</div>
+    <h3>Service health</h3>
+    <pre id="health-box" class="result-box">Загрузка...</pre>
+  </article>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(async function loadDashboard() {
+  if (!requireAuth()) return;
+
+  const [health, mode, ask, overview, safety, devices] = await Promise.all([
+    ghApi("/api/health", { method: "GET", auth: false }),
+    ghTryGetVariants(["/api/modes/current", "/api/modes"]),
+    ghTryGetVariants(["/api/ask/current", "/api/ask"]),
+    ghApi("/api/monitoring/overview", { method: "GET" }),
+    ghApi("/api/monitoring/safety", { method: "GET" }),
+    ghTryGetVariants(["/api/registry/devices", "/api/registry/list_devices", "/api/registry/items"])
+  ]);
+
+  pretty("health-box", health.data);
+  pretty("mode-box", mode);
+  pretty("ask-box", ask);
+  pretty("overview-box", overview.data);
+  pretty("safety-box", safety.data);
+  pretty("registry-brief-box", devices);
+})();
+</script>
+{% endblock %}

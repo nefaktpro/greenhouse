@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="cards-grid">
+  <article class="card wide">
+    <div class="card-label">Pending</div>
+    <h3>Текущее ASK-состояние</h3>
+    <p class="muted">
+      Система предлагает действие, а здесь ты его подтверждаешь или отменяешь.
+    </p>
+
+    <div class="button-row">
+      <button class="primary-btn" onclick="loadAsk()">Обновить</button>
+      <button class="primary-btn" onclick="confirmAsk()">Подтвердить</button>
+      <button class="ghost-btn" onclick="cancelAsk()">Отменить</button>
+    </div>
+
+    <pre id="ask-current-box" class="result-box">Загрузка...</pre>
+  </article>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function loadAsk() {
+  if (!requireAuth()) return;
+  const result = await ghTryGetVariants(["/api/ask/current", "/api/ask"]);
+  pretty("ask-current-box", result);
+}
+
+async function confirmAsk() {
+  if (!requireAuth()) return;
+  const result = await ghTryPostVariants([
+    { url: "/api/ask/confirm", body: {} },
+    { url: "/api/ask/confirm", body: { confirm: true } }
+  ]);
+  pretty("ask-current-box", result);
+}
+
+async function cancelAsk() {
+  if (!requireAuth()) return;
+  const result = await ghTryPostVariants([
+    { url: "/api/ask/cancel", body: {} },
+    { url: "/api/ask/cancel", body: { cancel: true } }
+  ]);
+  pretty("ask-current-box", result);
+}
+
+loadAsk();
+</script>
+{% endblock %}

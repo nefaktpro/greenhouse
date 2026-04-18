@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="cards-grid">
+  <article class="card wide">
+    <div class="card-label">Pending</div>
+    <h3>Текущее ASK-состояние</h3>
+    <pre id="ask-current-box" class="result-box">Загрузка...</pre>
+
+    <div class="button-row">
+      <button class="primary-btn" onclick="confirmAsk()">Подтвердить</button>
+      <button class="ghost-btn" onclick="cancelAsk()">Отменить</button>
+      <button class="ghost-btn" onclick="loadAsk()">Обновить</button>
+    </div>
+  </article>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function loadAsk() {
+  if (!requireAuth()) return;
+  const result = await ghApi("/api/ask/current", { method: "GET" });
+  pretty("ask-current-box", result.data);
+}
+
+async function confirmAsk() {
+  const result = await ghApi("/api/ask/confirm", { method: "POST" });
+  pretty("ask-current-box", result.data);
+}
+
+async function cancelAsk() {
+  const result = await ghApi("/api/ask/cancel", { method: "POST" });
+  pretty("ask-current-box", result.data);
+}
+
+loadAsk();
+setInterval(loadAsk, 7000);
+</script>
+{% endblock %}

@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="cards-grid">
+  <article class="card">
+    <div class="card-label">System</div>
+    <h3>Текущий режим</h3>
+    <pre id="mode-box" class="result-box">Загрузка...</pre>
+  </article>
+
+  <article class="card">
+    <div class="card-label">ASK</div>
+    <h3>Текущее ожидание</h3>
+    <pre id="ask-box" class="result-box">Загрузка...</pre>
+  </article>
+</section>
+
+<section class="cards-grid">
+  <article class="card">
+    <div class="card-label">Monitoring</div>
+    <h3>Overview</h3>
+    <pre id="overview-box" class="result-box">Загрузка...</pre>
+  </article>
+
+  <article class="card">
+    <div class="card-label">Safety</div>
+    <h3>Safety summary</h3>
+    <pre id="safety-box" class="result-box">Загрузка...</pre>
+  </article>
+</section>
+
+<section class="cards-grid">
+  <article class="card">
+    <div class="card-label">Навигация</div>
+    <h3>Быстрые действия</h3>
+    <div class="button-row">
+      <a class="primary-btn" href="/web/control">Control</a>
+      <a class="ghost-btn-link" href="/web/ask">ASK</a>
+      <a class="ghost-btn-link" href="/web/modes">Modes</a>
+      <a class="ghost-btn-link" href="/web/registry">Registry</a>
+      <a class="ghost-btn-link" href="/web/monitoring">Monitoring</a>
+      <a class="ghost-btn-link" href="/web/safety">Safety</a>
+    </div>
+  </article>
+
+  <article class="card">
+    <div class="card-label">Health</div>
+    <h3>Service health</h3>
+    <pre id="health-box" class="result-box">Загрузка...</pre>
+  </article>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(async function loadDashboard() {
+  if (!requireAuth()) return;
+
+  const [health, mode, ask, overview, safety] = await Promise.all([
+    ghApi("/api/health", { method: "GET", auth: false }),
+    ghLoadCurrentMode(),
+    ghLoadAskCurrent(),
+    ghLoadOverview(),
+    ghLoadSafety(),
+  ]);
+
+  pretty("health-box", health.data);
+  pretty("mode-box", mode);
+  pretty("ask-box", ask);
+  pretty("overview-box", overview.data);
+  pretty("safety-box", safety.data);
+})();
+</script>
+{% endblock %}

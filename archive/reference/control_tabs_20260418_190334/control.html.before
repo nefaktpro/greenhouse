@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="cards-grid">
+  <article class="card wide">
+    <div class="card-label">Manual Control</div>
+    <h3>Управление всеми устройствами</h3>
+    <p class="muted">
+      Здесь показываются все управляемые устройства из registry. Категории: switch, light, fan, cover, climate.
+    </p>
+
+    <div class="button-row">
+      <button class="primary-btn" onclick="loadControlDevices()">Обновить устройства</button>
+    </div>
+
+    <div id="control-groups" class="control-groups">
+      Загрузка...
+    </div>
+  </article>
+</section>
+
+<section class="cards-grid">
+  <article class="card wide">
+    <div class="card-label">Result</div>
+    <h3>Результат команды</h3>
+    <pre id="control-result-box" class="result-box">Ожидание...</pre>
+  </article>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const CONTROL_TYPES = ["switch", "light", "fan", "cover", "climate"];
+
+function normalizeDeviceType(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function isControllable(item) {
+  const t = normalizeDeviceType(item.type);
+  return CONTROL_TYPES.includes(t) && String(item.entity_id || "").trim() !== "";
+}
+
+function groupDevices(items) {
+  const groups = {
+    switch: [],
+    light: [],
+    fan: [],
+    cover: [],
+    climate: [],
+  };
+
+  for (const item of items) {
+    const t = normalizeDeviceType(item.type);
+    if (groups[t]) groups[t].push(item);
+  }
+
+  return groups;
+}
+
+function esc(text) {
+  return String(text ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;");
+}
+
+function renderButtons(item) {
+  const t = normalizeDeviceType(item.type);
+
+  if (["switch", "light", "fan", "climate"].includes(t)) {
+    return `
+      <div class="button-row wrap">
+        <button class="primary-btn" onclick='runDeviceCommand(${JSON.stringify(item.entity_id)}, ${JSON.stringify(t)}, "on", ${JSON.stringify(item.name || item.device_id || item.entity_id)})'>ON</button>
+        <button class="ghost-btn" onclick='runDeviceCommand(${JSON.stringify(item.entity_id)}, ${JSON.stringify(t)}, "off", ${JSON.stringify(item.name || item.device_id || item.entity_id)})'>OFF</button>
+      </div>
+    `;
+  }
+
+  if (t === "cover") {
+    return `
+      <div class="button-row wrap">
+        <button class="primary-btn" onclick='runDeviceCommand(${JSON.stringify(item.entity_id)}, "cover", "open", ${JSON.stringify(item.name || item.device_id || item.entity_id)})'>OPEN</button>
+        <button class="ghost-btn" onclick='runDeviceCommand(${JSON.stringify(item.entity_id)}, "cover", "close", ${JSON.stringify(item.name || item.device_id || item.entity_id)})'>CLOSE</button>
+        <button class="ghost-btn" onclick='runDeviceCommand(${JSON.stringify(item.entity_id)}, "cover", "stop", ${JSON.stringify(item.name || item.device_id || item.entity_id)})'>STOP</button>
+      </div>
+    `;
+  }
+
+  return "";
+}
+
+function renderDeviceCard(item) {
+  return `
+    <article class="card">
+      <div class="card-label">${esc(item.type || "device")}</div>
+      <h3>${esc(item.name || item.device_id || item.entity_id)}</h3>
+      <div class="muted">ID: ${esc(item.device_id || "")}</div>
+      <div class="muted">Zone: ${esc(item.zone || "")}</div>
+      <div class="muted">Location: ${esc(item.location || "")}</div>
+      <div class="muted">Entity: ${esc(item.entity_id || "")}</div>
+      ${renderButtons(item)}
+    </article>
+  `;
+}
+
+function renderGroup(title, items) {
+  if (!items.length) return "";
+  return `
+    <section class="cards-grid">
+      <article class="card wide">
+        <div class="card-label">${title.toUpperCase()}</div>
+        <h3>${title} — ${items.length}</h3>
+      </article>
+      ${items.map(renderDeviceCard).join("")}
+    </section>
+  `;
+}
+
+async function loadControlDevices() {
+  if (!requireAuth()) return;
+
+  const box = document.getElementById("control-groups");
+  box.innerHTML = "Загрузка...";
+
+  const result = await ghTryGetVariants([
+    "/api/registry/devices",
+    "/api/registry/list_devices",
+    "/api/registry/items"
+  ]);
+
+  if (!result.ok) {
+    pretty("control-result-box", result);
+    box.innerHTML = "<div class='card'>Не удалось загрузить registry devices</div>";
+    return;
+  }
+
+  const items = Array.isArray(result.data?.items)
+    ? result.data.items
+    : Array.isArray(result.data?.data?.items)
+      ? result.data.data.items
+      : [];
+
+  const controllable = items.filter(isControllable);
+  const groups = groupDevices(controllable);
+
+  box.innerHTML =
+    renderGroup("switch", groups.switch) +
+    renderGroup("light", groups.light) +
+    renderGroup("fan", groups.fan) +
+    renderGroup("cover", groups.cover) +
+    renderGroup("climate", groups.climate);
+
+  if (!box.innerHTML.trim()) {
+    box.innerHTML = "<div class='card'>Управляемые устройства не найдены</div>";
+  }
+}
+
+async function runDeviceCommand(entityId, deviceType, operation, title) {
+  if (!requireAuth()) return;
+
+  const resultBox = document.getElementById("control-result-box");
+  resultBox.textContent = "Выполняю команду...";
+
+  const result = await ghApi("/api/device-control/command", {
+    method: "POST",
+    body: JSON.stringify({
+      entity_id: entityId,
+      device_type: deviceType,
+      operation: operation,
+      title: title
+    })
+  });
+
+  pretty("control-result-box", result.data);
+}
+
+loadControlDevices();
+</script>
+{% endblock %}

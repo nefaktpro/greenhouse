@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card">
+  <div class="card-label">Execution</div>
+  <h3>Control</h3>
+  <p class="muted">
+    Страница читает action map и позволяет запускать действия через общий API.
+  </p>
+  <div id="actions-grid" class="actions-grid"></div>
+  <pre id="control-result" class="result-box">Загрузка action map...</pre>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function runAction(actionKey) {
+  const result = document.getElementById("control-result");
+  result.textContent = "Выполняю: " + actionKey;
+
+  const { data } = await ghApi("/api/actions/execute", {
+    method: "POST",
+    body: JSON.stringify({ action_key: actionKey })
+  });
+
+  pretty("control-result", data);
+}
+
+(async function loadControl() {
+  if (!requireAuth()) return;
+
+  const result = document.getElementById("control-result");
+  const grid = document.getElementById("actions-grid");
+
+  const { data } = await ghApi("/api/actions/debug/action-map", {
+    method: "GET",
+    headers: ghHeaders(false)
+  });
+
+  pretty("control-result", data);
+
+  const items = data.items || data.actions || data.action_map || [];
+  const pairs = Array.isArray(items)
+    ? items
+    : Object.entries(items).map(([key, val]) => ({ action_key: key, ...(val || {}) }));
+
+  if (!pairs.length) {
+    grid.innerHTML = '<div class="muted">Action map пустой или другой структуры.</div>';
+    return;
+  }
+
+  grid.innerHTML = pairs.map((item) => {
+    const key = item.action_key || item.key || item.name || "unknown_action";
+    const title = item.title || item.label || key;
+    const role = item.logical_role || item.role || "-";
+    const op = item.operation || "-";
+
+    return `
+      <div class="action-card">
+        <div class="action-title">${esc(title)}</div>
+        <div class="action-meta">
+          <div><b>action_key:</b> ${esc(key)}</div>
+          <div><b>role:</b> ${esc(role)}</div>
+          <div><b>operation:</b> ${esc(op)}</div>
+        </div>
+        <div class="action-row">
+          <button class="primary-btn" onclick="runAction('${esc(key)}')">Выполнить</button>
+        </div>
+      </div>
+    `;
+  }).join("");
+})();
+</script>
+{% endblock %}

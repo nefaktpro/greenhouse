@@ -1,21 +1,497 @@
 {% extends "base.html" %}
 {% block content %}
-<section class="card">
-  <div class="card-label">Monitoring</div>
-  <h3>Overview</h3>
-  <pre id="overview-box" class="result-box">Загрузка...</pre>
+<style>
+  .monitoring-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+    margin: 16px 0 18px 0;
+  }
+
+  .monitoring-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .monitoring-tab-btn {
+    border: 1px solid #284a86;
+    background: #0b1731;
+    color: #dbe8ff;
+    border-radius: 14px;
+    padding: 12px 18px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .monitoring-tab-btn.active {
+    background: linear-gradient(180deg, #4f8cff 0%, #2f6ee5 100%);
+    color: #fff;
+    box-shadow: 0 8px 22px rgba(47,110,229,.35);
+  }
+
+  .monitoring-panel {
+    display: none;
+  }
+
+  .monitoring-panel.active {
+    display: block;
+  }
+
+  .monitoring-summary {
+    margin: 8px 0 18px 0;
+    color: #c7d5ee;
+    line-height: 1.5;
+  }
+
+  .monitoring-card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 14px;
+    margin-bottom: 18px;
+  }
+
+  .monitoring-mini-card {
+    background: rgba(9,18,38,.92);
+    border: 1px solid #223659;
+    border-radius: 16px;
+    padding: 16px;
+  }
+
+  .monitoring-mini-card .k {
+    color: #8fb3ff;
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+  }
+
+  .monitoring-mini-card .v {
+    color: #fff;
+    font-size: 28px;
+    font-weight: 800;
+    line-height: 1.1;
+    margin-bottom: 6px;
+  }
+
+  .monitoring-mini-card .s {
+    color: #c7d5ee;
+    font-size: 14px;
+    line-height: 1.35;
+  }
+
+  .monitoring-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 16px;
+    align-items: center;
+  }
+
+  .monitoring-filters input,
+  .monitoring-filters select {
+    border: 1px solid #284a86;
+    background: #091226;
+    color: #e8f0ff;
+    border-radius: 12px;
+    padding: 10px 12px;
+    min-width: 220px;
+  }
+
+  .monitoring-table-wrap {
+    overflow: auto;
+    border: 1px solid #223659;
+    border-radius: 16px;
+  }
+
+  .monitoring-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 1450px;
+    background: rgba(8,15,30,.9);
+  }
+
+  .monitoring-table th,
+  .monitoring-table td {
+    padding: 12px 14px;
+    border-bottom: 1px solid #1e3153;
+    vertical-align: top;
+    text-align: left;
+    color: #e7eeff;
+    font-size: 14px;
+    line-height: 1.35;
+  }
+
+  .monitoring-table th {
+    color: #8fb3ff;
+    font-weight: 700;
+    background: #0d1a34;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+  }
+
+  .monitoring-table tr:hover td {
+    background: rgba(31,61,110,.18);
+  }
+
+  .mono {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 13px;
+  }
+</style>
+
+<section class="cards-grid">
+  <article class="card wide">
+    <div class="card-label">Monitoring</div>
+    <h3>Мониторинг системы</h3>
+    <p class="muted">
+      Overview, Safety и полный список датчиков с текущими значениями и временем обновления.
+    </p>
+
+    <div class="monitoring-toolbar">
+      <button class="primary-btn" onclick="loadMonitoringAll()">Обновить monitoring</button>
+
+      <div class="monitoring-tabs">
+        <button id="monitoring-tab-btn-overview" class="monitoring-tab-btn active" onclick="switchMonitoringTab('overview')">Overview</button>
+        <button id="monitoring-tab-btn-safety" class="monitoring-tab-btn" onclick="switchMonitoringTab('safety')">Safety</button>
+        <button id="monitoring-tab-btn-sensors" class="monitoring-tab-btn" onclick="switchMonitoringTab('sensors')">Sensors</button>
+      </div>
+    </div>
+
+    <div id="monitoring-summary" class="monitoring-summary">Загрузка...</div>
+
+    <div id="monitoring-panel-overview" class="monitoring-panel active">
+      <div id="overview-categories-box"></div>
+      <div id="overview-table-box"></div>
+    </div>
+
+    <div id="monitoring-panel-safety" class="monitoring-panel">
+      <div id="safety-categories-box"></div>
+      <div id="safety-table-box"></div>
+    </div>
+
+    <div id="monitoring-panel-sensors" class="monitoring-panel">
+      <div class="monitoring-filters">
+        <input id="sensor-search" type="text" placeholder="Поиск: имя, id, entity, zone..." oninput="renderSensorsTable()">
+        <select id="sensor-type-filter" onchange="renderSensorsTable()">
+          <option value="">Все типы датчиков</option>
+        </select>
+      </div>
+      <div id="sensors-table-box">Загрузка...</div>
+    </div>
+  </article>
 </section>
 {% endblock %}
 
 {% block scripts %}
 <script>
-(async function loadMonitoring() {
-  if (!requireAuth()) return;
-  const { data } = await ghApi("/api/monitoring/overview", {
-    method: "GET",
-    headers: ghHeaders(false)
+let MON_STATE = {
+  overview: null,
+  safety: null,
+  sensors: [],
+};
+
+const SENSOR_TYPES = new Set([
+  "sensor",
+  "binary_sensor",
+  "moisture",
+  "battery",
+  "smoke",
+  "tamper"
+]);
+
+function esc(text) {
+  return String(text ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;");
+}
+
+function switchMonitoringTab(tabName) {
+  for (const name of ["overview", "safety", "sensors"]) {
+    const btn = document.getElementById("monitoring-tab-btn-" + name);
+    const panel = document.getElementById("monitoring-panel-" + name);
+    if (btn) btn.classList.toggle("active", name === tabName);
+    if (panel) panel.classList.toggle("active", name === tabName);
+  }
+}
+
+function renderCategoryCards(boxId, categories) {
+  const box = document.getElementById(boxId);
+  const entries = Object.entries(categories || {});
+  if (!entries.length) {
+    box.innerHTML = `<div class="card">Нет категорий</div>`;
+    return;
+  }
+
+  box.innerHTML = `
+    <div class="monitoring-card-grid">
+      ${entries.map(([k, v]) => `
+        <div class="monitoring-mini-card">
+          <div class="k">${esc(k)}</div>
+          <div class="v">${esc(v)}</div>
+          <div class="s">элементов в категории</div>
+        </div>
+      `).join("")}
+    </div>
+  `;
+}
+
+function renderOverviewTable(items) {
+  const box = document.getElementById("overview-table-box");
+  if (!items.length) {
+    box.innerHTML = `<div class="card">Нет overview items</div>`;
+    return;
+  }
+
+  box.innerHTML = `
+    <div class="monitoring-table-wrap">
+      <table class="monitoring-table">
+        <thead>
+          <tr>
+            <th>Device ID</th>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Zone</th>
+            <th>Location</th>
+            <th>Role</th>
+            <th>Entity</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${items.map(item => `
+            <tr>
+              <td class="mono">${esc(item.device_id || "")}</td>
+              <td>${esc(item.name || "")}</td>
+              <td>${esc(item.type || "")}</td>
+              <td>${esc(item.zone || "")}</td>
+              <td>${esc(item.location || "")}</td>
+              <td class="mono">${esc(item.logical_role || "")}</td>
+              <td class="mono">${esc(item.entity_id || "")}</td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function renderSafetyTable(items) {
+  const box = document.getElementById("safety-table-box");
+  if (!items.length) {
+    box.innerHTML = `<div class="card">Нет safety items</div>`;
+    return;
+  }
+
+  box.innerHTML = `
+    <div class="monitoring-table-wrap">
+      <table class="monitoring-table">
+        <thead>
+          <tr>
+            <th>Device ID</th>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Zone</th>
+            <th>Location</th>
+            <th>Role</th>
+            <th>Entity</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${items.map(item => `
+            <tr>
+              <td class="mono">${esc(item.device_id || "")}</td>
+              <td>${esc(item.name || "")}</td>
+              <td>${esc(item.type || "")}</td>
+              <td>${esc(item.zone || "")}</td>
+              <td>${esc(item.location || "")}</td>
+              <td class="mono">${esc(item.logical_role || "")}</td>
+              <td class="mono">${esc(item.entity_id || "")}</td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function fillSensorTypeFilter(items) {
+  const select = document.getElementById("sensor-type-filter");
+  const types = [...new Set(items.map(x => String(x.type || "").trim()).filter(Boolean))].sort();
+
+  select.innerHTML = '<option value="">Все типы датчиков</option>' +
+    types.map(t => `<option value="${esc(t)}">${esc(t)}</option>`).join("");
+}
+
+function formatDateTime(value) {
+  if (!value) return "";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return value;
+  return d.toLocaleString();
+}
+
+function formatAge(value) {
+  if (!value) return "";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "";
+
+  const diffSec = Math.max(0, Math.floor((Date.now() - d.getTime()) / 1000));
+  if (diffSec < 60) return diffSec + "s";
+
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return diffMin + "m";
+
+  const diffHr = Math.floor(diffMin / 60);
+  if (diffHr < 24) return diffHr + "h";
+
+  const diffDay = Math.floor(diffHr / 24);
+  return diffDay + "d";
+}
+
+function renderSensorsTable() {
+  const q = (document.getElementById("sensor-search")?.value || "").trim().toLowerCase();
+  const typeFilter = (document.getElementById("sensor-type-filter")?.value || "").trim().toLowerCase();
+  const items = MON_STATE.sensors || [];
+
+  const filtered = items.filter(item => {
+    const matchesType = !typeFilter || String(item.type || "").trim().toLowerCase() === typeFilter;
+
+    const blob = [
+      item.device_id,
+      item.name,
+      item.type,
+      item.zone,
+      item.location,
+      item.entity_id,
+      item.logical_role,
+      item.state,
+      item.unit,
+      item.last_updated,
+      item.last_changed
+    ].map(v => String(v || "").toLowerCase()).join(" | ");
+
+    return matchesType && (!q || blob.includes(q));
   });
-  pretty("overview-box", data);
-})();
+
+  const box = document.getElementById("sensors-table-box");
+  if (!filtered.length) {
+    box.innerHTML = `<div class="card">Датчики не найдены</div>`;
+    return;
+  }
+
+  box.innerHTML = `
+    <div class="monitoring-table-wrap">
+      <table class="monitoring-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Zone</th>
+            <th>Location</th>
+            <th>Entity</th>
+            <th>State</th>
+            <th>Unit</th>
+            <th>Last updated</th>
+            <th>Last changed</th>
+            <th>Age</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${filtered.map(item => `
+            <tr>
+              <td class="mono">${esc(item.device_id || "")}</td>
+              <td>${esc(item.name || "")}</td>
+              <td>${esc(item.type || "")}</td>
+              <td>${esc(item.zone || "")}</td>
+              <td>${esc(item.location || "")}</td>
+              <td class="mono">${esc(item.entity_id || "")}</td>
+              <td class="mono">${esc(item.state || "")}</td>
+              <td>${esc(item.unit || "")}</td>
+              <td class="mono">${esc(formatDateTime(item.last_updated))}</td>
+              <td class="mono">${esc(formatDateTime(item.last_changed))}</td>
+              <td class="mono">${esc(formatAge(item.last_updated || item.last_changed))}</td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function buildSensorRows(registryItems, liveItems) {
+  const liveMap = new Map();
+  for (const item of liveItems) {
+    if (item.entity_id) liveMap.set(item.entity_id, item);
+  }
+
+  return registryItems
+    .filter(item => SENSOR_TYPES.has(String(item.type || "").trim().toLowerCase()) && String(item.entity_id || "").trim() !== "")
+    .map(item => {
+      const live = liveMap.get(item.entity_id) || {};
+      return {
+        device_id: item.device_id,
+        name: item.name,
+        type: item.type,
+        zone: item.zone,
+        location: item.location,
+        entity_id: item.entity_id,
+        logical_role: item.logical_role,
+        state: live.state ?? "",
+        unit: live.unit_of_measurement ?? item.unit ?? "",
+        last_updated: live.last_updated ?? "",
+        last_changed: live.last_changed ?? "",
+      };
+    });
+}
+
+async function loadMonitoringAll() {
+  if (!requireAuth()) return;
+
+  const summary = document.getElementById("monitoring-summary");
+  summary.textContent = "Загрузка...";
+
+  const [overview, safety, devices, live] = await Promise.all([
+    ghApi("/api/monitoring/overview", { method: "GET" }),
+    ghApi("/api/monitoring/safety", { method: "GET" }),
+    ghTryGetVariants(["/api/registry/devices", "/api/registry/list_devices", "/api/registry/items"]),
+    ghApi("/api/live/states", { method: "GET" })
+  ]);
+
+  MON_STATE.overview = overview.data || {};
+  MON_STATE.safety = safety.data || {};
+
+  const registryItems = Array.isArray(devices.data?.items)
+    ? devices.data.items
+    : Array.isArray(devices.data?.data?.items)
+      ? devices.data.data.items
+      : [];
+
+  const liveItems = Array.isArray(live.data?.items) ? live.data.items : [];
+  MON_STATE.sensors = buildSensorRows(registryItems, liveItems);
+
+  const overviewCount = MON_STATE.overview.count || 0;
+  const safetyCount = MON_STATE.safety.count || 0;
+  const sensorCount = MON_STATE.sensors.length || 0;
+
+  summary.textContent = `Overview: ${overviewCount} | Safety: ${safetyCount} | Sensors: ${sensorCount}`;
+
+  renderCategoryCards("overview-categories-box", MON_STATE.overview.categories || {});
+  renderOverviewTable(Array.isArray(MON_STATE.overview.items) ? MON_STATE.overview.items : []);
+
+  renderCategoryCards("safety-categories-box", MON_STATE.safety.categories || {});
+  renderSafetyTable(Array.isArray(MON_STATE.safety.items) ? MON_STATE.safety.items : []);
+
+  fillSensorTypeFilter(MON_STATE.sensors);
+  renderSensorsTable();
+
+  switchMonitoringTab("overview");
+}
+
+loadMonitoringAll();
 </script>
 {% endblock %}

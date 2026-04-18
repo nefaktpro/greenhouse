@@ -1,72 +1,74 @@
 {% extends "base.html" %}
 {% block content %}
+
 <section class="cards-grid">
+
   <article class="card">
-    <div class="card-label">Система</div>
+    <div class="card-label">SYSTEM</div>
     <h3>Текущий режим</h3>
-    <pre id="mode-box" class="result-box">Загрузка...</pre>
+    <div id="modeBlock">Загрузка...</div>
   </article>
 
   <article class="card">
     <div class="card-label">ASK</div>
-    <h3>Текущее ожидание</h3>
-    <pre id="ask-box" class="result-box">Загрузка...</pre>
+    <h3>Ожидание</h3>
+    <div id="askBlock">Загрузка...</div>
   </article>
-</section>
 
-<section class="cards-grid">
   <article class="card">
-    <div class="card-label">Monitoring</div>
+    <div class="card-label">MONITORING</div>
     <h3>Обзор</h3>
-    <pre id="overview-box" class="result-box">Загрузка...</pre>
+    <div id="monitoringBlock">Загрузка...</div>
   </article>
 
   <article class="card">
-    <div class="card-label">Safety</div>
-    <h3>Сводка безопасности</h3>
-    <pre id="safety-box" class="result-box">Загрузка...</pre>
+    <div class="card-label">SAFETY</div>
+    <h3>Безопасность</h3>
+    <div id="safetyBlock">Загрузка...</div>
   </article>
+
 </section>
 
-<section class="cards-grid">
-  <article class="card">
-    <div class="card-label">Навигация</div>
-    <h3>Быстрые действия</h3>
-    <div class="button-row">
-      <a class="primary-btn" href="/web/control">Control</a>
-      <a class="ghost-btn-link" href="/web/ask">ASK</a>
-      <a class="ghost-btn-link" href="/web/modes">Modes</a>
-      <a class="ghost-btn-link" href="/web/registry">Registry</a>
-      <a class="ghost-btn-link" href="/web/monitoring">Monitoring</a>
-    </div>
-  </article>
-
-  <article class="card">
-    <div class="card-label">Состояние</div>
-    <h3>Health</h3>
-    <pre id="health-box" class="result-box">Загрузка...</pre>
-  </article>
-</section>
-{% endblock %}
-
-{% block scripts %}
 <script>
-(async function loadDashboard() {
-  if (!requireAuth()) return;
+async function loadDashboard() {
 
-  const [health, mode, ask, overview, safety] = await Promise.all([
-    ghApi("/api/health", { method: "GET", headers: ghHeaders(false) }),
-    ghApi("/api/modes/current", { method: "GET", headers: ghHeaders(false) }),
-    ghApi("/api/ask/current", { method: "GET", headers: ghHeaders(false) }),
-    ghApi("/api/monitoring/overview", { method: "GET", headers: ghHeaders(false) }),
-    ghApi("/api/monitoring/safety", { method: "GET", headers: ghHeaders(false) }),
-  ]);
+  try {
+    let mode = await fetch("/api/modes/current").then(r=>r.json())
+    document.getElementById("modeBlock").innerHTML =
+      "<b>" + mode.data.state.mode + "</b>"
+  } catch(e) {
+    document.getElementById("modeBlock").innerText = "Ошибка"
+  }
 
-  pretty("health-box", health.data);
-  pretty("mode-box", mode.data);
-  pretty("ask-box", ask.data);
-  pretty("overview-box", overview.data);
-  pretty("safety-box", safety.data);
-})();
+  try {
+    let ask = await fetch("/api/ask/current").then(r=>r.json())
+    document.getElementById("askBlock").innerHTML =
+      ask.data.has_pending
+        ? "<b>Есть действие</b><br>" + (ask.data.item?.title || "")
+        : "Нет ожиданий"
+  } catch(e) {
+    document.getElementById("askBlock").innerText = "Ошибка"
+  }
+
+  try {
+    let mon = await fetch("/api/monitoring/overview").then(r=>r.json())
+    document.getElementById("monitoringBlock").innerHTML =
+      "Датчиков: " + mon.count
+  } catch(e) {
+    document.getElementById("monitoringBlock").innerText = "Ошибка"
+  }
+
+  try {
+    let saf = await fetch("/api/monitoring/safety").then(r=>r.json())
+    document.getElementById("safetyBlock").innerHTML =
+      "Проверок: " + saf.count
+  } catch(e) {
+    document.getElementById("safetyBlock").innerText = "Ошибка"
+  }
+
+}
+
+loadDashboard()
 </script>
+
 {% endblock %}

@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card">
+  <div class="card-label">Monitoring</div>
+  <h3>Overview</h3>
+  <pre id="overview-box" class="result-box">Загрузка...</pre>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(async function () {
+  const { data } = await ghApi("/api/monitoring/overview");
+  pretty("overview-box", data);
+})();
+</script>
+{% endblock %}

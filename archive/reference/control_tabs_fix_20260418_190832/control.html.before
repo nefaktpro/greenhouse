@@ -1,0 +1,224 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="cards-grid">
+  <article class="card wide">
+    <div class="card-label">Manual Control</div>
+    <h3>Управление устройствами</h3>
+    <p class="muted">
+      Категории вынесены во вкладки. Показываются только управляемые устройства из registry.
+    </p>
+
+    <div class="button-row">
+      <button class="primary-btn" onclick="loadControlDevices()">Обновить устройства</button>
+    </div>
+
+    <div id="control-tabs" class="control-tabs">
+      <button class="tab-btn active" data-tab="switch" onclick="switchControlTab('switch')">Switch</button>
+      <button class="tab-btn" data-tab="light" onclick="switchControlTab('light')">Light</button>
+      <button class="tab-btn" data-tab="fan" onclick="switchControlTab('fan')">Fan</button>
+      <button class="tab-btn" data-tab="cover" onclick="switchControlTab('cover')">Cover</button>
+      <button class="tab-btn" data-tab="climate" onclick="switchControlTab('climate')">Climate</button>
+    </div>
+
+    <div id="control-summary" class="muted" style="margin: 14px 0 18px 0;">Загрузка...</div>
+
+    <div id="control-tab-switch" class="control-tab-panel active">Загрузка...</div>
+    <div id="control-tab-light" class="control-tab-panel"></div>
+    <div id="control-tab-fan" class="control-tab-panel"></div>
+    <div id="control-tab-cover" class="control-tab-panel"></div>
+    <div id="control-tab-climate" class="control-tab-panel"></div>
+  </article>
+</section>
+
+<section class="cards-grid">
+  <article class="card wide">
+    <div class="card-label">Result</div>
+    <h3>Результат команды</h3>
+    <pre id="control-result-box" class="result-box">Ожидание...</pre>
+  </article>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const CONTROL_TYPES = ["switch", "light", "fan", "cover", "climate"];
+
+function normalizeDeviceType(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function isControllable(item) {
+  const t = normalizeDeviceType(item.type);
+  return CONTROL_TYPES.includes(t) && String(item.entity_id || "").trim() !== "";
+}
+
+function esc(text) {
+  return String(text ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;");
+}
+
+function prettyType(typeValue) {
+  const m = {
+    switch: "Выключатель",
+    light: "Свет",
+    fan: "Вентилятор",
+    cover: "Штора / привод",
+    climate: "Климат",
+  };
+  return m[normalizeDeviceType(typeValue)] || String(typeValue || "device");
+}
+
+function groupDevices(items) {
+  const groups = {
+    switch: [],
+    light: [],
+    fan: [],
+    cover: [],
+    climate: [],
+  };
+
+  for (const item of items) {
+    const t = normalizeDeviceType(item.type);
+    if (groups[t]) groups[t].push(item);
+  }
+
+  return groups;
+}
+
+function renderButtons(item) {
+  const t = normalizeDeviceType(item.type);
+
+  if (["switch", "light", "fan", "climate"].includes(t)) {
+    return `
+      <div class="button-row wrap">
+        <button class="primary-btn" onclick='runDeviceCommand(${JSON.stringify(item.entity_id)}, ${JSON.stringify(t)}, "on", ${JSON.stringify(item.name || item.device_id || item.entity_id)})'>ON</button>
+        <button class="ghost-btn" onclick='runDeviceCommand(${JSON.stringify(item.entity_id)}, ${JSON.stringify(t)}, "off", ${JSON.stringify(item.name || item.device_id || item.entity_id)})'>OFF</button>
+      </div>
+    `;
+  }
+
+  if (t === "cover") {
+    return `
+      <div class="button-row wrap">
+        <button class="primary-btn" onclick='runDeviceCommand(${JSON.stringify(item.entity_id)}, "cover", "open", ${JSON.stringify(item.name || item.device_id || item.entity_id)})'>OPEN</button>
+        <button class="ghost-btn" onclick='runDeviceCommand(${JSON.stringify(item.entity_id)}, "cover", "close", ${JSON.stringify(item.name || item.device_id || item.entity_id)})'>CLOSE</button>
+        <button class="ghost-btn" onclick='runDeviceCommand(${JSON.stringify(item.entity_id)}, "cover", "stop", ${JSON.stringify(item.name || item.device_id || item.entity_id)})'>STOP</button>
+      </div>
+    `;
+  }
+
+  return "";
+}
+
+function renderMetaLine(label, value) {
+  if (!value) return "";
+  return `<div class="device-meta"><span>${esc(label)}:</span> ${esc(value)}</div>`;
+}
+
+function renderDeviceCard(item) {
+  const title = item.name || item.device_id || item.entity_id || "Устройство";
+  const subtitleParts = [
+    prettyType(item.type),
+    item.zone ? `зона: ${item.zone}` : "",
+    item.location ? `локация: ${item.location}` : "",
+  ].filter(Boolean);
+
+  return `
+    <article class="card control-device-card">
+      <div class="card-label">${esc(prettyType(item.type))}</div>
+      <h3>${esc(title)}</h3>
+      <div class="muted control-subtitle">${esc(subtitleParts.join(" • "))}</div>
+
+      ${renderMetaLine("ID", item.device_id)}
+      ${renderMetaLine("Entity", item.entity_id)}
+      ${renderMetaLine("Role", item.logical_role)}
+      ${renderMetaLine("Source", item.source)}
+
+      ${renderButtons(item)}
+    </article>
+  `;
+}
+
+function renderPanel(items, emptyText) {
+  if (!items.length) {
+    return `<div class="card">${esc(emptyText)}</div>`;
+  }
+  return `<div class="cards-grid compact-grid">${items.map(renderDeviceCard).join("")}</div>`;
+}
+
+function switchControlTab(tabName) {
+  document.querySelectorAll(".tab-btn").forEach(btn => {
+    btn.classList.toggle("active", btn.dataset.tab === tabName);
+  });
+
+  document.querySelectorAll(".control-tab-panel").forEach(panel => {
+    panel.classList.remove("active");
+  });
+
+  const panel = document.getElementById("control-tab-" + tabName);
+  if (panel) panel.classList.add("active");
+}
+
+async function loadControlDevices() {
+  if (!requireAuth()) return;
+
+  const summary = document.getElementById("control-summary");
+  summary.textContent = "Загрузка...";
+
+  const result = await ghTryGetVariants([
+    "/api/registry/devices",
+    "/api/registry/list_devices",
+    "/api/registry/items"
+  ]);
+
+  if (!result.ok) {
+    pretty("control-result-box", result);
+    summary.textContent = "Не удалось загрузить registry devices";
+    return;
+  }
+
+  const items = Array.isArray(result.data?.items)
+    ? result.data.items
+    : Array.isArray(result.data?.data?.items)
+      ? result.data.data.items
+      : [];
+
+  const controllable = items.filter(isControllable);
+  const groups = groupDevices(controllable);
+
+  document.getElementById("control-tab-switch").innerHTML = renderPanel(groups.switch, "Нет управляемых switch");
+  document.getElementById("control-tab-light").innerHTML = renderPanel(groups.light, "Нет управляемых light");
+  document.getElementById("control-tab-fan").innerHTML = renderPanel(groups.fan, "Нет управляемых fan");
+  document.getElementById("control-tab-cover").innerHTML = renderPanel(groups.cover, "Нет управляемых cover");
+  document.getElementById("control-tab-climate").innerHTML = renderPanel(groups.climate, "Нет управляемых climate");
+
+  summary.textContent =
+    `Всего управляемых устройств: ${controllable.length} | ` +
+    `switch: ${groups.switch.length}, light: ${groups.light.length}, fan: ${groups.fan.length}, cover: ${groups.cover.length}, climate: ${groups.climate.length}`;
+}
+
+async function runDeviceCommand(entityId, deviceType, operation, title) {
+  if (!requireAuth()) return;
+
+  const resultBox = document.getElementById("control-result-box");
+  resultBox.textContent = "Выполняю команду...";
+
+  const result = await ghApi("/api/device-control/command", {
+    method: "POST",
+    body: JSON.stringify({
+      entity_id: entityId,
+      device_type: deviceType,
+      operation: operation,
+      title: title
+    })
+  });
+
+  pretty("control-result-box", result.data);
+}
+
+loadControlDevices();
+</script>
+{% endblock %}

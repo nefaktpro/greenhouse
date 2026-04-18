@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="card">
+  <h3>Режимы</h3>
+
+  <button onclick="setMode('manual')">Manual</button>
+  <button onclick="setMode('ask')">ASK</button>
+  <button onclick="setMode('auto')">AUTO</button>
+
+</div>
+
+<script>
+async function setMode(mode) {
+  await fetch("/api/modes/set", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({mode})
+  })
+  location.reload()
+}
+</script>
+
+{% endblock %}

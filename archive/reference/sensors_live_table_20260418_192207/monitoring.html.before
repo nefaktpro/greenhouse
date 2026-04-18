@@ -1,0 +1,313 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+  .monitoring-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+    margin: 16px 0 18px 0;
+  }
+
+  .monitoring-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .monitoring-tab-btn {
+    border: 1px solid #284a86;
+    background: #0b1731;
+    color: #dbe8ff;
+    border-radius: 14px;
+    padding: 12px 18px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .monitoring-tab-btn.active {
+    background: linear-gradient(180deg, #4f8cff 0%, #2f6ee5 100%);
+    color: #fff;
+    box-shadow: 0 8px 22px rgba(47,110,229,.35);
+  }
+
+  .monitoring-panel {
+    display: none;
+  }
+
+  .monitoring-panel.active {
+    display: block;
+  }
+
+  .monitoring-summary {
+    margin: 8px 0 18px 0;
+    color: #c7d5ee;
+    line-height: 1.5;
+  }
+
+  .monitoring-card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 14px;
+    margin-bottom: 18px;
+  }
+
+  .monitoring-mini-card {
+    background: rgba(9,18,38,.92);
+    border: 1px solid #223659;
+    border-radius: 16px;
+    padding: 16px;
+  }
+
+  .monitoring-mini-card .k {
+    color: #8fb3ff;
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+  }
+
+  .monitoring-mini-card .v {
+    color: #fff;
+    font-size: 28px;
+    font-weight: 800;
+    line-height: 1.1;
+    margin-bottom: 6px;
+  }
+
+  .monitoring-mini-card .s {
+    color: #c7d5ee;
+    font-size: 14px;
+    line-height: 1.35;
+  }
+
+  .monitoring-table-wrap {
+    overflow: auto;
+    border: 1px solid #223659;
+    border-radius: 16px;
+  }
+
+  .monitoring-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 980px;
+    background: rgba(8,15,30,.9);
+  }
+
+  .monitoring-table th,
+  .monitoring-table td {
+    padding: 12px 14px;
+    border-bottom: 1px solid #1e3153;
+    vertical-align: top;
+    text-align: left;
+    color: #e7eeff;
+    font-size: 14px;
+    line-height: 1.35;
+  }
+
+  .monitoring-table th {
+    color: #8fb3ff;
+    font-weight: 700;
+    background: #0d1a34;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+  }
+
+  .monitoring-table tr:hover td {
+    background: rgba(31,61,110,.18);
+  }
+
+  .mono {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 13px;
+  }
+</style>
+
+<section class="cards-grid">
+  <article class="card wide">
+    <div class="card-label">Monitoring</div>
+    <h3>Мониторинг системы</h3>
+    <p class="muted">
+      Overview и Safety выводятся человеческим видом: summary, категории и таблицы.
+    </p>
+
+    <div class="monitoring-toolbar">
+      <button class="primary-btn" onclick="loadMonitoringAll()">Обновить monitoring</button>
+
+      <div class="monitoring-tabs">
+        <button id="monitoring-tab-btn-overview" class="monitoring-tab-btn active" onclick="switchMonitoringTab('overview')">Overview</button>
+        <button id="monitoring-tab-btn-safety" class="monitoring-tab-btn" onclick="switchMonitoringTab('safety')">Safety</button>
+      </div>
+    </div>
+
+    <div id="monitoring-summary" class="monitoring-summary">Загрузка...</div>
+
+    <div id="monitoring-panel-overview" class="monitoring-panel active">
+      <div id="overview-categories-box"></div>
+      <div id="overview-table-box"></div>
+    </div>
+
+    <div id="monitoring-panel-safety" class="monitoring-panel">
+      <div id="safety-categories-box"></div>
+      <div id="safety-table-box"></div>
+    </div>
+  </article>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let MON_STATE = {
+  overview: null,
+  safety: null,
+};
+
+function esc(text) {
+  return String(text ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;");
+}
+
+function switchMonitoringTab(tabName) {
+  for (const name of ["overview", "safety"]) {
+    const btn = document.getElementById("monitoring-tab-btn-" + name);
+    const panel = document.getElementById("monitoring-panel-" + name);
+    if (btn) btn.classList.toggle("active", name === tabName);
+    if (panel) panel.classList.toggle("active", name === tabName);
+  }
+}
+
+function renderCategoryCards(boxId, categories) {
+  const box = document.getElementById(boxId);
+  const entries = Object.entries(categories || {});
+  if (!entries.length) {
+    box.innerHTML = `<div class="card">Нет категорий</div>`;
+    return;
+  }
+
+  box.innerHTML = `
+    <div class="monitoring-card-grid">
+      ${entries.map(([k, v]) => `
+        <div class="monitoring-mini-card">
+          <div class="k">${esc(k)}</div>
+          <div class="v">${esc(v)}</div>
+          <div class="s">элементов в категории</div>
+        </div>
+      `).join("")}
+    </div>
+  `;
+}
+
+function renderOverviewTable(items) {
+  const box = document.getElementById("overview-table-box");
+  if (!items.length) {
+    box.innerHTML = `<div class="card">Нет overview items</div>`;
+    return;
+  }
+
+  box.innerHTML = `
+    <div class="monitoring-table-wrap">
+      <table class="monitoring-table">
+        <thead>
+          <tr>
+            <th>Device ID</th>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Zone</th>
+            <th>Location</th>
+            <th>Role</th>
+            <th>Entity</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${items.map(item => `
+            <tr>
+              <td class="mono">${esc(item.device_id || "")}</td>
+              <td>${esc(item.name || "")}</td>
+              <td>${esc(item.type || "")}</td>
+              <td>${esc(item.zone || "")}</td>
+              <td>${esc(item.location || "")}</td>
+              <td class="mono">${esc(item.logical_role || "")}</td>
+              <td class="mono">${esc(item.entity_id || "")}</td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function renderSafetyTable(items) {
+  const box = document.getElementById("safety-table-box");
+  if (!items.length) {
+    box.innerHTML = `<div class="card">Нет safety items</div>`;
+    return;
+  }
+
+  box.innerHTML = `
+    <div class="monitoring-table-wrap">
+      <table class="monitoring-table">
+        <thead>
+          <tr>
+            <th>Device ID</th>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Zone</th>
+            <th>Location</th>
+            <th>Role</th>
+            <th>Entity</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${items.map(item => `
+            <tr>
+              <td class="mono">${esc(item.device_id || "")}</td>
+              <td>${esc(item.name || "")}</td>
+              <td>${esc(item.type || "")}</td>
+              <td>${esc(item.zone || "")}</td>
+              <td>${esc(item.location || "")}</td>
+              <td class="mono">${esc(item.logical_role || "")}</td>
+              <td class="mono">${esc(item.entity_id || "")}</td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+async function loadMonitoringAll() {
+  if (!requireAuth()) return;
+
+  const summary = document.getElementById("monitoring-summary");
+  summary.textContent = "Загрузка...";
+
+  const [overview, safety] = await Promise.all([
+    ghApi("/api/monitoring/overview", { method: "GET" }),
+    ghApi("/api/monitoring/safety", { method: "GET" })
+  ]);
+
+  MON_STATE.overview = overview.data || {};
+  MON_STATE.safety = safety.data || {};
+
+  const overviewCount = MON_STATE.overview.count || 0;
+  const safetyCount = MON_STATE.safety.count || 0;
+
+  summary.textContent = `Overview: ${overviewCount} | Safety: ${safetyCount}`;
+
+  renderCategoryCards("overview-categories-box", MON_STATE.overview.categories || {});
+  renderOverviewTable(Array.isArray(MON_STATE.overview.items) ? MON_STATE.overview.items : []);
+
+  renderCategoryCards("safety-categories-box", MON_STATE.safety.categories || {});
+  renderSafetyTable(Array.isArray(MON_STATE.safety.items) ? MON_STATE.safety.items : []);
+
+  switchMonitoringTab("overview");
+}
+
+loadMonitoringAll();
+</script>
+{% endblock %}

@@ -13,6 +13,7 @@ from interfaces.web_admin.routes.modes import router as modes_router
 from interfaces.web_admin.routes.registry import router as registry_router
 from interfaces.web_admin.routes.web import router as web_router
 from interfaces.web_admin.routes.monitoring import router as router_monitoring
+from interfaces.web_admin.routes.live_states import router as live_states_router
 
 BASE_DIR = Path(__file__).resolve().parent
 
@@ -61,3 +62,4 @@ app.include_router(web_router)
 app.include_router(actions_router)
 app.include_router(ask_router)
 app.include_router(modes_router)
+app.include_router(live_states_router)

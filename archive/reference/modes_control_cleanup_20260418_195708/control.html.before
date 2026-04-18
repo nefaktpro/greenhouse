@@ -1,0 +1,315 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+  .control-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+    margin: 16px 0 18px 0;
+  }
+
+  .control-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .control-tab-btn {
+    border: 1px solid #284a86;
+    background: #0b1731;
+    color: #dbe8ff;
+    border-radius: 14px;
+    padding: 12px 18px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .control-tab-btn.active {
+    background: linear-gradient(180deg, #4f8cff 0%, #2f6ee5 100%);
+    color: #fff;
+    box-shadow: 0 8px 22px rgba(47,110,229,.35);
+  }
+
+  .control-summary {
+    margin: 8px 0 18px 0;
+    color: #c7d5ee;
+  }
+
+  .control-panel {
+    display: none;
+  }
+
+  .control-panel.active {
+    display: block;
+  }
+
+  .control-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 16px;
+  }
+
+  .control-device-card h3 {
+    margin-bottom: 10px;
+  }
+
+  .control-subtitle {
+    margin-bottom: 12px;
+    color: #c7d5ee;
+    line-height: 1.35;
+  }
+
+  .control-meta {
+    font-size: 14px;
+    line-height: 1.45;
+    margin-bottom: 4px;
+    color: #dbe6fb;
+  }
+
+  .control-meta span {
+    color: #8db2ff;
+    font-weight: 700;
+  }
+
+  .control-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 14px;
+  }
+
+  .control-empty {
+    color: #c7d5ee;
+  }
+</style>
+
+<section class="cards-grid">
+  <article class="card wide">
+    <div class="card-label">Manual Control</div>
+    <h3>Управление устройствами</h3>
+    <p class="muted">
+      Категории вынесены во вкладки. Одновременно показывается только одна категория.
+    </p>
+
+    <div class="control-toolbar">
+      <button class="primary-btn" onclick="loadControlDevices()">Обновить устройства</button>
+
+      <div class="control-tabs">
+        <button id="tab-btn-switch" class="control-tab-btn active" onclick="switchControlTab('switch')">Switch</button>
+        <button id="tab-btn-light" class="control-tab-btn" onclick="switchControlTab('light')">Light</button>
+        <button id="tab-btn-fan" class="control-tab-btn" onclick="switchControlTab('fan')">Fan</button>
+        <button id="tab-btn-cover" class="control-tab-btn" onclick="switchControlTab('cover')">Cover</button>
+        <button id="tab-btn-climate" class="control-tab-btn" onclick="switchControlTab('climate')">Climate</button>
+      </div>
+    </div>
+
+    <div id="control-summary" class="control-summary">Загрузка...</div>
+
+    <div id="panel-switch" class="control-panel active"></div>
+    <div id="panel-light" class="control-panel"></div>
+    <div id="panel-fan" class="control-panel"></div>
+    <div id="panel-cover" class="control-panel"></div>
+    <div id="panel-climate" class="control-panel"></div>
+  </article>
+</section>
+
+<section class="cards-grid">
+  <article class="card wide">
+    <div class="card-label">Result</div>
+    <h3>Результат команды</h3>
+    <pre id="control-result-box" class="result-box">Ожидание...</pre>
+  </article>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const CONTROL_TYPES = ["switch", "light", "fan", "cover", "climate"];
+let CONTROL_GROUPS = {
+  switch: [],
+  light: [],
+  fan: [],
+  cover: [],
+  climate: [],
+};
+
+function normalizeDeviceType(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function isControllable(item) {
+  const t = normalizeDeviceType(item.type);
+  return CONTROL_TYPES.includes(t) && String(item.entity_id || "").trim() !== "";
+}
+
+function esc(text) {
+  return String(text ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;");
+}
+
+function prettyType(typeValue) {
+  const m = {
+    switch: "Выключатель",
+    light: "Свет",
+    fan: "Вентилятор",
+    cover: "Штора / привод",
+    climate: "Климат",
+  };
+  return m[normalizeDeviceType(typeValue)] || String(typeValue || "device");
+}
+
+function groupDevices(items) {
+  const groups = {
+    switch: [],
+    light: [],
+    fan: [],
+    cover: [],
+    climate: [],
+  };
+
+  for (const item of items) {
+    const t = normalizeDeviceType(item.type);
+    if (groups[t]) groups[t].push(item);
+  }
+
+  return groups;
+}
+
+function renderMeta(label, value) {
+  if (!value) return "";
+  return `<div class="control-meta"><span>${esc(label)}:</span> ${esc(value)}</div>`;
+}
+
+function renderButtons(item) {
+  const t = normalizeDeviceType(item.type);
+  const title = item.name || item.device_id || item.entity_id || "Устройство";
+
+  if (["switch", "light", "fan", "climate"].includes(t)) {
+    return `
+      <div class="control-actions">
+        <button class="primary-btn" onclick='runDeviceCommand(${JSON.stringify(item.entity_id)}, ${JSON.stringify(t)}, "on", ${JSON.stringify(title)})'>ON</button>
+        <button class="ghost-btn" onclick='runDeviceCommand(${JSON.stringify(item.entity_id)}, ${JSON.stringify(t)}, "off", ${JSON.stringify(title)})'>OFF</button>
+      </div>
+    `;
+  }
+
+  if (t === "cover") {
+    return `
+      <div class="control-actions">
+        <button class="primary-btn" onclick='runDeviceCommand(${JSON.stringify(item.entity_id)}, "cover", "open", ${JSON.stringify(title)})'>OPEN</button>
+        <button class="ghost-btn" onclick='runDeviceCommand(${JSON.stringify(item.entity_id)}, "cover", "close", ${JSON.stringify(title)})'>CLOSE</button>
+        <button class="ghost-btn" onclick='runDeviceCommand(${JSON.stringify(item.entity_id)}, "cover", "stop", ${JSON.stringify(title)})'>STOP</button>
+      </div>
+    `;
+  }
+
+  return "";
+}
+
+function renderCard(item) {
+  const title = item.name || item.device_id || item.entity_id || "Устройство";
+  const subtitle = [
+    prettyType(item.type),
+    item.zone ? `зона: ${item.zone}` : "",
+    item.location ? `локация: ${item.location}` : ""
+  ].filter(Boolean).join(" • ");
+
+  return `
+    <article class="card control-device-card">
+      <div class="card-label">${esc(prettyType(item.type))}</div>
+      <h3>${esc(title)}</h3>
+      <div class="control-subtitle">${esc(subtitle)}</div>
+      ${renderMeta("ID", item.device_id)}
+      ${renderMeta("Entity", item.entity_id)}
+      ${renderMeta("Role", item.logical_role)}
+      ${renderMeta("Source", item.source)}
+      ${renderButtons(item)}
+    </article>
+  `;
+}
+
+function renderPanel(typeName) {
+  const items = CONTROL_GROUPS[typeName] || [];
+  const panel = document.getElementById("panel-" + typeName);
+  if (!panel) return;
+
+  if (!items.length) {
+    panel.innerHTML = `<div class="card control-empty">Нет управляемых устройств в категории ${esc(typeName)}</div>`;
+    return;
+  }
+
+  panel.innerHTML = `<div class="control-grid">${items.map(renderCard).join("")}</div>`;
+}
+
+function switchControlTab(tabName) {
+  for (const t of CONTROL_TYPES) {
+    const panel = document.getElementById("panel-" + t);
+    const btn = document.getElementById("tab-btn-" + t);
+    if (panel) panel.classList.toggle("active", t === tabName);
+    if (btn) btn.classList.toggle("active", t === tabName);
+  }
+}
+
+async function loadControlDevices() {
+  if (!requireAuth()) return;
+
+  const summary = document.getElementById("control-summary");
+  summary.textContent = "Загрузка...";
+
+  const result = await ghTryGetVariants([
+    "/api/registry/devices",
+    "/api/registry/list_devices",
+    "/api/registry/items"
+  ]);
+
+  if (!result.ok) {
+    pretty("control-result-box", result);
+    summary.textContent = "Не удалось загрузить registry devices";
+    return;
+  }
+
+  const items = Array.isArray(result.data?.items)
+    ? result.data.items
+    : Array.isArray(result.data?.data?.items)
+      ? result.data.data.items
+      : [];
+
+  const controllable = items.filter(isControllable);
+  CONTROL_GROUPS = groupDevices(controllable);
+
+  for (const t of CONTROL_TYPES) {
+    renderPanel(t);
+  }
+
+  summary.textContent =
+    `Всего управляемых устройств: ${controllable.length} | ` +
+    `switch: ${CONTROL_GROUPS.switch.length}, light: ${CONTROL_GROUPS.light.length}, fan: ${CONTROL_GROUPS.fan.length}, cover: ${CONTROL_GROUPS.cover.length}, climate: ${CONTROL_GROUPS.climate.length}`;
+
+  switchControlTab("switch");
+}
+
+async function runDeviceCommand(entityId, deviceType, operation, title) {
+  if (!requireAuth()) return;
+
+  document.getElementById("control-result-box").textContent = "Выполняю команду...";
+
+  const result = await ghApi("/api/device-control/command", {
+    method: "POST",
+    body: JSON.stringify({
+      entity_id: entityId,
+      device_type: deviceType,
+      operation: operation,
+      title: title
+    })
+  });
+
+  pretty("control-result-box", result.data);
+}
+
+loadControlDevices();
+</script>
+{% endblock %}
