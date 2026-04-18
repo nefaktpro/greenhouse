@@ -18,30 +18,20 @@
 {% block scripts %}
 <script>
 async function refreshMode() {
-  const { data } = await ghApi("/api/modes/current");
+  if (!requireAuth()) return;
+  const { data } = await ghApi("/api/modes/current", {
+    method: "GET",
+    headers: ghHeaders(false)
+  });
   pretty("mode-box", data);
 }
 
 async function setMode(mode) {
-  let payload = null;
-
-  const try1 = await ghApi("/api/modes/set", {
+  const { data } = await ghApi("/api/modes/set", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ mode })
   });
-  if (try1.resp.ok) {
-    pretty("mode-box", try1.data);
-    return;
-  }
-
-  const try2 = await ghApi("/api/modes/switch", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ mode })
-  });
-  payload = try2.data;
-  pretty("mode-box", payload);
+  pretty("mode-box", data);
 }
 
 refreshMode();

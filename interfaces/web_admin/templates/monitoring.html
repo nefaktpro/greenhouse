@@ -9,8 +9,12 @@
 
 {% block scripts %}
 <script>
-(async function () {
-  const { data } = await ghApi("/api/monitoring/overview");
+(async function loadMonitoring() {
+  if (!requireAuth()) return;
+  const { data } = await ghApi("/api/monitoring/overview", {
+    method: "GET",
+    headers: ghHeaders(false)
+  });
   pretty("overview-box", data);
 })();
 </script>

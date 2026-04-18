@@ -2,123 +2,50 @@
 <html lang="ru">
 <head>
   <meta charset="utf-8">
-  <title>{% block title %}Greenhouse v17 Web Admin{% endblock %}</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>{{ page_title or "Greenhouse v17" }}</title>
   <link rel="stylesheet" href="/static/app.css">
-  <style>
-    body {
-      margin: 0;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background: #0b1220;
-      color: #eef2ff;
-    }
-    .wrap {
-      max-width: 1240px;
-      margin: 0 auto;
-      padding: 24px;
-    }
-    .topbar {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: space-between;
-      gap: 16px;
-      align-items: center;
-      margin-bottom: 24px;
-    }
-    .brand {
-      font-size: 24px;
-      font-weight: 700;
-    }
-    .nav {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-    }
-    .nav a {
-      color: #dbeafe;
-      text-decoration: none;
-      background: #172036;
-      border: 1px solid #26314a;
-      padding: 9px 12px;
-      border-radius: 12px;
-    }
-    .nav a:hover {
-      background: #1d2944;
-    }
-    .card {
-      background: #141c2f;
-      border: 1px solid #24314d;
-      border-radius: 18px;
-      padding: 18px;
-      box-shadow: 0 8px 24px rgba(0,0,0,.22);
-    }
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-      gap: 16px;
-    }
-    h1, h2, h3, p {
-      margin-top: 0;
-    }
-    pre {
-      white-space: pre-wrap;
-      word-break: break-word;
-      background: #0a0f1d;
-      border: 1px solid #24314d;
-      border-radius: 12px;
-      padding: 12px;
-      min-height: 120px;
-      overflow: auto;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 14px;
-    }
-    th, td {
-      text-align: left;
-      padding: 8px 10px;
-      border-bottom: 1px solid #24314d;
-      vertical-align: top;
-    }
-    .muted {
-      color: #9fb0d1;
-    }
-    .ok { color: #86efac; }
-    .warn { color: #fcd34d; }
-    .bad { color: #fca5a5; }
-    button {
-      cursor: pointer;
-      padding: 10px 14px;
-      border-radius: 10px;
-      border: 0;
-      font-weight: 600;
-      background: #8b5cf6;
-      color: white;
-    }
-    button.secondary {
-      background: #334155;
-    }
-  </style>
-  {% block head_extra %}{% endblock %}
 </head>
-<body>
-  <div class="wrap">
-    <div class="topbar">
-      <div class="brand">Greenhouse v17 Web Admin</div>
-      <nav class="nav">
-        <a href="/web/">Главная</a>
-        <a href="/web/monitoring">Мониторинг</a>
-        <a href="/web/registry">Реестр</a>
-        <a href="/web/safety">Safety</a>
-        <a href="/web/modes">Режимы</a>
-        <a href="/web/ask">ASK</a>
-        <a href="/web/control">Control</a>
-      </nav>
+<body class="layout">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-title">GREENHOUSE v17</div>
+      <div class="brand-subtitle">Web Admin</div>
     </div>
 
+    <nav class="menu">
+      <a href="/web/">🏠 Dashboard</a>
+      <a href="/web/control">🎛 Control</a>
+      <a href="/web/ask">❓ ASK</a>
+      <a href="/web/modes">🧠 Modes</a>
+      <a href="/web/registry">🗂 Registry</a>
+      <a href="/web/monitoring">📈 Monitoring</a>
+      <a href="/web/safety">🛡 Safety</a>
+      <a href="/web/login">🔐 Login</a>
+    </nav>
+
+    <div class="sidebar-box">
+      <div class="sidebar-title">Канон</div>
+      <div class="sidebar-note">
+        Telegram + Web работают поверх одного v17 Core / Registry / Execution контура.
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div>
+        <h1 class="page-title">{{ page_title or "Greenhouse v17" }}</h1>
+      </div>
+      <div class="topbar-actions">
+        <button class="ghost-btn" onclick="logout()">Выйти</button>
+      </div>
+    </header>
+
     {% block content %}{% endblock %}
-  </div>
+  </main>
+
+  <script src="/static/app.js"></script>
   {% block scripts %}{% endblock %}
 </body>
 </html>

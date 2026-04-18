@@ -17,10 +17,12 @@
 
 {% block scripts %}
 <script>
-(async function () {
+(async function loadRegistry() {
+  if (!requireAuth()) return;
+
   const [devices, caps] = await Promise.all([
-    ghApi("/api/registry/devices"),
-    ghApi("/api/registry/capabilities")
+    ghApi("/api/registry/devices", { method: "GET", headers: ghHeaders(false) }),
+    ghApi("/api/registry/capabilities", { method: "GET", headers: ghHeaders(false) })
   ]);
 
   pretty("devices-box", devices.data);

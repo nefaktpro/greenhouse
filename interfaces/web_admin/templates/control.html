@@ -3,7 +3,9 @@
 <section class="card">
   <div class="card-label">Execution</div>
   <h3>Control</h3>
-  <p class="muted">Запуск действий через общий v17 pipeline.</p>
+  <p class="muted">
+    Страница читает action map и позволяет запускать действия через общий API.
+  </p>
   <div id="actions-grid" class="actions-grid"></div>
   <pre id="control-result" class="result-box">Загрузка action map...</pre>
 </section>
@@ -11,50 +13,42 @@
 
 {% block scripts %}
 <script>
-async function executeAction(actionKey) {
-  const out = document.getElementById("control-result");
-  out.textContent = "Выполняю: " + actionKey;
+async function runAction(actionKey) {
+  const result = document.getElementById("control-result");
+  result.textContent = "Выполняю: " + actionKey;
 
-  let res = await ghApi("/api/actions/execute", {
+  const { data } = await ghApi("/api/actions/execute", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ action_key: actionKey })
   });
 
-  if (!res.resp.ok) {
-    res = await ghApi("/api/actions/run", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action_key: actionKey })
-    });
-  }
-
-  pretty("control-result", res.data);
+  pretty("control-result", data);
 }
 
-(async function () {
+(async function loadControl() {
+  if (!requireAuth()) return;
+
+  const result = document.getElementById("control-result");
   const grid = document.getElementById("actions-grid");
-  const out = document.getElementById("control-result");
 
-  let mapRes = await ghApi("/api/actions/debug/action-map");
-  if (!mapRes.resp.ok) {
-    mapRes = await ghApi("/api/actions/action-map");
-  }
+  const { data } = await ghApi("/api/actions/debug/action-map", {
+    method: "GET",
+    headers: ghHeaders(false)
+  });
 
-  const data = mapRes.data;
   pretty("control-result", data);
 
-  const src = data.items || data.actions || data.action_map || data || [];
-  const items = Array.isArray(src)
-    ? src
-    : Object.entries(src).map(([key, val]) => ({ action_key: key, ...(val || {}) }));
+  const items = data.items || data.actions || data.action_map || [];
+  const pairs = Array.isArray(items)
+    ? items
+    : Object.entries(items).map(([key, val]) => ({ action_key: key, ...(val || {}) }));
 
-  if (!items.length) {
+  if (!pairs.length) {
     grid.innerHTML = '<div class="muted">Action map пустой или другой структуры.</div>';
     return;
   }
 
-  grid.innerHTML = items.map((item) => {
+  grid.innerHTML = pairs.map((item) => {
     const key = item.action_key || item.key || item.name || "unknown_action";
     const title = item.title || item.label || key;
     const role = item.logical_role || item.role || "-";
@@ -69,7 +63,7 @@ async function executeAction(actionKey) {
           <div><b>operation:</b> ${esc(op)}</div>
         </div>
         <div class="action-row">
-          <button class="primary-btn" onclick="executeAction('${String(key).replaceAll("'", "\\'")}')">Выполнить</button>
+          <button class="primary-btn" onclick="runAction('${esc(key)}')">Выполнить</button>
         </div>
       </div>
     `;

@@ -1,19 +1,21 @@
 {% extends "base.html" %}
 {% block content %}
 <section class="hero-card narrow">
-  <div class="hero-kicker">Web Admin Login</div>
-  <h2>Вход в панель</h2>
-  <p class="muted">Нормальный вход в тот же backend, без пустых разделов.</p>
+  <div class="hero-kicker">Локальный защищённый вход</div>
+  <h2>Вход в Web Admin</h2>
+  <p class="muted">Логин идёт через текущий API и сохраняет bearer token в localStorage.</p>
 
   <form id="login-form" class="form-grid">
     <label>
       <span>Логин</span>
       <input id="username" type="text" value="Mi" autocomplete="username">
     </label>
+
     <label>
       <span>Пароль</span>
       <input id="password" type="password" autocomplete="current-password">
     </label>
+
     <button type="submit" class="primary-btn">Войти</button>
   </form>
 
@@ -30,7 +32,6 @@ document.getElementById("login-form").addEventListener("submit", async (e) => {
 
   const { resp, data } = await ghApi("/api/auth/login", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       username: document.getElementById("username").value,
       password: document.getElementById("password").value
@@ -42,6 +43,7 @@ document.getElementById("login-form").addEventListener("submit", async (e) => {
     return;
   }
 
+  localStorage.setItem("gh_token", data.access_token);
   result.textContent = "Успешный вход";
   window.location.href = "/web/";
 });
