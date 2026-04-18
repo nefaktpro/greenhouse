@@ -1,69 +1,49 @@
-{% set page_id = 'login' %}
-{% set require_auth = '0' %}
 {% extends "base.html" %}
-
-{% block title %}Greenhouse v17 — Login{% endblock %}
-
 {% block content %}
-<div class="layout-grid" style="grid-template-columns:minmax(320px,780px);">
-  <section class="card">
-    <div class="eyebrow">Локальный защищённый вход</div>
-    <h2 style="font-size:26px;margin-bottom:14px;">Вход в Web Admin</h2>
-    <p class="muted" style="margin-top:0;">Панель управления теплицей v17. Логин идёт через текущий API.</p>
+<section class="hero-card narrow">
+  <div class="hero-kicker">Web Admin Login</div>
+  <h2>Вход в панель</h2>
+  <p class="muted">Нормальный вход в тот же backend, без пустых разделов.</p>
 
-    <div class="list" style="margin-top:22px;">
-      <div>
-        <div class="muted" style="margin-bottom:8px;">Логин</div>
-        <input id="username" class="search" autocomplete="username" placeholder="Логин" value="Mi" />
-      </div>
-      <div>
-        <div class="muted" style="margin-bottom:8px;">Пароль</div>
-        <input id="password" class="search" type="password" autocomplete="current-password" placeholder="••••••••" />
-      </div>
-      <div>
-        <button id="loginBtn" class="btn btn-primary" style="width:100%;">Войти</button>
-      </div>
-      <div id="loginResult" class="result"></div>
-    </div>
-  </section>
-</div>
+  <form id="login-form" class="form-grid">
+    <label>
+      <span>Логин</span>
+      <input id="username" type="text" value="Mi" autocomplete="username">
+    </label>
+    <label>
+      <span>Пароль</span>
+      <input id="password" type="password" autocomplete="current-password">
+    </label>
+    <button type="submit" class="primary-btn">Войти</button>
+  </form>
+
+  <pre id="login-result" class="result-box"></pre>
+</section>
 {% endblock %}
 
 {% block scripts %}
 <script>
-  const loginBtn = document.getElementById("loginBtn");
-  const resultEl = document.getElementById("loginResult");
+document.getElementById("login-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const result = document.getElementById("login-result");
+  result.textContent = "Выполняю вход...";
 
-  async function doLogin() {
-    const username = document.getElementById("username").value.trim();
-    const password = document.getElementById("password").value;
+  const { resp, data } = await ghApi("/api/auth/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      username: document.getElementById("username").value,
+      password: document.getElementById("password").value
+    })
+  });
 
-    try {
-      GH.showResult(resultEl, "Выполняю вход...", "warn");
-      const data = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: {"Content-Type":"application/json"},
-        body: JSON.stringify({ username, password })
-      }).then(async r => {
-        const t = await r.text();
-        let j = {};
-        try { j = t ? JSON.parse(t) : {}; } catch { j = { raw: t }; }
-        if (!r.ok) throw new Error(j.detail || j.error || j.raw || `HTTP ${r.status}`);
-        return j;
-      });
-
-      if (!data.access_token) throw new Error("API не вернул access_token");
-      GH.setToken(data.access_token);
-      GH.showResult(resultEl, "Успешный вход. Перехожу на Dashboard...", "ok");
-      setTimeout(() => location.href = "/web/", 400);
-    } catch (e) {
-      GH.showResult(resultEl, `Ошибка входа: ${e.message}`, "error");
-    }
+  if (!resp.ok || !data.access_token) {
+    result.textContent = JSON.stringify(data, null, 2);
+    return;
   }
 
-  loginBtn.addEventListener("click", doLogin);
-  document.getElementById("password").addEventListener("keydown", (e) => {
-    if (e.key === "Enter") doLogin();
-  });
+  result.textContent = "Успешный вход";
+  window.location.href = "/web/";
+});
 </script>
 {% endblock %}

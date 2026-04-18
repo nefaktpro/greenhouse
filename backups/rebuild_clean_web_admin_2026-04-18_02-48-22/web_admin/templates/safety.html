@@ -1,0 +1,91 @@
+{% set page_id = 'safety' %}
+{% extends "base.html" %}
+
+{% block title %}Greenhouse v17 — Safety{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="eyebrow">Safety</div>
+  <h2 style="font-size:24px;">Питание, пожар, протечка, safety-батарейки, связность</h2>
+  <input id="safetySearch" class="search" placeholder="Поиск по name / entity_id / zone / category" style="margin:16px 0;" />
+  <div id="safetyMeta" class="chips" style="margin-bottom:14px;"></div>
+  <div id="safetyChips" class="chips" style="margin-bottom:16px;"></div>
+  <div id="safetyList" class="list">Загрузка...</div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  let SAFE_ITEMS = [];
+  let SAFE_FILTER = "";
+
+  function safeText(x) {
+    return [
+      x.device_id, x.name, x.entity_id, x.zone, x.category, x.logical_role, x.location
+    ].join(" ").toLowerCase();
+  }
+
+  function fmtVal(x) {
+    const v = x.value ?? "—";
+    return `${v}${x.unit ? " " + x.unit : ""}`;
+  }
+
+  function renderSafety() {
+    const q = document.getElementById("safetySearch").value.trim().toLowerCase();
+    let items = SAFE_ITEMS.filter(x => !q || safeText(x).includes(q));
+    if (SAFE_FILTER) items = items.filter(x => x.category === SAFE_FILTER);
+
+    document.getElementById("safetyMeta").innerHTML = `
+      <span class="chip ok">count: ${SAFE_ITEMS.length}</span>
+      <span class="chip">filtered: ${items.length}</span>
+    `;
+
+    const cats = [...new Set(SAFE_ITEMS.map(x => x.category))];
+    document.getElementById("safetyChips").innerHTML =
+      `<button class="btn ${!SAFE_FILTER ? 'btn-primary' : ''}" onclick="setSafeFilter('')">Все</button>` +
+      cats.map(c => `<button class="btn ${SAFE_FILTER===c ? 'btn-primary' : ''}" onclick="setSafeFilter('${c}')">${c}</button>`).join("");
+
+    const root = document.getElementById("safetyList");
+    if (!items.length) {
+      root.innerHTML = `<div class="empty">Нет safety-данных по текущему фильтру.</div>`;
+      return;
+    }
+
+    root.innerHTML = items.map(x => `
+      <div class="row" style="align-items:flex-start;">
+        <div style="width:100%;">
+          <div class="name">${x.name || "—"}</div>
+          <div class="sub">${x.category} · ${x.zone || "—"} · ${x.type || "—"}</div>
+          <div class="kv" style="margin-top:10px;">
+            <div>value</div><div>${fmtVal(x)}</div>
+            <div>entity_id</div><div class="mono">${x.entity_id || "—"}</div>
+            <div>location</div><div>${x.location || "—"}</div>
+            <div>logical_role</div><div>${x.logical_role || "—"}</div>
+            <div>available</div><div>${x.available ? "yes" : "no"}</div>
+            <div>updated</div><div>${x.last_updated || "—"}</div>
+          </div>
+        </div>
+      </div>
+    `).join("");
+  }
+
+  function setSafeFilter(v) {
+    SAFE_FILTER = v;
+    renderSafety();
+  }
+
+  async function loadSafety() {
+    const root = document.getElementById("safetyList");
+    try {
+      const data = await GH.api("/api/monitoring/safety");
+      SAFE_ITEMS = Array.isArray(data.items) ? data.items : [];
+      renderSafety();
+    } catch (e) {
+      root.innerHTML = `<div class="empty">Ошибка загрузки safety: ${e.message}</div>`;
+    }
+  }
+
+  document.getElementById("safetySearch").addEventListener("input", renderSafety);
+  loadSafety();
+</script>
+{% endblock %}

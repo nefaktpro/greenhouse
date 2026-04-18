@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card">
+  <div class="card-label">Execution</div>
+  <h3>Control</h3>
+  <p class="muted">Запуск действий через текущий v17 action/execution pipeline.</p>
+  <div id="actions-grid" class="actions-grid"></div>
+  <pre id="control-result" class="result-box">Загрузка action map...</pre>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function runAction(actionKey) {
+  const { data } = await ghApi("/api/actions/execute", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action_key: actionKey })
+  });
+  pretty("control-result", data);
+}
+
+(async function () {
+  const grid = document.getElementById("actions-grid");
+  const out = document.getElementById("control-result");
+
+  const { data } = await ghApi("/api/actions/debug/action-map");
+  pretty("control-result", data);
+
+  const src = data.items || data.actions || data.action_map || data || [];
+  const items = Array.isArray(src)
+    ? src
+    : Object.entries(src).map(([key, val]) => ({ action_key: key, ...(val || {}) }));
+
+  if (!items.length) {
+    out.textContent = JSON.stringify(data, null, 2);
+    grid.innerHTML = "";
+    return;
+  }
+
+  grid.innerHTML = items.map((item) => {
+    const key = item.action_key || item.key || item.name || "unknown_action";
+    const title = item.title || item.label || key;
+    const role = item.logical_role || item.role || "-";
+    const op = item.operation || "-";
+
+    return `
+      <div class="action-card">
+        <div class="action-title">${esc(title)}</div>
+        <div class="action-meta">
+          <div><b>action_key:</b> ${esc(key)}</div>
+          <div><b>role:</b> ${esc(role)}</div>
+          <div><b>operation:</b> ${esc(op)}</div>
+        </div>
+        <div class="action-row">
+          <button class="primary-btn" onclick="runAction('${String(key).replaceAll("'", "\\'")}')">Выполнить</button>
+        </div>
+      </div>
+    `;
+  }).join("");
+})();
+</script>
+{% endblock %}

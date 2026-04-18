@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card">
+  <div class="card-label">Modes</div>
+  <h3>Управление режимами</h3>
+  <pre id="mode-box" class="result-box">Загрузка...</pre>
+  <div class="button-row" style="margin-top:12px">
+    <button class="ghost-btn" onclick="setMode('MANUAL')">MANUAL</button>
+    <button class="ghost-btn" onclick="setMode('TEST')">TEST</button>
+    <button class="ghost-btn" onclick="setMode('ASK')">ASK</button>
+    <button class="ghost-btn" onclick="setMode('AUTO')">AUTO</button>
+    <button class="ghost-btn" onclick="setMode('AUTOPILOT')">AUTOPILOT</button>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function refreshMode() {
+  const { data } = await ghApi("/api/modes/current");
+  pretty("mode-box", data);
+}
+
+async function setMode(mode) {
+  const { data } = await ghApi("/api/modes/set", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ mode })
+  });
+  pretty("mode-box", data);
+}
+
+refreshMode();
+</script>
+{% endblock %}

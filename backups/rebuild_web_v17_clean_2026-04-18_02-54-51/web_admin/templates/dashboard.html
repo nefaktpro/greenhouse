@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="cards-grid">
+  <article class="card">
+    <div class="card-label">Система</div>
+    <h3>Текущий режим</h3>
+    <pre id="mode-box" class="result-box">Загрузка...</pre>
+  </article>
+
+  <article class="card">
+    <div class="card-label">ASK</div>
+    <h3>Текущее ожидание</h3>
+    <pre id="ask-box" class="result-box">Загрузка...</pre>
+  </article>
+</section>
+
+<section class="cards-grid">
+  <article class="card">
+    <div class="card-label">Monitoring</div>
+    <h3>Обзор</h3>
+    <pre id="overview-box" class="result-box">Загрузка...</pre>
+  </article>
+
+  <article class="card">
+    <div class="card-label">Safety</div>
+    <h3>Сводка безопасности</h3>
+    <pre id="safety-box" class="result-box">Загрузка...</pre>
+  </article>
+</section>
+
+<section class="cards-grid">
+  <article class="card">
+    <div class="card-label">Навигация</div>
+    <h3>Быстрые действия</h3>
+    <div class="button-row">
+      <a class="primary-btn" href="/web/control">Control</a>
+      <a class="ghost-btn-link" href="/web/ask">ASK</a>
+      <a class="ghost-btn-link" href="/web/modes">Modes</a>
+      <a class="ghost-btn-link" href="/web/registry">Registry</a>
+      <a class="ghost-btn-link" href="/web/monitoring">Monitoring</a>
+    </div>
+  </article>
+
+  <article class="card">
+    <div class="card-label">Состояние</div>
+    <h3>Health</h3>
+    <pre id="health-box" class="result-box">Загрузка...</pre>
+  </article>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(async function loadDashboard() {
+  if (!requireAuth()) return;
+
+  const [health, mode, ask, overview, safety] = await Promise.all([
+    ghApi("/api/health", { method: "GET", headers: ghHeaders(false) }),
+    ghApi("/api/modes/current", { method: "GET", headers: ghHeaders(false) }),
+    ghApi("/api/ask/current", { method: "GET", headers: ghHeaders(false) }),
+    ghApi("/api/monitoring/overview", { method: "GET", headers: ghHeaders(false) }),
+    ghApi("/api/monitoring/safety", { method: "GET", headers: ghHeaders(false) }),
+  ]);
+
+  pretty("health-box", health.data);
+  pretty("mode-box", mode.data);
+  pretty("ask-box", ask.data);
+  pretty("overview-box", overview.data);
+  pretty("safety-box", safety.data);
+})();
+</script>
+{% endblock %}
