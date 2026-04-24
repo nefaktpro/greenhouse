@@ -146,32 +146,11 @@
       <button class="mode-btn" onclick="setMode('AUTOPILOT')">AUTOPILOT</button>
     </div>
 
-    <div style="margin-top:16px;color:#c7d5ee;line-height:1.45;font-size:14px;">
-      💡 <b>MANUAL</b> — выполняет сразу<br>
-      💡 <b>ASK</b> — сначала создаёт подтверждение<br>
-      💡 <b>TEST</b> — не трогает железо
-    </div>
-
     <div class="mode-result">
       <pre id="mode-set-box" class="result-box">Ожидание...</pre>
     </div>
   </article>
 </section>
-
-<style>
-.mode-btn.active {
-  background: linear-gradient(135deg,#5aa2ff,#3b82f6) !important;
-  color: #fff !important;
-  border-color: rgba(125,180,255,.85) !important;
-  box-shadow: 0 0 0 2px rgba(90,162,255,.28) !important;
-}
-
-.mode-btn:nth-child(4),
-.mode-btn:nth-child(5) {
-  opacity: .55;
-}
-</style>
-
 {% endblock %}
 
 {% block scripts %}
@@ -179,11 +158,11 @@
 function modeDescription(modeName) {
   const m = String(modeName || "").toUpperCase();
   const map = {
-    MANUAL: "⚡ Ручной режим: команды выполняются сразу через общий pipeline.",
-    TEST: "🧪 Тестовый режим: dry-run / логирование без реального исполнения.",
-    ASK: "❓ Безопасный режим: действие создаётся как pending и ждёт подтверждения.",
-    AUTO: "🤖 Автоматический режим: система может выполнять разрешённые действия сама. Пока осторожно.",
-    AUTOPILOT: "🧠 AI-control: AI может инициировать решения, но не исполняет напрямую. Пока не используем."
+    MANUAL: "Ручное управление через общий execution pipeline.",
+    TEST: "Только расчёт и логирование без реального исполнения.",
+    ASK: "Действие уходит в pending и ждёт подтверждения.",
+    AUTO: "Автоматическое исполнение по rules / validation / execution.",
+    AUTOPILOT: "AI-control поверх общего Core / Validation / Execution."
   };
   return map[m] || "Описание режима не найдено.";
 }
@@ -234,22 +213,10 @@ async function loadMode() {
   document.getElementById("flag-ai").innerHTML = flagHtml(
     payload.ai_control ?? payload.ai ?? payload.flags?.ai_control ?? false
   );
-
-  document.querySelectorAll(".mode-btn").forEach(btn => {
-    btn.classList.remove("active");
-    if (btn.textContent.trim().toUpperCase() === String(modeName).toUpperCase()) {
-      btn.classList.add("active");
-    }
-  });
 }
 
 async function setMode(modeName) {
   if (!requireAuth()) return;
-
-  if (["AUTO", "AUTOPILOT"].includes(String(modeName).toUpperCase())) {
-    alert("Этот режим пока не включаем из Web/Admin ⚠️");
-    return;
-  }
 
   const result = await ghTryPostVariants([
     { url: "/api/modes/set", body: { mode: modeName } },

@@ -4,34 +4,6 @@ from dataclasses import asdict, dataclass, field
 from typing import Any, Dict, Optional
 
 from ai.context_builder import build_minimal_context
-import json
-from pathlib import Path
-
-
-def _norm_text_for_nl_map(text: str) -> str:
-    t = (text or "").lower().strip()
-    t = " ".join(t.split())
-    t = t.replace("верх вент ", "верхний вентилятор ")
-    t = t.replace("верх вент", "верхний вентилятор")
-    t = t.replace("низ вент ", "нижний вентилятор ")
-    t = t.replace("низ вент", "нижний вентилятор")
-    t = t.replace("ниж вент ", "нижний вентилятор ")
-    t = t.replace("ниж вент", "нижний вентилятор")
-    return t
-
-
-def resolve_action_key_from_nl_map(text: str):
-    p = Path("data/registry/nl_map.json")
-    if not p.exists():
-        return None
-    try:
-        data = json.loads(p.read_text(encoding="utf-8"))
-    except Exception:
-        return None
-    raw = " ".join((text or "").lower().strip().split())
-    norm = _norm_text_for_nl_map(text)
-    return data.get(raw) or data.get(norm)
-
 
 def resolve_action_key(action: str, target: str):
     if not action or not target:
@@ -66,7 +38,6 @@ def route_ai_message(text: str) -> Dict[str, Any]:
     """
     parsed: ParsedIntent = parse_intent(text)
     context = build_minimal_context()
-    nl_action_key = resolve_action_key_from_nl_map(text)
 
     if parsed.intent_type == "device_action":
         response = (
@@ -74,7 +45,7 @@ def route_ai_message(text: str) -> Dict[str, Any]:
             "но выполнение напрямую запрещено. "
             "Дальше это должно идти через Core → Validation → Execution."
         )
-        action_key = nl_action_key or resolve_action_key(parsed.action, parsed.target)
+        action_key = resolve_action_key(parsed.action, parsed.target)
 
         proposed_action = {
             "intent_type": parsed.intent_type,
