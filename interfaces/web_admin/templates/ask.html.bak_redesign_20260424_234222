@@ -1,0 +1,263 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+  .ask-layout {
+    display: grid;
+    grid-template-columns: 1.2fr 0.9fr;
+    gap: 18px;
+  }
+
+  .ask-main-card,
+  .ask-side-card {
+    background: rgba(9,18,38,.92);
+    border: 1px solid #223659;
+    border-radius: 18px;
+    padding: 20px;
+  }
+
+  .ask-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    border-radius: 999px;
+    padding: 8px 14px;
+    font-weight: 800;
+    margin: 8px 0 14px 0;
+  }
+
+  .ask-status.pending {
+    background: rgba(255,216,102,.12);
+    color: #ffd866;
+    border: 1px solid rgba(255,216,102,.35);
+  }
+
+  .ask-status.empty {
+    background: rgba(126,231,135,.10);
+    color: #7ee787;
+    border: 1px solid rgba(126,231,135,.28);
+  }
+
+  .ask-title {
+    font-size: 28px;
+    font-weight: 800;
+    line-height: 1.15;
+    margin: 6px 0 14px 0;
+    color: #fff;
+  }
+
+  .ask-meta {
+    margin-bottom: 8px;
+    color: #d8e4fb;
+    line-height: 1.45;
+    font-size: 14px;
+  }
+
+  .ask-meta span {
+    color: #8fb3ff;
+    font-weight: 700;
+  }
+
+  .ask-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 18px;
+  }
+
+  .ask-actions button {
+    min-width: 180px;
+  }
+
+  .ask-help-grid {
+    display: grid;
+    gap: 14px;
+  }
+
+  .ask-help-card {
+    background: rgba(12,22,44,.88);
+    border: 1px solid #203456;
+    border-radius: 14px;
+    padding: 16px;
+  }
+
+  .ask-help-card h3 {
+    margin-bottom: 8px;
+  }
+
+  .ask-help-card p {
+    color: #c7d5ee;
+    line-height: 1.45;
+    margin: 0;
+  }
+
+  .ask-raw {
+    margin-top: 18px;
+  }
+
+  @media (max-width: 900px) {
+    .ask-layout {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
+<section class="ask-layout">
+  <article class="ask-main-card">
+    <div class="card-label">ASK</div>
+    <h2>Подтверждение действий</h2>
+
+    <div id="ask-status" class="ask-status empty">Загрузка...</div>
+    <div id="ask-title" class="ask-title">Проверка состояния...</div>
+
+    <div id="ask-meta-box"></div>
+
+    <div class="ask-actions">
+      <button class="primary-btn" onclick="loadAsk()">Обновить</button>
+      <button id="ask-confirm-btn" class="primary-btn" onclick="confirmAsk()" disabled>Подтвердить</button>
+      <button id="ask-cancel-btn" class="ghost-btn" onclick="cancelAsk()" disabled>Отменить</button>
+    </div>
+
+    <div class="ask-raw">
+      <pre id="ask-result-box" class="result-box">Ожидание...</pre>
+    </div>
+  </article>
+
+  <aside class="ask-side-card">
+    <div class="card-label">Как это работает</div>
+    <h2>Логика ASK</h2>
+
+    <div class="ask-help-grid">
+      <article class="ask-help-card">
+        <h3>1. Предложение</h3>
+        <p>Система формирует pending-действие и сохраняет ask-state.</p>
+      </article>
+
+      <article class="ask-help-card">
+        <h3>2. Подтверждение</h3>
+        <p>Пользователь подтверждает или отменяет действие через текущий confirm flow.</p>
+      </article>
+
+      <article class="ask-help-card">
+        <h3>3. Исполнение</h3>
+        <p>После подтверждения действие должно идти через общий Core / Validation / Execution контур.</p>
+      </article>
+    </div>
+  </aside>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function esc(text) {
+  return String(text ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;");
+}
+
+function renderAskMeta(item) {
+  const lines = [];
+
+  const pairs = [
+    ["Kind", item.kind],
+    ["Action key", item.action_key],
+    ["Mode", item.mode],
+    ["Created at", item.created_at],
+    ["Title", item.title]
+  ];
+
+  for (const [label, value] of pairs) {
+    if (!value) continue;
+    lines.push(`<div class="ask-meta"><span>${esc(label)}:</span> ${esc(value)}</div>`);
+  }
+
+  return lines.join("");
+}
+
+function setAskEmpty(data) {
+  const status = document.getElementById("ask-status");
+  const title = document.getElementById("ask-title");
+  const meta = document.getElementById("ask-meta-box");
+  const confirmBtn = document.getElementById("ask-confirm-btn");
+  const cancelBtn = document.getElementById("ask-cancel-btn");
+
+  status.className = "ask-status empty";
+  status.textContent = "Нет pending ASK";
+  title.textContent = "Сейчас нет действий, ожидающих подтверждения";
+  meta.innerHTML = "";
+  confirmBtn.disabled = true;
+  cancelBtn.disabled = true;
+
+  pretty("ask-result-box", data);
+}
+
+function setAskPending(item, data) {
+  const status = document.getElementById("ask-status");
+  const title = document.getElementById("ask-title");
+  const meta = document.getElementById("ask-meta-box");
+  const confirmBtn = document.getElementById("ask-confirm-btn");
+  const cancelBtn = document.getElementById("ask-cancel-btn");
+
+  status.className = "ask-status pending";
+  status.textContent = "Есть pending ASK";
+  title.textContent = item.title || item.action_key || "Ожидает подтверждения";
+  meta.innerHTML = renderAskMeta(item);
+  confirmBtn.disabled = false;
+  cancelBtn.disabled = false;
+
+  pretty("ask-result-box", data);
+}
+
+async function loadAsk() {
+  if (!requireAuth()) return;
+
+  const result = await ghTryGetVariants([
+    "/api/ask/current",
+    "/api/ask"
+  ]);
+
+  if (!result.ok) {
+    pretty("ask-result-box", result);
+    return;
+  }
+
+  const data = result.data || {};
+  const hasPending = Boolean(data.has_pending);
+  const item = data.item || {};
+
+  if (!hasPending) {
+    setAskEmpty(data);
+    return;
+  }
+
+  setAskPending(item, data);
+}
+
+async function confirmAsk() {
+  if (!requireAuth()) return;
+
+  const result = await ghTryPostVariants([
+    { url: "/api/ask/confirm", body: {} },
+    { url: "/api/ask/confirm", body: { confirm: true } }
+  ]);
+
+  pretty("ask-result-box", result);
+  await loadAsk();
+}
+
+async function cancelAsk() {
+  if (!requireAuth()) return;
+
+  const result = await ghTryPostVariants([
+    { url: "/api/ask/cancel", body: {} },
+    { url: "/api/ask/cancel", body: { cancel: true } }
+  ]);
+
+  pretty("ask-result-box", result);
+  await loadAsk();
+}
+
+loadAsk();
+</script>
+{% endblock %}

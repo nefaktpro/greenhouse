@@ -21,7 +21,7 @@ class ChatResponse:
 
 def _build_status_reply() -> str:
     mode = get_mode_flags()
-    mode_name = mode.get("title") or mode.get("name", "UNKNOWN")
+    mode_name = mode.get("title", "UNKNOWN")
     execute = "да" if mode.get("execute") else "нет"
     ask = "да" if mode.get("ask") else "нет"
     ai_control = "да" if mode.get("ai_control") else "нет"
@@ -66,7 +66,7 @@ def _build_memory_forget_reply(text: str) -> str:
 
 def _build_device_action_reply(parsed: ParsedIntent) -> ChatResponse:
     mode = get_mode_flags()
-    mode_name = mode.get("title") or mode.get("name", "UNKNOWN")
+    mode_name = mode.get("title", "UNKNOWN")
     target = parsed.target or "неизвестная цель"
     action = parsed.action or "unknown"
 

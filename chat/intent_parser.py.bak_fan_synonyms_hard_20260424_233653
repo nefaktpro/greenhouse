@@ -104,32 +104,8 @@ def detect_fan_target(text: str) -> Optional[str]:
     return None
 
 
-
-def _normalize_greenhouse_text(text: str) -> str:
-    t = (text or "").lower().strip()
-
-    replacements = {
-        "верх вентилятор": "верхний вентилятор",
-        "верх вент": "верхний вентилятор",
-        "верхний вент": "верхний вентилятор",
-        "вент верх": "верхний вентилятор",
-        "вентилятор верх": "верхний вентилятор",
-
-        "низ вентилятор": "нижний вентилятор",
-        "ниж вент": "нижний вентилятор",
-        "низ вент": "нижний вентилятор",
-        "нижний вент": "нижний вентилятор",
-        "вент низ": "нижний вентилятор",
-        "вентилятор низ": "нижний вентилятор",
-    }
-
-    for old, new in replacements.items():
-        t = t.replace(old, new)
-
-    return t
-
 def parse_intent(text: str) -> ParsedIntent:
-    normalized = normalize_text(_normalize_greenhouse_text(text))
+    normalized = normalize_text(text)
 
     if not normalized:
         return ParsedIntent(

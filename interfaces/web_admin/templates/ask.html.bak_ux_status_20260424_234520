@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+.ask-wrap{display:grid;grid-template-columns:1.25fr .85fr;gap:22px;align-items:start}
+.ask-card{background:rgba(7,16,34,.92);border:1px solid rgba(71,115,190,.45);border-radius:24px;padding:28px;box-shadow:0 18px 50px rgba(0,0,0,.18)}
+.ask-kicker{color:#8fb3ff;text-transform:uppercase;letter-spacing:.12em;font-weight:900;font-size:13px;margin-bottom:14px}
+.ask-title{font-size:34px;line-height:1.08;font-weight:950;margin:14px 0 18px;color:#fff}
+.ask-pill{display:inline-flex;align-items:center;gap:8px;border-radius:999px;padding:10px 16px;font-weight:900;margin-bottom:14px}
+.ask-pill.empty{background:rgba(126,231,135,.10);color:#7ee787;border:1px solid rgba(126,231,135,.30)}
+.ask-pill.pending{background:rgba(255,216,102,.12);color:#ffd866;border:1px solid rgba(255,216,102,.35)}
+.ask-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:18px 0}
+.ask-field{background:rgba(12,25,52,.85);border:1px solid rgba(71,115,190,.28);border-radius:16px;padding:14px}
+.ask-field b{display:block;color:#8fb3ff;font-size:12px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:7px}
+.ask-field span{font-size:16px;color:#eef5ff;word-break:break-word}
+.ask-actions{display:flex;gap:12px;flex-wrap:wrap;margin:20px 0}
+.ask-actions button{min-width:170px}
+.ask-raw{height:260px;overflow:auto;margin-top:16px}
+.ask-help{display:grid;gap:14px}
+.ask-help article{background:rgba(12,25,52,.72);border:1px solid rgba(71,115,190,.28);border-radius:18px;padding:18px}
+.ask-help h3{margin:0 0 8px;color:#fff}
+.ask-help p{margin:0;color:#c7d5ee;line-height:1.45}
+@media(max-width:1000px){.ask-wrap{grid-template-columns:1fr}.ask-grid{grid-template-columns:1fr}}
+</style>
+
+<section class="ask-wrap">
+  <article class="ask-card">
+    <div class="ask-kicker">ASK / подтверждение</div>
+    <div id="ask-status" class="ask-pill empty">Загрузка...</div>
+    <div id="ask-title" class="ask-title">Проверка pending-действий...</div>
+
+    <div id="ask-details" class="ask-grid"></div>
+
+    <div class="ask-actions">
+      <button class="primary-btn" onclick="loadAsk()">Обновить</button>
+      <button id="ask-confirm-btn" class="primary-btn" onclick="confirmAsk()" disabled>✅ Подтвердить</button>
+      <button id="ask-cancel-btn" class="ghost-btn" onclick="cancelAsk()" disabled>❌ Отменить</button>
+    </div>
+
+    <pre id="ask-result-box" class="result-box ask-raw">Ожидание...</pre>
+  </article>
+
+  <aside class="ask-card">
+    <div class="ask-kicker">Как работает</div>
+    <h2>Логика ASK</h2>
+    <div class="ask-help">
+      <article>
+        <h3>1. Предложение</h3>
+        <p>AI, Control или другой интерфейс создаёт pending-действие через action_key.</p>
+      </article>
+      <article>
+        <h3>2. Подтверждение</h3>
+        <p>Пользователь проверяет действие, entity_id и operation, затем подтверждает или отменяет.</p>
+      </article>
+      <article>
+        <h3>3. Исполнение</h3>
+        <p>После подтверждения действие идёт через общий Core / Validation / Execution / HA контур.</p>
+      </article>
+    </div>
+  </aside>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function esc(v){return String(v ?? "—").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;")}
+function field(label,value){return `<div class="ask-field"><b>${esc(label)}</b><span>${esc(value)}</span></div>`}
+
+function renderEmpty(data){
+  document.getElementById("ask-status").className="ask-pill empty";
+  document.getElementById("ask-status").textContent="Нет pending ASK";
+  document.getElementById("ask-title").textContent="Сейчас нет действий, ожидающих подтверждения";
+  document.getElementById("ask-details").innerHTML="";
+  document.getElementById("ask-confirm-btn").disabled=true;
+  document.getElementById("ask-cancel-btn").disabled=true;
+  pretty("ask-result-box", data);
+}
+
+function renderPending(item,data){
+  document.getElementById("ask-status").className="ask-pill pending";
+  document.getElementById("ask-status").textContent="Есть pending ASK";
+  document.getElementById("ask-title").textContent=item.title || item.action_key || "Ожидает подтверждения";
+
+  document.getElementById("ask-details").innerHTML=[
+    field("Action key", item.action_key),
+    field("Entity ID", item.entity_id),
+    field("Operation", item.operation),
+    field("Source", item.source),
+    field("Kind", item.kind),
+    field("Created", item.created_at)
+  ].join("");
+
+  document.getElementById("ask-confirm-btn").disabled=false;
+  document.getElementById("ask-cancel-btn").disabled=false;
+  pretty("ask-result-box", data);
+}
+
+async function loadAsk(){
+  const res = await fetch("/api/ask/current");
+  const data = await res.json();
+  if(!data.ok){ pretty("ask-result-box", data); return; }
+  if(data.has_pending){ renderPending(data.item || {}, data); }
+  else { renderEmpty(data); }
+}
+
+async function confirmAsk(){
+  const res = await fetch("/api/ask/confirm", {method:"POST"});
+  const data = await res.json();
+  pretty("ask-result-box", data);
+  setTimeout(loadAsk, 500);
+}
+
+async function cancelAsk(){
+  const res = await fetch("/api/ask/cancel", {method:"POST"});
+  const data = await res.json();
+  pretty("ask-result-box", data);
+  setTimeout(loadAsk, 500);
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  loadAsk();
+  setInterval(loadAsk, 5000);
+});
+</script>
+{% endblock %}

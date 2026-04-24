@@ -4,9 +4,8 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, Optional
 
 from chat.intent_parser import ParsedIntent, parse_intent
-from ai.router import route_ai_message
 from chat.observation_store import add_observation
-from greenhouse_v17.services.mode_service import get_mode_flags
+from mode_manager import get_mode_config
 
 
 @dataclass
@@ -20,8 +19,8 @@ class ChatResponse:
 
 
 def _build_status_reply() -> str:
-    mode = get_mode_flags()
-    mode_name = mode.get("title") or mode.get("name", "UNKNOWN")
+    mode = get_mode_config()
+    mode_name = mode.get("title", "UNKNOWN")
     execute = "да" if mode.get("execute") else "нет"
     ask = "да" if mode.get("ask") else "нет"
     ai_control = "да" if mode.get("ai_control") else "нет"
@@ -65,8 +64,8 @@ def _build_memory_forget_reply(text: str) -> str:
 
 
 def _build_device_action_reply(parsed: ParsedIntent) -> ChatResponse:
-    mode = get_mode_flags()
-    mode_name = mode.get("title") or mode.get("name", "UNKNOWN")
+    mode = get_mode_config()
+    mode_name = mode.get("title", "UNKNOWN")
     target = parsed.target or "неизвестная цель"
     action = parsed.action or "unknown"
 
@@ -149,14 +148,6 @@ def _build_device_action_reply(parsed: ParsedIntent) -> ChatResponse:
 
 
 def handle_chat_message(text: str) -> ChatResponse:
-    # === AI ROUTER DEBUG HOOK ===
-    try:
-        ai_debug = route_ai_message(text)
-        print("\n=== AI ROUTER DEBUG ===")
-        print(ai_debug)
-    except Exception as e:
-        print("AI ROUTER ERROR:", e)
-
     parsed = parse_intent(text)
 
     if parsed.intent_type == "empty":

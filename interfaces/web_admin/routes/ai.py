@@ -1,0 +1,65 @@
+from fastapi import APIRouter, Request
+from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
+from pydantic import BaseModel
+
+from ai.router import route_ai_message
+from chat.chat_router import handle_chat_message
+
+router = APIRouter(tags=["ai-lab"])
+templates = Jinja2Templates(directory="interfaces/web_admin/templates")
+
+
+class AIMessageIn(BaseModel):
+    text: str
+
+
+@router.get("/web/ai", response_class=HTMLResponse)
+def ai_lab_page(request: Request):
+    return templates.TemplateResponse(request, "ai_lab.html", {})
+
+
+@router.post("/api/ai/message")
+def ai_message(payload: AIMessageIn):
+    ai_result = route_ai_message(payload.text)
+
+    try:
+        resp = handle_chat_message(payload.text)
+        chat_result = {
+            "reply_text": resp.reply_text,
+            "response_type": resp.response_type,
+            "ask_payload": resp.ask_payload,
+            "action_payload": resp.action_payload,
+            "meta": resp.meta,
+        }
+    except Exception as e:
+        chat_result = {"error": str(e)}
+
+    return {
+        "ok": True,
+        "input": payload.text,
+        "ai_router": ai_result,
+        "chat_response": chat_result,
+    }
+
+
+from greenhouse_v17.services.webadmin_execution_service import create_pending_ask
+
+@router.post("/api/ai/create-ask")
+def create_ask_via_actions(payload: AIMessageIn):
+    ai_result = route_ai_message(payload.text)
+    proposed = ai_result.get("proposed_action")
+
+    if not proposed:
+        return {"ok": False, "error": "no_proposed_action"}
+
+    action_key = proposed.get("action_key")
+    if not action_key:
+        return {"ok": False, "error": "no_action_key"}
+
+    state = create_pending_ask(
+        action_key=action_key,
+        title=f"AI: {payload.text}"
+    )
+
+    return {"ok": True, "pending": state}

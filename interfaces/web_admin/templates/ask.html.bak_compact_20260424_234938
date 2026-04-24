@@ -1,26 +1,26 @@
 {% extends "base.html" %}
 {% block content %}
 <style>
-.ask-page{max-width:1180px;margin:0 auto}
+.ask-page{max-width:1320px;margin:0 auto}
 .ask-hero{margin-bottom:18px}
-.ask-hero h1{font-size:28px;margin:0 0 10px}
-.ask-hero p{color:#c7d5ee;margin:0;font-size:15px}
-.ask-shell{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:16px;align-items:start}
-.ask-card{background:rgba(7,16,34,.92);border:1px solid rgba(71,115,190,.42);border-radius:20px;padding:20px}
+.ask-hero h1{font-size:32px;margin:0 0 10px}
+.ask-hero p{color:#c7d5ee;margin:0;font-size:17px}
+.ask-shell{display:grid;grid-template-columns:minmax(0,1fr) 420px;gap:22px;align-items:start}
+.ask-card{background:rgba(7,16,34,.92);border:1px solid rgba(71,115,190,.42);border-radius:26px;padding:28px}
 .ask-badge{display:inline-flex;border-radius:999px;padding:10px 16px;font-weight:900;margin-bottom:18px}
 .ask-badge.empty{background:rgba(126,231,135,.12);color:#7ee787;border:1px solid rgba(126,231,135,.32)}
 .ask-badge.pending{background:rgba(255,216,102,.13);color:#ffd866;border:1px solid rgba(255,216,102,.36)}
 .ask-badge.work{background:rgba(88,166,255,.13);color:#8fb3ff;border:1px solid rgba(88,166,255,.36)}
-.ask-title{font-size:20px;line-height:1.1;font-weight:950;margin:0 0 18px;color:#fff}
-.ask-human{background:rgba(14,30,62,.75);border:1px solid rgba(71,115,190,.32);border-radius:22px;padding:16px;margin:12px 0}
-.ask-human h2{margin:0 0 10px;font-size:18px}
-.ask-human .big{font-size:20px;font-weight:950;color:#fff;margin-top:4px}
-.ask-info{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px}
-.ask-field{background:rgba(9,20,44,.72);border:1px solid rgba(71,115,190,.24);border-radius:16px;padding:11px}
+.ask-title{font-size:30px;line-height:1.1;font-weight:950;margin:0 0 18px;color:#fff}
+.ask-human{background:rgba(14,30,62,.75);border:1px solid rgba(71,115,190,.32);border-radius:22px;padding:22px;margin:18px 0}
+.ask-human h2{margin:0 0 10px;font-size:22px}
+.ask-human .big{font-size:24px;font-weight:950;color:#fff;margin-top:4px}
+.ask-info{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:18px}
+.ask-field{background:rgba(9,20,44,.72);border:1px solid rgba(71,115,190,.24);border-radius:16px;padding:14px}
 .ask-field b{display:block;color:#8fb3ff;font-size:12px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px}
 .ask-field span{color:#eef5ff;word-break:break-word}
-.ask-buttons{display:grid;grid-template-columns:1.35fr 1fr 1fr;gap:10px;margin-top:14px}
-.ask-buttons button{font-size:14px;padding:11px 14px;border-radius:16px}
+.ask-buttons{display:grid;grid-template-columns:1.35fr 1fr 1fr;gap:12px;margin-top:22px}
+.ask-buttons button{font-size:17px;padding:15px 18px;border-radius:16px}
 .ask-confirm{background:linear-gradient(135deg,#4f8cff,#2f6df6)!important;color:white!important}
 .ask-cancel{background:rgba(255,92,122,.12)!important;border:1px solid rgba(255,92,122,.32)!important;color:#ffc2cd!important}
 .ask-status-card{position:sticky;top:20px}
@@ -72,31 +72,6 @@
     </aside>
   </div>
 </section>
-
-<style>
-.ask-page{max-width:1180px!important;margin:0!important}
-.ask-hero{margin-bottom:14px!important}
-.ask-hero h1{font-size:28px!important;margin:0 0 8px!important}
-.ask-hero p{font-size:15px!important}
-.ask-shell{grid-template-columns:minmax(0,1fr) 360px!important;gap:16px!important}
-.ask-card{padding:18px!important;border-radius:18px!important}
-.ask-badge{padding:7px 12px!important;font-size:13px!important;margin-bottom:12px!important}
-.ask-title{font-size:24px!important;margin:8px 0 12px!important}
-.ask-human{padding:14px!important;border-radius:16px!important;margin:12px 0!important}
-.ask-human h2{font-size:16px!important;margin:0 0 8px!important}
-.ask-human .big{font-size:20px!important}
-.ask-info{gap:10px!important;margin-top:10px!important}
-.ask-field{padding:10px!important;border-radius:13px!important}
-.ask-field b{font-size:11px!important;margin-bottom:4px!important}
-.ask-field span{font-size:14px!important}
-.ask-buttons{gap:10px!important;margin-top:12px!important}
-.ask-buttons button{font-size:14px!important;padding:10px 12px!important;border-radius:13px!important}
-.status-line{padding:12px!important;border-radius:14px!important;margin-top:10px!important}
-.status-line b{font-size:13px!important}
-.status-line span{font-size:14px!important}
-.ask-debug pre{height:160px!important}
-</style>
-
 {% endblock %}
 
 {% block scripts %}
@@ -186,115 +161,3 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 </script>
 {% endblock %}
-
-<style>
-/* === ASK match Control scale === */
-.ask-page{
-  max-width:1120px!important;
-  margin:0!important;
-}
-.ask-hero{
-  margin-bottom:18px!important;
-}
-.ask-hero .ask-kicker{
-  font-size:13px!important;
-  margin-bottom:12px!important;
-}
-.ask-hero h1{
-  font-size:28px!important;
-  line-height:1.15!important;
-  margin:0 0 14px!important;
-}
-.ask-hero p{
-  font-size:16px!important;
-  line-height:1.4!important;
-  max-width:760px!important;
-}
-.ask-shell{
-  grid-template-columns:minmax(0,720px) 340px!important;
-  gap:18px!important;
-}
-.ask-card{
-  padding:18px!important;
-  border-radius:18px!important;
-}
-.ask-badge{
-  padding:7px 12px!important;
-  font-size:13px!important;
-  margin-bottom:14px!important;
-}
-.ask-title{
-  font-size:22px!important;
-  line-height:1.18!important;
-  margin:0 0 14px!important;
-  max-width:680px!important;
-}
-.ask-human{
-  padding:14px 16px!important;
-  margin:12px 0!important;
-  border-radius:15px!important;
-}
-.ask-human h2{
-  font-size:15px!important;
-  margin:0 0 8px!important;
-}
-.ask-human .big{
-  font-size:20px!important;
-  line-height:1.2!important;
-}
-.ask-info{
-  grid-template-columns:repeat(2,minmax(0,1fr))!important;
-  gap:10px!important;
-  margin-top:12px!important;
-}
-.ask-field{
-  padding:10px 12px!important;
-  border-radius:13px!important;
-}
-.ask-field b{
-  font-size:11px!important;
-  margin-bottom:4px!important;
-}
-.ask-field span{
-  font-size:14px!important;
-  line-height:1.25!important;
-}
-.ask-buttons{
-  display:flex!important;
-  gap:10px!important;
-  margin-top:14px!important;
-}
-.ask-buttons button{
-  min-width:auto!important;
-  font-size:14px!important;
-  padding:10px 14px!important;
-  border-radius:13px!important;
-  line-height:1.15!important;
-}
-.ask-confirm{
-  flex:1.25!important;
-}
-.ask-cancel,
-.ask-buttons button:last-child{
-  flex:1!important;
-}
-.ask-status-card h2{
-  font-size:22px!important;
-  margin:0 0 14px!important;
-}
-.status-line{
-  padding:12px 14px!important;
-  margin-top:10px!important;
-  border-radius:14px!important;
-}
-.status-line b{
-  font-size:12px!important;
-  margin-bottom:5px!important;
-}
-.status-line span{
-  font-size:14px!important;
-}
-.ask-debug{
-  margin-top:12px!important;
-}
-</style>

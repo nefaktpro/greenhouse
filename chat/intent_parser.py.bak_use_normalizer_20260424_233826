@@ -129,7 +129,7 @@ def _normalize_greenhouse_text(text: str) -> str:
     return t
 
 def parse_intent(text: str) -> ParsedIntent:
-    normalized = normalize_text(_normalize_greenhouse_text(text))
+    normalized = normalize_text(text)
 
     if not normalized:
         return ParsedIntent(
