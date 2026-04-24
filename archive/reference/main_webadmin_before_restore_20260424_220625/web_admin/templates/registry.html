@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="cards-grid">
+  <article class="card">
+    <div class="card-label">Registry</div>
+    <h3>Devices</h3>
+    <pre id="devices-box" class="result-box">Загрузка...</pre>
+  </article>
+
+  <article class="card">
+    <div class="card-label">Registry</div>
+    <h3>Capabilities</h3>
+    <pre id="caps-box" class="result-box">Загрузка...</pre>
+  </article>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(async function loadRegistry() {
+  if (!requireAuth()) return;
+
+  const [devices, caps] = await Promise.all([
+    ghApi("/api/registry/devices", { method: "GET", headers: ghHeaders(false) }),
+    ghApi("/api/registry/capabilities", { method: "GET", headers: ghHeaders(false) })
+  ]);
+
+  pretty("devices-box", devices.data);
+  pretty("caps-box", caps.data);
+})();
+</script>
+{% endblock %}
