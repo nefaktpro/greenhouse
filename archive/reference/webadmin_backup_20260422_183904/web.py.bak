@@ -49,22 +49,3 @@ def monitoring_page(request: Request):
 @router.get("/safety", response_class=HTMLResponse)
 def safety_page(request: Request):
     return render(request, "safety.html", "Greenhouse v17 — Safety")
-
-@router.get("/test/devices", response_class=HTMLResponse)
-def test_devices_page(request: Request):
-    return render(request, "test_devices.html", "Greenhouse v17 — Test Devices")
-
-
-@router.get("/test/thermostat", response_class=HTMLResponse)
-def test_thermostat_page(request: Request):
-    return render(request, "test_thermostat.html", "Greenhouse v17 — Thermostat Demo")
-
-
-@router.get("/test/humidifier", response_class=HTMLResponse)
-def test_humidifier_page(request: Request):
-    return render(request, "test_humidifier.html", "Greenhouse v17 — Humidifier Demo")
-
-
-@router.get("/test/sensor24", response_class=HTMLResponse)
-def test_sensor24_page(request: Request):
-    return render(request, "test_sensor24.html", "Greenhouse v17 — Sensor24 Demo")

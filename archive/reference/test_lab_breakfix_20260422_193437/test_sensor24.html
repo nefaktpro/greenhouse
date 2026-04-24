@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-section">
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:16px;">
+    <h1>📈 Датчик 24</h1>
+    <div style="padding:10px 14px;border-radius:999px;background:rgba(255,96,96,.15);border:1px solid rgba(255,96,96,.35);color:#ffb4b4;font-weight:700;">TEST / НА УДАЛЕНИЕ</div>
+  </div>
+
+  <div class="card-grid">
+    <div class="card">
+      <h3>Текущее состояние</h3>
+      <pre id="stateBox">loading...</pre>
+    </div>
+    <div class="card">
+      <h3>История 24ч</h3>
+      <pre id="histBox">loading...</pre>
+    </div>
+  </div>
+</section>
+
+<script>
+async function loadSensor24(){
+  const s = await fetch("/api/test/sensor24/state");
+  const state = await s.json();
+  document.getElementById("stateBox").textContent = JSON.stringify(state, null, 2);
+
+  const h = await fetch("/api/test/sensor24/history?hours=24");
+  const hist = await h.json();
+  document.getElementById("histBox").textContent = JSON.stringify(hist, null, 2);
+}
+loadSensor24();
+</script>
+{% endblock %}

@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-section">
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:16px;">
+    <h1>💧 Увлажнитель</h1>
+    <div style="padding:10px 14px;border-radius:999px;background:rgba(255,96,96,.15);border:1px solid rgba(255,96,96,.35);color:#ffb4b4;font-weight:700;">TEST / НА УДАЛЕНИЕ</div>
+  </div>
+
+  <div class="card-grid">
+    <div class="card">
+      <h3>Состояние</h3>
+      <pre id="humBox">loading...</pre>
+    </div>
+
+    <div class="card">
+      <h3>Управление</h3>
+      <button id="powerBtn">Toggle power</button>
+      <button id="socketBtn">Toggle socket</button>
+      <button id="autoBtn">Toggle auto</button>
+      <button id="sleepBtn">Toggle sleep</button>
+    </div>
+  </div>
+</section>
+
+<script>
+let humState = null;
+
+async function postJson(url, body){
+  const r = await fetch(url, {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify(body)
+  });
+  if(!r.ok) throw new Error(await r.text());
+  return await r.json();
+}
+
+async function loadHum(){
+  const r = await fetch("/api/test/humidifier/state");
+  const data = await r.json();
+  humState = data;
+  document.getElementById("humBox").textContent = JSON.stringify(data, null, 2);
+}
+
+document.getElementById("powerBtn").onclick = async () => {
+  const current = humState?.power?.state === "on";
+  await postJson("/api/test/humidifier/set_power", {enabled: !current});
+  await loadHum();
+};
+
+document.getElementById("socketBtn").onclick = async () => {
+  const current = humState?.socket?.state === "on";
+  await postJson("/api/test/humidifier/set_socket", {enabled: !current});
+  await loadHum();
+};
+
+document.getElementById("autoBtn").onclick = async () => {
+  const current = humState?.auto?.state === "on";
+  await postJson("/api/test/humidifier/set_auto", {enabled: !current});
+  await loadHum();
+};
+
+document.getElementById("sleepBtn").onclick = async () => {
+  const current = humState?.sleep?.state === "on";
+  await postJson("/api/test/humidifier/set_sleep", {enabled: !current});
+  await loadHum();
+};
+
+loadHum();
+</script>
+{% endblock %}

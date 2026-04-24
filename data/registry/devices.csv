@@ -6,7 +6,7 @@ device_id,parent_id,name,type,entity_id,unit,zone,location,logical_role,is_enabl
 2,0,Камера общий план,device,,,veranda,Веранда,device_2,true,true,low,devices_source_full,Видеонаблюдение
 2.4,2,Видео,camera,camera.smart_camera_2,,veranda,Веранда,видео_camera,true,false,normal,devices_source_full,Общий план стеллажа
 3,0,Увлажнитель,device,,,veranda,Пол веранды,device_3,true,true,low,devices_source_full,Увлажнение воздуха
-3.5,3,Вкл/выкл,switch,switch.uviazhnitel_,on/off,veranda,Пол веранды,main_humidifier,true,false,normal,devices_source_full,Управление увлажнителем
+3.5,3,Вкл/выкл,switch,switch.3_uvlazhnitel,on/off,veranda,Пол веранды,main_humidifier,true,false,normal,devices_source_full,Управление увлажнителем
 4,0,Качество воздуха (верхний ярус),device,,,top_rack,Верхний ярус,device_4,true,true,low,devices_source_full,Мониторинг воздуха
 4.6,4,CO₂,sensor,sensor.nobito_carbon_dioxide,ppm,top_rack,Верхний ярус,co2_sensor,true,false,normal,devices_source_full,Углекислый газ
 4.7,4,VOC,sensor,sensor.nobito_volatile_organic_compounds,mg/m³,top_rack,Верхний ярус,voc_sensor,true,false,normal,devices_source_full,Летучие органические соединения

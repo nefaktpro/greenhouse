@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-section">
+  <h1>🌡️ Термостат веранда</h1>
+
+  <div class="card-grid">
+    <div class="card">
+      <h3>Состояние</h3>
+      <pre id="thermostat-data">loading...</pre>
+    </div>
+
+    <div class="card">
+      <h3>Устройство</h3>
+      <ul>
+        <li><code>climate.termostat_veranda</code></li>
+        <li>Тип: climate</li>
+        <li>Зона: веранда</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<script>
+(async () => {
+  const box = document.getElementById("thermostat-data");
+
+  try {
+    const resp = await fetch("/api/live/states");
+    const payload = await resp.json();
+
+    const items = payload.items || [];
+    const entity = items.find(x => x.entity_id === "climate.termostat_veranda");
+
+    if (!entity) {
+      box.textContent = "entity not found: climate.termostat_veranda";
+      return;
+    }
+
+    box.textContent = JSON.stringify(entity, null, 2);
+  } catch (e) {
+    box.textContent = "error loading thermostat data";
+  }
+})();
+</script>
+{% endblock %}

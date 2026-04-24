@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-section">
+  <h1>💧 Увлажнитель</h1>
+
+  <div class="card-grid">
+    <div class="card">
+      <h3>Питание</h3>
+      <pre id="humidifier-power">loading...</pre>
+    </div>
+
+    <div class="card">
+      <h3>Температура</h3>
+      <pre id="humidifier-temp">loading...</pre>
+    </div>
+
+    <div class="card">
+      <h3>Влажность</h3>
+      <pre id="humidifier-humidity">loading...</pre>
+    </div>
+
+    <div class="card">
+      <h3>Дополнительно</h3>
+      <pre id="humidifier-extra">loading...</pre>
+    </div>
+  </div>
+</section>
+
+<script>
+(async () => {
+  const powerBox = document.getElementById("humidifier-power");
+  const tempBox = document.getElementById("humidifier-temp");
+  const humBox = document.getElementById("humidifier-humidity");
+  const extraBox = document.getElementById("humidifier-extra");
+
+  try {
+    const resp = await fetch("/api/live/states");
+    const payload = await resp.json();
+    const items = payload.items || [];
+
+    const byId = (entityId) => items.find(x => x.entity_id === entityId);
+
+    const power = byId("switch.3_uvlazhnitel");
+    const temp = byId("sensor.humidifier_temperature");
+    const hum = byId("sensor.humidifier_humidity");
+    const autoMode = byId("switch.humidifier_auto");
+    const sleepMode = byId("switch.humidifier_sleep");
+    const timer = byId("sensor.humidifier_timer");
+    const waterLow = byId("binary_sensor.humidifier_water_low");
+    const level = byId("select.humidifier_level");
+
+    powerBox.textContent = power
+      ? JSON.stringify(power, null, 2)
+      : "entity not found: switch.3_uvlazhnitel";
+
+    tempBox.textContent = temp
+      ? JSON.stringify(temp, null, 2)
+      : "entity not found: sensor.humidifier_temperature";
+
+    humBox.textContent = hum
+      ? JSON.stringify(hum, null, 2)
+      : "entity not found: sensor.humidifier_humidity";
+
+    extraBox.textContent = JSON.stringify({
+      auto: autoMode || "not found",
+      sleep: sleepMode || "not found",
+      timer: timer || "not found",
+      water_low: waterLow || "not found",
+      level: level || "not found"
+    }, null, 2);
+  } catch (e) {
+    powerBox.textContent = "error loading humidifier data";
+    tempBox.textContent = "error loading humidifier data";
+    humBox.textContent = "error loading humidifier data";
+    extraBox.textContent = "error loading humidifier data";
+  }
+})();
+</script>
+{% endblock %}

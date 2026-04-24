@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-section">
+  <h1>💧 Увлажнитель</h1>
+
+  <div class="card">
+    <pre id="data">loading...</pre>
+  </div>
+</section>
+
+<script>
+fetch("/api/live-states/entity/switch.3_uvlazhnitel")
+  .then(r => r.json())
+  .then(d => {
+    document.getElementById("data").textContent = JSON.stringify(d, null, 2);
+  })
+  .catch(() => {
+    document.getElementById("data").textContent = "error loading data";
+  });
+</script>
+{% endblock %}

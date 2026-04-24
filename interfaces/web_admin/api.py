@@ -15,6 +15,7 @@ from interfaces.web_admin.routes.web import router as web_router
 from interfaces.web_admin.routes.control_debug import router as control_debug_router
 from interfaces.web_admin.routes.monitoring import router as router_monitoring
 from interfaces.web_admin.routes.live_states import router as live_states_router
+from interfaces.web_admin.routes.test_lab import router as test_lab_router
 
 BASE_DIR = Path(__file__).resolve().parent
 
@@ -64,4 +65,5 @@ app.include_router(actions_router)
 app.include_router(ask_router)
 app.include_router(modes_router)
 app.include_router(live_states_router)
+app.include_router(test_lab_router)
 app.include_router(control_debug_router, tags=["control_debug"])
