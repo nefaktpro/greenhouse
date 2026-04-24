@@ -21,23 +21,29 @@ def ai_lab_page(request: Request):
 
 @router.post("/api/ai/message")
 def ai_message(payload: AIMessageIn):
-    # AI Lab preview only.
-    # Важно: здесь НЕ вызываем handle_chat_message(),
-    # потому что chat_router теперь может создавать ASK / выполнять action.
     ai_result = route_ai_message(payload.text)
+
+    try:
+        resp = handle_chat_message(payload.text)
+        chat_result = {
+            "reply_text": resp.reply_text,
+            "response_type": resp.response_type,
+            "ask_payload": resp.ask_payload,
+            "action_payload": resp.action_payload,
+            "meta": resp.meta,
+        }
+    except Exception as e:
+        chat_result = {"error": str(e)}
 
     return {
         "ok": True,
         "input": payload.text,
         "ai_router": ai_result,
-        "chat_response": {
-            "preview_only": True,
-            "note": "AI Lab does not create ASK until /api/ai/create-ask is called."
-        },
+        "chat_response": chat_result,
     }
 
 
-from greenhouse_v17.services.webadmin_execution_service import create_pending_ask, load_ask_state
+from greenhouse_v17.services.webadmin_execution_service import create_pending_ask
 
 @router.post("/api/ai/create-ask")
 def create_ask_via_actions(payload: AIMessageIn):
@@ -51,19 +57,9 @@ def create_ask_via_actions(payload: AIMessageIn):
     if not action_key:
         return {"ok": False, "error": "no_action_key"}
 
-    current = load_ask_state()
-    if current.get("has_pending"):
-        return {
-            "ok": False,
-            "error": "pending_ask_exists",
-            "message": "Сначала подтвердите или отмените текущее ASK-действие.",
-            "pending": current,
-        }
-
     state = create_pending_ask(
         action_key=action_key,
-        title=f"AI: {payload.text}",
-        source="web_admin",
+        title=f"AI: {payload.text}"
     )
 
     return {"ok": True, "pending": state}

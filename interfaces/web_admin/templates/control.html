@@ -1,135 +1,247 @@
 {% extends "base.html" %}
+
 {% block content %}
+<style>
+.control-page{
+  width:100%;
+  max-width:1320px;
+  margin:0 auto;
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 380px;
+  gap:20px;
+  align-items:start;
+}
+.control-panel,.control-result-card{
+  background:rgba(7,16,34,.92);
+  border:1px solid rgba(71,115,190,.42);
+  border-radius:22px;
+  padding:22px;
+  min-width:0;
+}
+.control-panel h2{font-size:28px;margin:10px 0 12px}
+.control-tools{display:flex;gap:12px;margin:16px 0}
+.control-tools input{width:420px;max-width:100%}
+.control-action-list{
+  max-height:68vh;
+  overflow:auto;
+  border:1px solid rgba(71,115,190,.22);
+  border-radius:18px;
+}
+.control-action-row{
+  display:grid;
+  grid-template-columns:220px 210px 130px 190px;
+  gap:14px;
+  align-items:center;
+  padding:14px 16px;
+  border-bottom:1px solid rgba(255,255,255,.07);
+}
+.control-action-row:last-child{border-bottom:0}
+.control-action-kicker{
+  color:#8fb3ff;
+  font-size:11px;
+  font-weight:900;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+}
+.control-action-title{
+  font-size:17px;
+  font-weight:900;
+  color:#fff;
+  margin-top:4px;
+}
+.control-action-meta{
+  color:#9fb2d0;
+  font-size:13px;
+  line-height:1.35;
+}
+.control-action-meta span{color:#8fb3ff;font-weight:800}
+.state-pill{
+  display:inline-flex;
+  justify-content:center;
+  align-items:center;
+  border-radius:999px;
+  padding:7px 10px;
+  font-size:13px;
+  font-weight:900;
+  min-width:86px;
+}
+.state-on{background:rgba(126,231,135,.12);color:#7ee787;border:1px solid rgba(126,231,135,.34)}
+.state-off{background:rgba(255,216,102,.10);color:#ffd866;border:1px solid rgba(255,216,102,.30)}
+.state-bad{background:rgba(255,92,122,.10);color:#ffc2cd;border:1px solid rgba(255,92,122,.30)}
+.control-buttons{
+  display:flex;
+  gap:8px;
+  justify-content:flex-end;
+}
+.control-buttons button{
+  min-width:82px!important;
+  width:82px!important;
+  padding:9px 8px!important;
+  font-size:13px!important;
+  border-radius:12px!important;
+}
+.result-box{
+  height:58vh;
+  overflow:auto;
+  white-space:pre-wrap;
+}
+@media(max-width:1100px){
+  .control-page{grid-template-columns:1fr}
+  .control-action-row{grid-template-columns:1fr}
+  .control-buttons{justify-content:flex-start}
+}
+</style>
 
 <div class="control-page">
-  <div class="control-left">
-    <section class="control-panel">
-      <div class="card-label">Control</div>
-      <h2>Действия через общий pipeline</h2>
-      <p class="muted control-desc">
-        Все кнопки идут через action-based flow. Режимы TEST / ASK / MANUAL влияют на поведение.
-      </p>
+  <section class="control-panel">
+    <div class="card-label">Control</div>
+    <h2>Действия через общий pipeline</h2>
+    <p class="muted">Кнопки идут через action_key → Validation / Execution / HA. Статус читается из Home Assistant.</p>
 
-      <div class="control-tools">
-        <button class="primary-btn" onclick="loadActions()">Обновить actions</button>
-        <input id="action-search" type="text" placeholder="Поиск: action key, роль, операция..." oninput="renderActions()">
-      </div>
+    <div class="control-tools">
+      <button class="primary-btn" onclick="loadActions()">Обновить</button>
+      <input id="action-search" type="text" placeholder="Поиск: устройство, роль, action key..." oninput="renderActions()">
+    </div>
 
-      <div id="actions-box">Загрузка...</div>
-    </section>
-  </div>
+    <div id="actions-box">Загрузка...</div>
+  </section>
 
-  <aside class="control-right">
-    <section class="control-result-card">
-      <div class="card-label">Live result</div>
-      <h3>Результат</h3>
-      <pre id="action-result-box" class="result-box">Ожидание...</pre>
-    </section>
+  <aside class="control-result-card">
+    <div class="card-label">Live result</div>
+    <h3>Результат</h3>
+    <pre id="action-result-box" class="result-box">Ожидание...</pre>
   </aside>
 </div>
-
 {% endblock %}
 
 {% block scripts %}
 <script>
-let ACTION_STATE = [];
+let ACTION_GROUPS = [];
 
-function esc(text) {
-  return String(text ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;");
+function esc(v){
+  return String(v ?? "—")
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;");
 }
 
-function entriesFromActionMap(payload) {
-  const data = payload?.data ?? payload ?? {};
-  if (Array.isArray(data)) return data;
-  if (data.items && Array.isArray(data.items)) return data.items;
-  if (typeof data === "object") {
-    return Object.entries(data).map(([action_key, value]) => ({
-      action_key,
-      ...(value || {})
-    }));
+function humanName(key, item){
+  const role = String(item.target_role || "");
+  const base = String(key || "").replace(/_on$/,"").replace(/_off$/,"");
+  if(role === "top_air_circulation") return "Вентиляторы верх";
+  if(role === "bottom_air_circulation") return "Вентиляторы низ";
+  const names = {
+    fan_top:"Вентиляторы верх",
+    fan_bottom:"Вентиляторы низ",
+    fan_low:"Вентиляторы низ",
+    humidifier_power:"Питание увлажнителя",
+    humidifier:"Увлажнитель",
+    main_humidifier:"Увлажнитель",
+    watering_top:"Полив верх",
+    watering_bottom:"Полив низ",
+    curtain:"Штора",
+    light_top:"Свет верх",
+    light_bottom:"Свет низ"
+  };
+  return names[base] || item.title || base || key;
+}
+
+function groupItems(items){
+  const groups = {};
+  for(const item of items){
+    const key = String(item.action_key || "");
+    if(!key.includes("_")) continue;
+    const base = key.replace(/_on$/,"").replace(/_off$/,"");
+    if(!groups[base]){
+      groups[base] = {base, title:humanName(key,item), on:null, off:null, sample:item};
+    }
+    if(key.endsWith("_on")) groups[base].on = item;
+    else if(key.endsWith("_off")) groups[base].off = item;
+    else groups[base].single = item;
   }
-  return [];
+  return Object.values(groups);
 }
 
-function renderActions() {
-  const q = (document.getElementById("action-search")?.value || "").trim().toLowerCase();
+function stateLabel(state){
+  if(state === "on") return `<span class="state-pill state-on">ВКЛ</span>`;
+  if(state === "off") return `<span class="state-pill state-off">ВЫКЛ</span>`;
+  if(state === "open") return `<span class="state-pill state-on">ОТКР</span>`;
+  if(state === "closed") return `<span class="state-pill state-off">ЗАКР</span>`;
+  if(!state) return `<span class="state-pill state-bad">—</span>`;
+  return `<span class="state-pill state-bad">${esc(state)}</span>`;
+}
+
+function currentState(g){
+  return g.on?.state ?? g.off?.state ?? g.single?.state ?? null;
+}
+
+function renderActions(){
+  const q = (document.getElementById("action-search")?.value || "").toLowerCase().trim();
   const box = document.getElementById("actions-box");
 
-  const filtered = ACTION_STATE.filter(item => {
-    const blob = [
-      item.action_key,
-      item.logical_role,
-      item.operation,
-      item.title,
-      item.description
-    ].map(v => String(v || "").toLowerCase()).join(" | ");
+  const groups = ACTION_GROUPS.filter(g => {
+    const blob = [g.title,g.base,g.sample?.target_role,g.on?.action_key,g.off?.action_key,g.sample?.entity_id]
+      .map(x => String(x || "").toLowerCase()).join(" | ");
     return !q || blob.includes(q);
   });
 
-  if (!filtered.length) {
-    box.innerHTML = `<div class="control-empty">Действия не найдены</div>`;
+  if(!groups.length){
+    box.innerHTML = `<div class="control-action-row">Действия не найдены</div>`;
     return;
   }
 
-  box.innerHTML = `
-    <div class="control-action-list">
-      ${filtered.map(item => `
-        <article class="control-action-row">
-          <div>
-            <div class="control-action-kicker">ACTION</div>
-            <div class="control-action-title">${esc(item.title || item.action_key)}</div>
-          </div>
+  box.innerHTML = `<div class="control-action-list">${
+    groups.map(g => `
+      <article class="control-action-row">
+        <div>
+          <div class="control-action-kicker">Устройство</div>
+          <div class="control-action-title">${esc(g.title)}</div>
+        </div>
 
-          <div class="control-action-meta">
-            <div><span>action_key:</span> ${esc(item.action_key || "")}</div>
-            <div><span>role:</span> ${esc(item.logical_role || "—")}</div>
-            <div><span>operation:</span> ${esc(item.operation || "—")}</div>
-          </div>
+        <div class="control-action-meta">
+          <div><span>role:</span> ${esc(g.sample?.target_role)}</div>
+          <div><span>entity:</span> ${esc(g.sample?.entity_id)}</div>
+        </div>
 
-          <div class="control-action-desc">
-            ${esc(item.description || "Через общий execution/ASK pipeline.")}
-          </div>
+        <div>${stateLabel(currentState(g))}</div>
 
-          <button class="primary-btn control-run-btn" onclick='runAction(${JSON.stringify(item.action_key)})'>Выполнить</button>
-        </article>
-      `).join("")}
-    </div>
-  `;
+        <div class="control-buttons">
+          ${g.on ? `<button class="primary-btn" onclick='runAction(${JSON.stringify(g.on.action_key)})'>Вкл</button>` : ""}
+          ${g.off ? `<button class="ghost-btn" onclick='runAction(${JSON.stringify(g.off.action_key)})'>Выкл</button>` : ""}
+          ${!g.on && !g.off && g.single ? `<button class="primary-btn" onclick='runAction(${JSON.stringify(g.single.action_key)})'>Пуск</button>` : ""}
+        </div>
+      </article>
+    `).join("")
+  }</div>`;
 }
 
-async function loadActions() {
-  if (!requireAuth()) return;
+async function loadActions(){
+  if(!requireAuth()) return;
 
-  const result = await ghTryGetVariants([
-    "/api/registry/actions",
-    "/api/registry/action_map"
-  ]);
+  const res = await fetch("/api/actions/catalog");
+  const data = await res.json();
 
-  if (!result.ok) {
-    pretty("action-result-box", result);
+  if(!data.ok){
+    pretty("action-result-box", data);
     return;
   }
 
-  ACTION_STATE = entriesFromActionMap(result.data);
+  ACTION_GROUPS = groupItems(data.items || []);
   renderActions();
 }
 
-async function runAction(actionKey) {
-  if (!requireAuth()) return;
+async function runAction(actionKey){
+  if(!requireAuth()) return;
 
-  document.getElementById("action-result-box").textContent = "Выполняю действие через pipeline...";
+  document.getElementById("action-result-box").textContent = "Выполняю: " + actionKey;
 
   const result = await ghTryPostVariants([
-    { url: "/api/actions/execute", body: { action_key: actionKey } },
-    { url: "/api/actions/run", body: { action_key: actionKey } },
-    { url: "/api/actions/execute", body: { key: actionKey } }
+    {url:"/api/actions/execute", body:{action_key:actionKey}}
   ]);
 
   pretty("action-result-box", result);
+  setTimeout(loadActions, 1200);
 }
 
 loadActions();

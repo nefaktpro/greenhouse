@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="control-page">
+  <div class="control-left">
+    <section class="control-panel">
+      <div class="card-label">Control</div>
+      <h2>Действия через общий pipeline</h2>
+      <p class="muted control-desc">
+        Все кнопки идут через action-based flow. Режимы TEST / ASK / MANUAL влияют на поведение.
+      </p>
+
+      <div class="control-tools">
+        <button class="primary-btn" onclick="loadActions()">Обновить actions</button>
+        <input id="action-search" type="text" placeholder="Поиск: action key, роль, операция..." oninput="renderActions()">
+      </div>
+
+      <div id="actions-box">Загрузка...</div>
+    </section>
+  </div>
+
+  <aside class="control-right">
+    <section class="control-result-card">
+      <div class="card-label">Live result</div>
+      <h3>Результат</h3>
+      <pre id="action-result-box" class="result-box">Ожидание...</pre>
+    </section>
+  </aside>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+let ACTION_STATE = [];
+
+function esc(text) {
+  return String(text ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;");
+}
+
+function entriesFromActionMap(payload) {
+  const data = payload?.data ?? payload ?? {};
+  if (Array.isArray(data)) return data;
+  if (data.items && Array.isArray(data.items)) return data.items;
+  if (typeof data === "object") {
+    return Object.entries(data).map(([action_key, value]) => ({
+      action_key,
+      ...(value || {})
+    }));
+  }
+  return [];
+}
+
+function renderActions() {
+  const q = (document.getElementById("action-search")?.value || "").trim().toLowerCase();
+  const box = document.getElementById("actions-box");
+
+  const filtered = ACTION_STATE.filter(item => {
+    const blob = [
+      item.action_key,
+      item.logical_role,
+      item.operation,
+      item.title,
+      item.description
+    ].map(v => String(v || "").toLowerCase()).join(" | ");
+    return !q || blob.includes(q);
+  });
+
+  if (!filtered.length) {
+    box.innerHTML = `<div class="control-empty">Действия не найдены</div>`;
+    return;
+  }
+
+  box.innerHTML = `
+    <div class="control-action-list">
+      ${filtered.map(item => `
+        <article class="control-action-row">
+          <div>
+            <div class="control-action-kicker">ACTION</div>
+            <div class="control-action-title">${esc(item.title || item.action_key)}</div>
+          </div>
+
+          <div class="control-action-meta">
+            <div><span>action_key:</span> ${esc(item.action_key || "")}</div>
+            <div><span>role:</span> ${esc(item.logical_role || "—")}</div>
+            <div><span>operation:</span> ${esc(item.operation || "—")}</div>
+          </div>
+
+          <div class="control-action-desc">
+            ${esc(item.description || "Через общий execution/ASK pipeline.")}
+          </div>
+
+          <button class="primary-btn control-run-btn" onclick='runAction(${JSON.stringify(item.action_key)})'>Выполнить</button>
+        </article>
+      `).join("")}
+    </div>
+  `;
+}
+
+async function loadActions() {
+  if (!requireAuth()) return;
+
+  const result = await ghTryGetVariants([
+    "/api/registry/actions",
+    "/api/registry/action_map"
+  ]);
+
+  if (!result.ok) {
+    pretty("action-result-box", result);
+    return;
+  }
+
+  ACTION_STATE = entriesFromActionMap(result.data);
+  renderActions();
+}
+
+async function runAction(actionKey) {
+  if (!requireAuth()) return;
+
+  document.getElementById("action-result-box").textContent = "Выполняю действие через pipeline...";
+
+  const result = await ghTryPostVariants([
+    { url: "/api/actions/execute", body: { action_key: actionKey } },
+    { url: "/api/actions/run", body: { action_key: actionKey } },
+    { url: "/api/actions/execute", body: { key: actionKey } }
+  ]);
+
+  pretty("action-result-box", result);
+}
+
+loadActions();
+</script>
+{% endblock %}

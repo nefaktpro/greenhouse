@@ -7,7 +7,6 @@ from chat.intent_parser import ParsedIntent, parse_intent
 from ai.router import route_ai_message
 from chat.observation_store import add_observation
 from greenhouse_v17.services.mode_service import get_mode_flags
-from greenhouse_v17.services.webadmin_execution_service import create_pending_ask, execute_action, load_ask_state
 
 
 @dataclass
@@ -124,39 +123,28 @@ def _build_device_action_reply(parsed: ParsedIntent) -> ChatResponse:
         )
 
     if mode.get("ask"):
-        current = load_ask_state()
-        if current.get("has_pending"):
-            reply += "Уже есть действие, ожидающее подтверждения. Сначала подтверди или отмени его в ASK."
-            return ChatResponse(
-                reply_text=reply,
-                parsed_intent=parsed,
-                response_type="ask_blocked",
-                ask_payload=current,
-                meta={"mode": mode_name, "error": "pending_ask_exists"},
-            )
-
-        pending = create_pending_ask(
-            action_key=action_key,
-            title=f"Chat: {human_action} {human_target}",
-            source="chat",
-        )
-        reply += "Создал ASK-подтверждение. Открой раздел ASK и подтверди или отмени."
+        reply += "Нужно подтверждение. Нажми OK или Отмена."
         return ChatResponse(
             reply_text=reply,
             parsed_intent=parsed,
-            response_type="ask_created",
-            ask_payload=pending,
+            response_type="ask_candidate",
+            ask_payload={
+                "kind": "execution_action",
+                "action_key": action_key,
+            },
             meta={"mode": mode_name},
         )
 
-    reply += "Выполняю действие через общий execution pipeline."
-    result = execute_action(action_key=action_key, dry_run=False, source="chat")
+    reply += "Выполняю действие."
     return ChatResponse(
         reply_text=reply,
         parsed_intent=parsed,
-        response_type="action_executed",
-        action_payload=result,
-        meta={"mode": mode_name, "ok": bool(result.get("ok"))},
+        response_type="action_candidate",
+        action_payload={
+            "action_key": action_key,
+            "dry_run": False,
+        },
+        meta={"mode": mode_name},
     )
 
 

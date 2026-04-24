@@ -4,7 +4,7 @@ from fastapi import APIRouter
 from pydantic import BaseModel
 from greenhouse_v17.services.mode_service import get_mode_flags
 
-from greenhouse_v17.services.webadmin_execution_service import execute_action, create_pending_ask, debug_action_map_full, load_action_map, resolve_action, _read_state_value, load_ask_state
+from greenhouse_v17.services.webadmin_execution_service import execute_action, create_pending_ask, debug_action_map_full, load_action_map, resolve_action, _read_state_value, get_current_ask_state
 
 router = APIRouter(prefix="/api/actions", tags=["actions"])
 
@@ -23,7 +23,7 @@ def execute_action_route(payload: ExecuteActionIn):
     # В ASK режиме любое действие сначала уходит в pending ASK.
     # Прямое исполнение из Control/Web запрещено.
     if payload.ask or mode.get("ask"):
-        current = load_ask_state()
+        current = get_current_ask_state()
         if current.get("has_pending"):
             return {
                 "ok": False,
