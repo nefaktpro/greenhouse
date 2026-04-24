@@ -1,21 +1,348 @@
 {% extends "base.html" %}
 {% block content %}
-<section class="card">
-  <div class="card-label">Safety</div>
-  <h3>Safety state</h3>
-  <pre id="safety-box" class="result-box">Загрузка...</pre>
+<style>
+  .safety-summary {
+    margin: 8px 0 18px 0;
+    color: #c7d5ee;
+    line-height: 1.5;
+  }
+
+  .safety-card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 14px;
+    margin-bottom: 18px;
+  }
+
+  .safety-mini-card {
+    background: rgba(9,18,38,.92);
+    border: 1px solid #223659;
+    border-radius: 16px;
+    padding: 16px;
+  }
+
+  .safety-mini-card .k {
+    color: #8fb3ff;
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+  }
+
+  .safety-mini-card .v {
+    color: #fff;
+    font-size: 24px;
+    font-weight: 800;
+    line-height: 1.1;
+    margin-bottom: 6px;
+  }
+
+  .safety-mini-card .s {
+    color: #c7d5ee;
+    font-size: 14px;
+    line-height: 1.35;
+  }
+
+  .safety-status-ok { color: #7ee787; }
+  .safety-status-warn { color: #ffd866; }
+  .safety-status-danger { color: #ff7b72; }
+
+  .safety-table-wrap {
+    overflow: auto;
+    border: 1px solid #223659;
+    border-radius: 16px;
+  }
+
+  .safety-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 1180px;
+    background: rgba(8,15,30,.9);
+  }
+
+  .safety-table th,
+  .safety-table td {
+    padding: 12px 14px;
+    border-bottom: 1px solid #1e3153;
+    vertical-align: top;
+    text-align: left;
+    color: #e7eeff;
+    font-size: 14px;
+    line-height: 1.35;
+  }
+
+  .safety-table th {
+    color: #8fb3ff;
+    font-weight: 700;
+    background: #0d1a34;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+  }
+
+  .safety-table tr:hover td {
+    background: rgba(31,61,110,.18);
+  }
+
+  .mono {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 13px;
+  }
+</style>
+
+<section class="cards-grid">
+  <article class="card wide">
+    <div class="card-label">Safety</div>
+    <h3>Safety / аварийный слой</h3>
+    <p class="muted">
+      Пожар, протечка, питание и критичные safety-сигналы должны быть выше обычной автоматизации.
+    </p>
+
+    <div class="button-row">
+      <button class="primary-btn" onclick="loadSafetyPage()">Обновить safety</button>
+    </div>
+
+    <div id="safety-summary" class="safety-summary">Загрузка...</div>
+    <div id="safety-cards" class="safety-card-grid"></div>
+    <div id="safety-table-box">Загрузка...</div>
+  </article>
 </section>
 {% endblock %}
 
 {% block scripts %}
 <script>
-(async function loadSafety() {
+function esc(text) {
+  return String(text ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;");
+}
+
+function formatDateTime(value) {
+  if (!value) return "";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return value;
+  return d.toLocaleString();
+}
+
+function formatAge(value) {
+  if (!value) return "";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "";
+
+  const diffSec = Math.max(0, Math.floor((Date.now() - d.getTime()) / 1000));
+  if (diffSec < 60) return diffSec + "s";
+
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return diffMin + "m";
+
+  const diffHr = Math.floor(diffMin / 60);
+  if (diffHr < 24) return diffHr + "h";
+
+  const diffDay = Math.floor(diffHr / 24);
+  return diffDay + "d";
+}
+
+function safetyClass(kind, count) {
+  if (count > 0) return "safety-status-danger";
+  if (kind === "battery_warn") return "safety-status-warn";
+  return "safety-status-ok";
+}
+
+function classifySafetyItems(items) {
+  const groups = {
+    fire: [],
+    leak: [],
+    power: [],
+    battery_warn: [],
+    other: [],
+  };
+
+  for (const item of items) {
+    const role = String(item.logical_role || "").toLowerCase();
+    const type = String(item.type || "").toLowerCase();
+    const state = String(item.state || "").toLowerCase();
+    const name = String(item.name || "").toLowerCase();
+
+    if (role.includes("fire") || role.includes("smoke") || type === "smoke" || name.includes("дым")) {
+      groups.fire.push(item);
+      continue;
+    }
+
+    if (role.includes("leak") || role.includes("water") || type === "moisture" || name.includes("утеч")) {
+      groups.leak.push(item);
+      continue;
+    }
+
+    if (role.includes("power") || name.includes("питание") || name.includes("электр")) {
+      groups.power.push(item);
+      continue;
+    }
+
+    if ((type === "battery" || name.includes("батар")) && state !== "" && !Number.isNaN(Number(state)) && Number(state) < 20) {
+      groups.battery_warn.push(item);
+      continue;
+    }
+
+    groups.other.push(item);
+  }
+
+  return groups;
+}
+
+function renderCards(groups) {
+  const cards = [
+    {
+      key: "fire",
+      title: "Пожар",
+      value: groups.fire.length,
+      note: groups.fire.length ? "Есть тревожные пожарные сигналы" : "Пожарных тревог не видно"
+    },
+    {
+      key: "leak",
+      title: "Протечка",
+      value: groups.leak.length,
+      note: groups.leak.length ? "Есть сигналы протечки" : "Сигналов протечки не видно"
+    },
+    {
+      key: "power",
+      title: "Питание",
+      value: groups.power.length,
+      note: groups.power.length ? "Есть power-related элементы" : "Power safety элементов не найдено"
+    },
+    {
+      key: "battery_warn",
+      title: "Батарейки <20%",
+      value: groups.battery_warn.length,
+      note: groups.battery_warn.length ? "Есть просевшие батарейки" : "Критичных батареек не видно"
+    }
+  ];
+
+  document.getElementById("safety-cards").innerHTML = cards.map(card => `
+    <div class="safety-mini-card">
+      <div class="k">${esc(card.title)}</div>
+      <div class="v ${safetyClass(card.key, card.value)}">${esc(card.value)}</div>
+      <div class="s">${esc(card.note)}</div>
+    </div>
+  `).join("");
+}
+
+function renderTable(items) {
+  const box = document.getElementById("safety-table-box");
+  if (!items.length) {
+    box.innerHTML = `<div class="card">Нет safety items</div>`;
+    return;
+  }
+
+  box.innerHTML = `
+    <div class="safety-table-wrap">
+      <table class="safety-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Zone</th>
+            <th>Location</th>
+            <th>Entity</th>
+            <th>State</th>
+            <th>Last updated</th>
+            <th>Age</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${items.map(item => `
+            <tr>
+              <td class="mono">${esc(item.device_id || "")}</td>
+              <td>${esc(item.name || "")}</td>
+              <td>${esc(item.type || "")}</td>
+              <td>${esc(item.zone || "")}</td>
+              <td>${esc(item.location || "")}</td>
+              <td class="mono">${esc(item.entity_id || "")}</td>
+              <td class="mono">${esc(item.state || "")}</td>
+              <td class="mono">${esc(formatDateTime(item.last_updated || item.last_changed || ""))}</td>
+              <td class="mono">${esc(formatAge(item.last_updated || item.last_changed || ""))}</td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function buildSafetyRows(registryItems, liveItems) {
+  const liveMap = new Map();
+  for (const item of liveItems) {
+    if (item.entity_id) liveMap.set(item.entity_id, item);
+  }
+
+  return registryItems
+    .filter(item => {
+      const t = String(item.type || "").toLowerCase();
+      const role = String(item.logical_role || "").toLowerCase();
+      const name = String(item.name || "").toLowerCase();
+
+      return (
+        t === "smoke" ||
+        t === "moisture" ||
+        t === "battery" ||
+        t === "binary_sensor" ||
+        role.includes("fire") ||
+        role.includes("smoke") ||
+        role.includes("leak") ||
+        role.includes("power") ||
+        name.includes("дым") ||
+        name.includes("утеч") ||
+        name.includes("питание") ||
+        name.includes("батар")
+      ) && String(item.entity_id || "").trim() !== "";
+    })
+    .map(item => {
+      const live = liveMap.get(item.entity_id) || {};
+      return {
+        device_id: item.device_id,
+        name: item.name,
+        type: item.type,
+        zone: item.zone,
+        location: item.location,
+        entity_id: item.entity_id,
+        logical_role: item.logical_role,
+        state: live.state ?? "",
+        last_updated: live.last_updated ?? "",
+        last_changed: live.last_changed ?? "",
+      };
+    });
+}
+
+async function loadSafetyPage() {
   if (!requireAuth()) return;
-  const { data } = await ghApi("/api/monitoring/safety", {
-    method: "GET",
-    headers: ghHeaders(false)
-  });
-  pretty("safety-box", data);
-})();
+
+  document.getElementById("safety-summary").textContent = "Загрузка...";
+
+  const [devices, live] = await Promise.all([
+    ghTryGetVariants(["/api/registry/devices", "/api/registry/list_devices", "/api/registry/items"]),
+    ghApi("/api/live/states", { method: "GET" })
+  ]);
+
+  const registryItems = Array.isArray(devices.data?.items)
+    ? devices.data.items
+    : Array.isArray(devices.data?.data?.items)
+      ? devices.data.data.items
+      : [];
+
+  const liveItems = Array.isArray(live.data?.items) ? live.data.items : [];
+  const safetyRows = buildSafetyRows(registryItems, liveItems);
+  const groups = classifySafetyItems(safetyRows);
+
+  document.getElementById("safety-summary").textContent =
+    `Safety items: ${safetyRows.length} | fire: ${groups.fire.length} | leak: ${groups.leak.length} | power: ${groups.power.length} | low battery: ${groups.battery_warn.length}`;
+
+  renderCards(groups);
+  renderTable(safetyRows);
+}
+
+loadSafetyPage();
 </script>
 {% endblock %}

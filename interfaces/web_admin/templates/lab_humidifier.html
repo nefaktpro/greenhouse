@@ -1,0 +1,276 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+  .test-badge{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:999px;background:rgba(255,96,96,.15);border:1px solid rgba(255,96,96,.35);color:#ffb4b4;font-weight:700}
+  .device-hero{display:grid;grid-template-columns:1.1fr .9fr;gap:24px;margin-top:12px}
+  .device-panel{border-radius:28px;padding:28px;background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.025));border:1px solid rgba(120,170,255,.18);box-shadow:inset 0 1px 0 rgba(255,255,255,.04)}
+  .humid-screen{min-height:620px;border-radius:32px;padding:28px;background:linear-gradient(180deg,#eef3f8 0%,#e9eef4 100%);color:#1b2430}
+  .humid-top-wave{width:180px;height:22px;margin:0 auto 22px;border-radius:999px;background:linear-gradient(90deg, rgba(90,205,255,.15), rgba(43,176,231,.55), rgba(90,205,255,.15))}
+  .humid-stats{display:grid;grid-template-columns:repeat(2,1fr);gap:18px;text-align:center;margin-bottom:18px}
+  .humid-stats .k{font-size:15px;color:rgba(27,36,48,.58);margin-bottom:8px}
+  .humid-stats .v{font-size:22px;font-weight:700}
+  .humid-card{background:rgba(255,255,255,.78);border-radius:28px;padding:22px;margin-top:16px;box-shadow:0 8px 28px rgba(17,33,58,.06)}
+  .humid-card-top{display:flex;justify-content:space-between;align-items:center;gap:16px}
+  .power-circle,.mini-mode{all:unset;cursor:pointer;width:88px;height:88px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+  .power-circle{background:#3dc5f3;color:#fff;font-size:36px;box-shadow:0 10px 28px rgba(61,197,243,.36)}
+  .mini-mode{background:#dff4fb;color:#39b6e4;font-weight:700;font-size:26px}
+  .slider-row{margin-top:18px}
+  .slider-head{display:flex;justify-content:space-between;gap:16px;margin-bottom:14px;font-size:18px;align-items:center}
+  .slider-head .value{color:#39b6e4;font-weight:600}
+  .fake-slider{position:relative;height:22px;border-radius:999px;background:#d9dee6;overflow:hidden}
+  .fake-slider-fill{position:absolute;inset:0 auto 0 0;width:var(--fill,50%);background:#39b6e4;border-radius:999px}
+  .fake-slider-thumb{position:absolute;top:50%;left:var(--fill,50%);transform:translate(-50%,-50%);width:34px;height:34px;border-radius:50%;background:#fff;border:3px solid #bce9f7;box-shadow:0 4px 12px rgba(0,0,0,.10)}
+  .metrics-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+  .metric-card{border-radius:22px;padding:18px 18px 16px;background:rgba(255,255,255,.04);border:1px solid rgba(120,170,255,.14)}
+  .metric-label{font-size:13px;opacity:.72;margin-bottom:10px}
+  .metric-value{font-size:34px;font-weight:700;line-height:1}
+  .metric-sub{margin-top:8px;font-size:13px;opacity:.72}
+  .status-pill{display:inline-flex;align-items:center;gap:8px;border-radius:999px;padding:8px 12px;font-size:13px;background:rgba(255,255,255,.05);border:1px solid rgba(120,170,255,.15)}
+  .status-dot{width:10px;height:10px;border-radius:50%;background:#6ee7a8;box-shadow:0 0 14px rgba(110,231,168,.7)}
+  .warn-dot{background:#ffb454;box-shadow:0 0 14px rgba(255,180,84,.7)}
+  .info-list{display:grid;gap:10px;margin-top:14px}
+  .info-row{display:flex;justify-content:space-between;gap:16px;border-bottom:1px solid rgba(255,255,255,.06);padding-bottom:10px}
+  .info-row .k{opacity:.7}
+  .info-row .v{text-align:right;font-weight:600;word-break:break-word}
+  .ctrl-btn{all:unset;cursor:pointer;padding:10px 14px;border-radius:14px;background:rgba(79,156,255,.18);border:1px solid rgba(79,156,255,.22)}
+  @media (max-width:1100px){.device-hero{grid-template-columns:1fr}}
+</style>
+
+<section class="page-section">
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+    <h1>💧 Увлажнитель</h1>
+    <div class="test-badge">TEST / НА УДАЛЕНИЕ</div>
+  </div>
+
+  <div class="device-hero">
+    <div class="device-panel">
+      <div class="humid-screen">
+        <div class="humid-top-wave"></div>
+
+        <div class="humid-stats">
+          <div>
+            <div class="k">Текущая температура</div>
+            <div class="v" id="screenTemp">--°C</div>
+          </div>
+          <div>
+            <div class="k">Текущая влажность</div>
+            <div class="v" id="screenHumidity">--%</div>
+          </div>
+        </div>
+
+        <div class="humid-card">
+          <div class="humid-card-top">
+            <div style="text-align:center;">
+              <button class="power-circle" id="powerBtn">⏻</button>
+              <div style="margin-top:10px;color:#6d7681;">Устройство</div>
+            </div>
+
+            <div style="text-align:center;">
+              <button class="mini-mode" id="autoBtn">AUTO</button>
+              <div style="margin-top:10px;color:#6d7681;">Auto</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="humid-card">
+          <div class="slider-row">
+            <div class="slider-head">
+              <span class="label">Питание розетки</span>
+              <span class="value" id="socketValue">—</span>
+            </div>
+            <div style="display:flex;gap:10px;">
+              <button class="ctrl-btn" id="socketBtn">Toggle socket</button>
+              <button class="ctrl-btn" id="sleepBtn">Toggle sleep</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="humid-card">
+          <div class="slider-row">
+            <div class="slider-head">
+              <span class="label">Таймер</span>
+              <span class="value" id="timerValue">—</span>
+            </div>
+            <div class="fake-slider" id="timerSlider" style="--fill:0%;">
+              <div class="fake-slider-fill" style="background:#cfd6df;"></div>
+              <div class="fake-slider-thumb"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="humid-card" style="display:flex;justify-content:space-between;align-items:center;">
+          <div>
+            <div style="font-size:26px;">🌙</div>
+            <div style="margin-top:8px;color:#1b2430;">Sleep mode</div>
+          </div>
+          <div id="sleepStatus" style="font-weight:700;color:#6d7681;">—</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="device-panel">
+      <div class="status-pill">
+        <span class="status-dot" id="humidStatusDot"></span>
+        <span id="humidStatusText">Онлайн</span>
+      </div>
+
+      <div style="height:16px"></div>
+
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <div class="metric-label">Питание</div>
+          <div class="metric-value" id="metricPower" style="font-size:24px;">—</div>
+          <div class="metric-sub">switch.3_uvlazhnitel</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-label">Socket</div>
+          <div class="metric-value" id="metricSocket" style="font-size:24px;">—</div>
+          <div class="metric-sub">розетка питания</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-label">Auto</div>
+          <div class="metric-value" id="metricAuto" style="font-size:24px;">—</div>
+          <div class="metric-sub">switch.humidifier_auto</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-label">Sleep</div>
+          <div class="metric-value" id="metricSleep" style="font-size:24px;">—</div>
+          <div class="metric-sub">switch.humidifier_sleep</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-label">Температура</div>
+          <div class="metric-value" id="metricTemp">--°C</div>
+          <div class="metric-sub">sensor.humidifier_temperature</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-label">Влажность</div>
+          <div class="metric-value" id="metricHumidity">--%</div>
+          <div class="metric-sub">sensor.humidifier_humidity</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-label">Timer</div>
+          <div class="metric-value" id="metricTimer" style="font-size:24px;">—</div>
+          <div class="metric-sub">sensor.humidifier_timer</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-label">Water low</div>
+          <div class="metric-value" id="metricWater" style="font-size:24px;">—</div>
+          <div class="metric-sub">binary_sensor.humidifier_water_low</div>
+        </div>
+      </div>
+
+      <div class="info-list" id="humidifierInfo"></div>
+    </div>
+  </div>
+</section>
+
+<script>
+let humState = null;
+
+async function postJson(url, body){
+  const r = await fetch(url, {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify(body)
+  });
+  if(!r.ok) throw new Error(await r.text());
+  return await r.json();
+}
+
+async function loadHum(){
+  const r = await fetch("/api/lab/humidifier/state");
+  const data = await r.json();
+  humState = data;
+
+  const power = data.power?.state || "unavailable";
+  const socket = data.socket?.state || "unavailable";
+  const auto = data.auto?.state || "unavailable";
+  const sleep = data.sleep?.state || "unavailable";
+  const temp = data.temperature?.state || "--";
+  const hum = data.humidity?.state || "--";
+  const timer = data.timer?.state || "—";
+  const water = data.water_low?.state || "—";
+
+  document.getElementById("screenTemp").textContent = temp + "°C";
+  document.getElementById("screenHumidity").textContent = hum + "%";
+
+  document.getElementById("metricPower").textContent = power;
+  document.getElementById("metricSocket").textContent = socket;
+  document.getElementById("metricAuto").textContent = auto;
+  document.getElementById("metricSleep").textContent = sleep;
+  document.getElementById("metricTemp").textContent = temp + "°C";
+  document.getElementById("metricHumidity").textContent = hum + "%";
+  document.getElementById("metricTimer").textContent = timer;
+  document.getElementById("metricWater").textContent = water;
+
+  document.getElementById("autoBtn").textContent = auto === "on" ? "AUTO" : "MAN";
+  document.getElementById("socketValue").textContent = socket;
+  document.getElementById("sleepStatus").textContent = sleep;
+  document.getElementById("timerValue").textContent = timer;
+
+  const timerFill = timer && timer !== "cancel" ? 35 : 0;
+  document.getElementById("timerSlider").style.setProperty("--fill", timerFill + "%");
+
+  const dot = document.getElementById("humidStatusDot");
+  const text = document.getElementById("humidStatusText");
+  if (water === "on") {
+    text.textContent = "Нет воды / предупреждение";
+    dot.classList.add("warn-dot");
+  } else {
+    text.textContent = "Онлайн";
+    dot.classList.remove("warn-dot");
+  }
+
+  const info = [
+    ["Power entity", data.power?.entity_id || "—"],
+    ["Socket entity", data.socket?.entity_id || "—"],
+    ["Auto entity", data.auto?.entity_id || "—"],
+    ["Sleep entity", data.sleep?.entity_id || "—"],
+    ["Timer entity", data.timer?.entity_id || "—"],
+    ["Water entity", data.water_low?.entity_id || "—"],
+    ["Last updated", data.power?.last_updated || data.temperature?.last_updated || "—"]
+  ];
+
+  document.getElementById("humidifierInfo").innerHTML = info.map(([k, v]) => `
+    <div class="info-row">
+      <div class="k">${k}</div>
+      <div class="v">${v}</div>
+    </div>
+  `).join("");
+}
+
+document.getElementById("powerBtn").onclick = async () => {
+  const current = humState?.power?.state === "on";
+  await postJson("/api/lab/humidifier/set_power", {enabled: !current});
+  await loadHum();
+};
+
+document.getElementById("socketBtn").onclick = async () => {
+  const current = humState?.socket?.state === "on";
+  await postJson("/api/lab/humidifier/set_socket", {enabled: !current});
+  await loadHum();
+};
+
+document.getElementById("autoBtn").onclick = async () => {
+  const current = humState?.auto?.state === "on";
+  await postJson("/api/lab/humidifier/set_auto", {enabled: !current});
+  await loadHum();
+};
+
+document.getElementById("sleepBtn").onclick = async () => {
+  const current = humState?.sleep?.state === "on";
+  await postJson("/api/lab/humidifier/set_sleep", {enabled: !current});
+  await loadHum();
+};
+
+loadHum();
+</script>
+{% endblock %}

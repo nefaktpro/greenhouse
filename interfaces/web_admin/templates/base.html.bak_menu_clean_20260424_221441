@@ -18,7 +18,10 @@
       <a href="/web/control">🎛 Control</a>
       <a href="/web/ask">❓ ASK</a>
       <a href="/web/control-debug">🧪 Debug Control</a>
-      <a href="/web/lab/devices">🧪 Lab</a>
+      <a href="/web/lab/devices">🧪 Lab Devices</a>
+      <a href="/web/lab/thermostat">🌡 Lab Thermostat</a>
+      <a href="/web/lab/humidifier">💧 Lab Humidifier</a>
+      <a href="/web/lab/sensor24">📟 Lab Sensor24</a>
       <a href="/web/modes">🧠 Modes</a>
       <a href="/web/registry">🗂 Registry</a>
       <a href="/web/monitoring">📈 Monitoring</a>

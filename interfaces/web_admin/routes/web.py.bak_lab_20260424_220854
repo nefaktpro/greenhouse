@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from fastapi import APIRouter, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -50,40 +50,21 @@ def monitoring_page(request: Request):
 def safety_page(request: Request):
     return render(request, "safety.html", "Greenhouse v17 — Safety")
 
-
-
-# Legacy TEST URLs -> LAB URLs, чтобы старые ссылки не ломались
-@router.get("/test/devices")
-def legacy_test_devices():
-    return RedirectResponse(url="/web/lab/devices", status_code=307)
-
-@router.get("/test/thermostat")
-def legacy_test_thermostat():
-    return RedirectResponse(url="/web/lab/thermostat", status_code=307)
-
-@router.get("/test/humidifier")
-def legacy_test_humidifier():
-    return RedirectResponse(url="/web/lab/humidifier", status_code=307)
-
-@router.get("/test/sensor24")
-def legacy_test_sensor24():
-    return RedirectResponse(url="/web/lab/sensor24", status_code=307)
-
-@router.get("/lab/devices", response_class=HTMLResponse)
+@router.get("/test/devices", response_class=HTMLResponse)
 def test_devices_page(request: Request):
-    return render(request, "lab_devices.html", "Greenhouse v17 — Lab Devices")
+    return render(request, "test_devices.html", "Greenhouse v17 — Test Devices")
 
 
-@router.get("/lab/thermostat", response_class=HTMLResponse)
+@router.get("/test/thermostat", response_class=HTMLResponse)
 def test_thermostat_page(request: Request):
-    return render(request, "lab_thermostat.html", "Greenhouse v17 — Lab Thermostat")
+    return render(request, "test_thermostat.html", "Greenhouse v17 — Thermostat Demo")
 
 
-@router.get("/lab/humidifier", response_class=HTMLResponse)
+@router.get("/test/humidifier", response_class=HTMLResponse)
 def test_humidifier_page(request: Request):
-    return render(request, "lab_humidifier.html", "Greenhouse v17 — Lab Humidifier")
+    return render(request, "test_humidifier.html", "Greenhouse v17 — Humidifier Demo")
 
 
-@router.get("/lab/sensor24", response_class=HTMLResponse)
+@router.get("/test/sensor24", response_class=HTMLResponse)
 def test_sensor24_page(request: Request):
-    return render(request, "lab_sensor24.html", "Greenhouse v17 — Lab Sensor24")
+    return render(request, "test_sensor24.html", "Greenhouse v17 — Sensor24 Demo")

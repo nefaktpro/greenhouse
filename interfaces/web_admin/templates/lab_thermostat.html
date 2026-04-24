@@ -1,0 +1,265 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+  .test-badge{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:999px;background:rgba(255,96,96,.15);border:1px solid rgba(255,96,96,.35);color:#ffb4b4;font-weight:700}
+  .device-hero{display:grid;grid-template-columns:1.15fr .85fr;gap:24px;margin-top:12px}
+  .device-panel{border-radius:28px;padding:28px;background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.025));border:1px solid rgba(120,170,255,.18);box-shadow:inset 0 1px 0 rgba(255,255,255,.04)}
+  .thermo-screen{min-height:620px;background:linear-gradient(180deg,#d28a00 0%,#c77c00 100%);border-radius:32px;padding:26px 26px 18px;color:#fff;position:relative;overflow:hidden}
+  .thermo-title{text-align:center;font-size:15px;opacity:.95;margin-bottom:18px}
+  .thermo-mode-pill{margin:0 auto 34px;width:fit-content;padding:12px 22px;border-radius:999px;background:rgba(255,255,255,.18);font-size:14px;color:rgba(255,255,255,.95);backdrop-filter:blur(8px)}
+  .dial-wrap{display:flex;align-items:center;justify-content:center;margin:12px 0 18px}
+  .dial{width:360px;height:360px;border-radius:50%;position:relative;background:radial-gradient(circle at 50% 50%, rgba(255,255,255,0.08) 0 58%, transparent 58%),conic-gradient(from 220deg, rgba(255,255,255,0.88) 0deg, rgba(255,255,255,0.88) var(--dial-deg), rgba(255,255,255,0.22) var(--dial-deg), rgba(255,255,255,0.22) 280deg, transparent 280deg)}
+  .dial::after{content:"";position:absolute;inset:22px;border-radius:50%;background:linear-gradient(180deg, rgba(255,255,255,.035), rgba(255,255,255,.015))}
+  .dial-center{position:absolute;inset:70px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-direction:column;z-index:2;text-align:center}
+  .target-value{font-size:86px;line-height:.95;font-weight:700;letter-spacing:-.03em}
+  .target-unit{font-size:34px;vertical-align:super;margin-left:4px;opacity:.95}
+  .current-line{margin-top:10px;font-size:20px;opacity:.95}
+  .dial-dot{position:absolute;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 0 0 5px rgba(255,255,255,.16);z-index:3;left:50%;top:50%;transform:translate(-50%,-50%)}
+  .thermo-controls{display:flex;justify-content:space-between;align-items:center;padding:6px 20px 0;font-size:56px;font-weight:300;user-select:none}
+  .thermo-btn{all:unset;cursor:pointer;padding:6px 18px;border-radius:18px}
+  .bottom-icons{margin-top:28px;display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+  .bottom-icon{border-radius:22px;padding:16px 10px 14px;text-align:center;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.10)}
+  .bottom-icon .i{font-size:28px;margin-bottom:8px}
+  .bottom-icon .t{font-size:13px;line-height:1.2;opacity:.96}
+  .metrics-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+  .metric-card{border-radius:22px;padding:18px 18px 16px;background:rgba(255,255,255,.04);border:1px solid rgba(120,170,255,.14)}
+  .metric-label{font-size:13px;opacity:.72;margin-bottom:10px}
+  .metric-value{font-size:34px;font-weight:700;line-height:1}
+  .metric-sub{margin-top:8px;font-size:13px;opacity:.72}
+  .status-pill{display:inline-flex;align-items:center;gap:8px;border-radius:999px;padding:8px 12px;font-size:13px;background:rgba(255,255,255,.05);border:1px solid rgba(120,170,255,.15)}
+  .status-dot{width:10px;height:10px;border-radius:50%;background:#6ee7a8;box-shadow:0 0 14px rgba(110,231,168,.7)}
+  .info-list{display:grid;gap:10px;margin-top:14px}
+  .info-row{display:flex;justify-content:space-between;gap:16px;border-bottom:1px solid rgba(255,255,255,.06);padding-bottom:10px}
+  .info-row .k{opacity:.7}
+  .info-row .v{text-align:right;font-weight:600;word-break:break-word}
+  .ctrl-row{display:flex;gap:10px;align-items:center;margin-top:18px;flex-wrap:wrap}
+  .ctrl-row input{width:140px;padding:10px 12px;border-radius:14px;border:1px solid rgba(255,255,255,.12);background:#0f1622;color:#fff}
+  .ctrl-btn{all:unset;cursor:pointer;padding:10px 14px;border-radius:14px;background:rgba(79,156,255,.18);border:1px solid rgba(79,156,255,.22)}
+  @media (max-width:1100px){.device-hero{grid-template-columns:1fr}}
+</style>
+
+<section class="page-section">
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+    <h1>🌡️ Термостат веранда</h1>
+    <div class="test-badge">TEST / НА УДАЛЕНИЕ</div>
+  </div>
+
+  <div class="device-hero">
+    <div class="device-panel">
+      <div class="thermo-screen">
+        <div class="thermo-title">Термостат веранда</div>
+        <div class="thermo-mode-pill" id="thermoModePill">Загрузка режима…</div>
+
+        <div class="dial-wrap">
+          <div class="dial" id="dialArc" style="--dial-deg: 120deg;">
+            <div class="dial-dot" id="dialDot"></div>
+            <div class="dial-center">
+              <div>
+                <span class="target-value" id="targetTemp">--.-</span><span class="target-unit">°C</span>
+              </div>
+              <div class="current-line" id="currentLine">Температура: --.-°C</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="thermo-controls">
+          <button class="thermo-btn" id="minusBtn">−</button>
+          <button class="thermo-btn" id="plusBtn">+</button>
+        </div>
+
+        <div class="bottom-icons">
+          <div class="bottom-icon">
+            <div class="i">⏻</div>
+            <div class="t">Climate</div>
+          </div>
+          <button class="bottom-icon thermo-btn" id="childBtn">
+            <div class="i">🔒</div>
+            <div class="t" id="childText">Lock</div>
+          </button>
+          <button class="bottom-icon thermo-btn" id="frostBtn">
+            <div class="i">❄️</div>
+            <div class="t" id="frostText">Frost</div>
+          </button>
+          <div class="bottom-icon">
+            <div class="i">⚙️</div>
+            <div class="t">Correction</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="device-panel">
+      <div class="status-pill">
+        <span class="status-dot"></span>
+        <span id="availabilityText">Онлайн</span>
+      </div>
+
+      <div style="height:16px"></div>
+
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <div class="metric-label">Текущая температура</div>
+          <div class="metric-value" id="metricCurrent">--.-°C</div>
+          <div class="metric-sub">из climate entity</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-label">Уставка</div>
+          <div class="metric-value" id="metricTarget">--.-°C</div>
+          <div class="metric-sub">target temperature</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-label">HVAC режим</div>
+          <div class="metric-value" id="metricMode" style="font-size:24px;">—</div>
+          <div class="metric-sub">state / hvac_mode</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-label">Correction</div>
+          <div class="metric-value" id="metricCorrection" style="font-size:24px;">—</div>
+          <div class="metric-sub">number entity</div>
+        </div>
+      </div>
+
+      <div class="ctrl-row">
+        <input id="targetInput" type="number" step="0.5" />
+        <button class="ctrl-btn" id="setTargetBtn">Set target</button>
+      </div>
+
+      <div class="ctrl-row">
+        <input id="corrInput" type="number" step="0.1" />
+        <button class="ctrl-btn" id="setCorrBtn">Apply correction</button>
+        <button class="ctrl-btn" id="refreshBtn">Обновить</button>
+      </div>
+
+      <div class="info-list" id="thermoInfo"></div>
+    </div>
+  </div>
+</section>
+
+<script>
+let thermoState = null;
+
+function num(v, fb=null){
+  const n = Number(v);
+  return Number.isFinite(n) ? n : fb;
+}
+
+async function postJson(url, body){
+  const r = await fetch(url, {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify(body)
+  });
+  if(!r.ok) throw new Error(await r.text());
+  return await r.json();
+}
+
+async function loadThermo(){
+  const r = await fetch("/api/lab/thermostat/state");
+  const data = await r.json();
+  thermoState = data;
+
+  const main = data.main || {};
+  const attrs = main.attributes || {};
+  const current = num(attrs.current_temperature, null);
+  const target = num(attrs.temperature, current);
+  const hvacMode = attrs.hvac_mode || main.state || "unknown";
+  const correction = data.temperature_correction?.state ?? "—";
+  const child = data.child_lock?.state || "unavailable";
+  const frost = data.frost_protection?.state || "unavailable";
+
+  document.getElementById("targetTemp").textContent = target !== null ? target.toFixed(1) : "--.-";
+  document.getElementById("currentLine").textContent = "Температура: " + (current !== null ? current.toFixed(1) : "--.-") + "°C";
+  document.getElementById("metricCurrent").textContent = (current !== null ? current.toFixed(1) : "--.-") + "°C";
+  document.getElementById("metricTarget").textContent = (target !== null ? target.toFixed(1) : "--.-") + "°C";
+  document.getElementById("metricMode").textContent = hvacMode;
+  document.getElementById("metricCorrection").textContent = String(correction);
+  document.getElementById("targetInput").value = target ?? "";
+  document.getElementById("corrInput").value = correction !== "—" ? correction : "";
+  document.getElementById("childText").textContent = "Lock: " + child;
+  document.getElementById("frostText").textContent = "Frost: " + frost;
+
+  document.getElementById("thermoModePill").textContent =
+    hvacMode === "heat_cool" ? "Авто режим" :
+    hvacMode === "heat" ? "Нагрев" :
+    hvacMode === "cool" ? "Охлаждение" :
+    hvacMode;
+
+  const minT = 5;
+  const maxT = 35;
+  const clamped = Math.max(minT, Math.min(maxT, target ?? 20));
+  const pct = (clamped - minT) / (maxT - minT);
+  const deg = 40 + pct * 240;
+  document.getElementById("dialArc").style.setProperty("--dial-deg", deg + "deg");
+
+  const angle = (220 + deg) * Math.PI / 180;
+  const rDot = 158;
+  const x = 180 + Math.cos(angle) * rDot;
+  const y = 180 + Math.sin(angle) * rDot;
+  const dot = document.getElementById("dialDot");
+  dot.style.left = x + "px";
+  dot.style.top = y + "px";
+
+  const info = [
+    ["Entity", main.entity_id || "—"],
+    ["Friendly name", attrs.friendly_name || "—"],
+    ["State", main.state || "—"],
+    ["Current temp", attrs.current_temperature ?? "—"],
+    ["Target temp", attrs.temperature ?? "—"],
+    ["Child lock", child],
+    ["Frost protection", frost],
+    ["Last updated", main.last_updated || "—"]
+  ];
+
+  document.getElementById("thermoInfo").innerHTML = info.map(([k, v]) => `
+    <div class="info-row">
+      <div class="k">${k}</div>
+      <div class="v">${v}</div>
+    </div>
+  `).join("");
+}
+
+document.getElementById("refreshBtn").onclick = () => loadThermo();
+
+document.getElementById("setTargetBtn").onclick = async () => {
+  const value = Number(document.getElementById("targetInput").value);
+  await postJson("/api/lab/thermostat/set_temperature", {value});
+  await loadThermo();
+};
+
+document.getElementById("setCorrBtn").onclick = async () => {
+  const value = Number(document.getElementById("corrInput").value);
+  await postJson("/api/lab/thermostat/set_correction", {value});
+  await loadThermo();
+};
+
+document.getElementById("plusBtn").onclick = async () => {
+  const value = Number(document.getElementById("targetInput").value || 20) + 0.5;
+  await postJson("/api/lab/thermostat/set_temperature", {value});
+  await loadThermo();
+};
+
+document.getElementById("minusBtn").onclick = async () => {
+  const value = Number(document.getElementById("targetInput").value || 20) - 0.5;
+  await postJson("/api/lab/thermostat/set_temperature", {value});
+  await loadThermo();
+};
+
+document.getElementById("childBtn").onclick = async () => {
+  const current = thermoState?.child_lock?.state === "on";
+  await postJson("/api/lab/thermostat/set_child_lock", {enabled: !current});
+  await loadThermo();
+};
+
+document.getElementById("frostBtn").onclick = async () => {
+  const current = thermoState?.frost_protection?.state === "on";
+  await postJson("/api/lab/thermostat/set_frost", {enabled: !current});
+  await loadThermo();
+};
+
+loadThermo();
+</script>
+{% endblock %}

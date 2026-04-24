@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-section">
+  <div style="display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;">
+    <h1>🧪 Lab</h1>
+    <div style="padding:10px 14px; border-radius:999px; background:rgba(255,96,96,0.15); border:1px solid rgba(255,96,96,0.35); color:#ffb4b4; font-weight:700;">
+      LAB / ЛАБОРАТОРИЯ
+    </div>
+  </div>
+
+  <p style="opacity:.8; margin:8px 0 22px;">
+    Лаборатория для проверки устройств, UX-гипотез и отладочных экранов. Это не режим TEST, а отдельная рабочая зона Web/Admin.
+  </p>
+
+  <div class="card-grid">
+    <a class="card" href="/web/lab/thermostat">
+      <h3>🌡️ Термостат</h3>
+      <p>Рабочий тест экрана и управления термостатом веранды.</p>
+    </a>
+
+    <a class="card" href="/web/lab/humidifier">
+      <h3>💧 Увлажнитель</h3>
+      <p>Рабочий тест экрана и управления увлажнителем.</p>
+    </a>
+
+    <a class="card" href="/web/lab/sensor24">
+      <h3>📈 Датчик 24</h3>
+      <p>Температура и влажность с красивыми графиками.</p>
+    </a>
+  </div>
+</section>
+{% endblock %}

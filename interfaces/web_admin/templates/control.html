@@ -1,73 +1,137 @@
 {% extends "base.html" %}
 {% block content %}
-<section class="card">
-  <div class="card-label">Execution</div>
-  <h3>Control</h3>
-  <p class="muted">
-    Страница читает action map и позволяет запускать действия через общий API.
-  </p>
-  <div id="actions-grid" class="actions-grid"></div>
-  <pre id="control-result" class="result-box">Загрузка action map...</pre>
-</section>
+
+<div class="control-page">
+  <div class="control-left">
+    <section class="control-panel">
+      <div class="card-label">Control</div>
+      <h2>Действия через общий pipeline</h2>
+      <p class="muted control-desc">
+        Все кнопки идут через action-based flow. Режимы TEST / ASK / MANUAL влияют на поведение.
+      </p>
+
+      <div class="control-tools">
+        <button class="primary-btn" onclick="loadActions()">Обновить actions</button>
+        <input id="action-search" type="text" placeholder="Поиск: action key, роль, операция..." oninput="renderActions()">
+      </div>
+
+      <div id="actions-box">Загрузка...</div>
+    </section>
+  </div>
+
+  <aside class="control-right">
+    <section class="control-result-card">
+      <div class="card-label">Live result</div>
+      <h3>Результат</h3>
+      <pre id="action-result-box" class="result-box">Ожидание...</pre>
+    </section>
+  </aside>
+</div>
+
 {% endblock %}
 
 {% block scripts %}
 <script>
-async function runAction(actionKey) {
-  const result = document.getElementById("control-result");
-  result.textContent = "Выполняю: " + actionKey;
+let ACTION_STATE = [];
 
-  const { data } = await ghApi("/api/actions/execute", {
-    method: "POST",
-    body: JSON.stringify({ action_key: actionKey })
-  });
-
-  pretty("control-result", data);
+function esc(text) {
+  return String(text ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;");
 }
 
-(async function loadControl() {
-  if (!requireAuth()) return;
+function entriesFromActionMap(payload) {
+  const data = payload?.data ?? payload ?? {};
+  if (Array.isArray(data)) return data;
+  if (data.items && Array.isArray(data.items)) return data.items;
+  if (typeof data === "object") {
+    return Object.entries(data).map(([action_key, value]) => ({
+      action_key,
+      ...(value || {})
+    }));
+  }
+  return [];
+}
 
-  const result = document.getElementById("control-result");
-  const grid = document.getElementById("actions-grid");
+function renderActions() {
+  const q = (document.getElementById("action-search")?.value || "").trim().toLowerCase();
+  const box = document.getElementById("actions-box");
 
-  const { data } = await ghApi("/api/actions/debug/action-map", {
-    method: "GET",
-    headers: ghHeaders(false)
+  const filtered = ACTION_STATE.filter(item => {
+    const blob = [
+      item.action_key,
+      item.logical_role,
+      item.operation,
+      item.title,
+      item.description
+    ].map(v => String(v || "").toLowerCase()).join(" | ");
+    return !q || blob.includes(q);
   });
 
-  pretty("control-result", data);
-
-  const items = data.items || data.actions || data.action_map || [];
-  const pairs = Array.isArray(items)
-    ? items
-    : Object.entries(items).map(([key, val]) => ({ action_key: key, ...(val || {}) }));
-
-  if (!pairs.length) {
-    grid.innerHTML = '<div class="muted">Action map пустой или другой структуры.</div>';
+  if (!filtered.length) {
+    box.innerHTML = `<div class="control-empty">Действия не найдены</div>`;
     return;
   }
 
-  grid.innerHTML = pairs.map((item) => {
-    const key = item.action_key || item.key || item.name || "unknown_action";
-    const title = item.title || item.label || key;
-    const role = item.logical_role || item.role || "-";
-    const op = item.operation || "-";
+  box.innerHTML = `
+    <div class="control-action-list">
+      ${filtered.map(item => `
+        <article class="control-action-row">
+          <div>
+            <div class="control-action-kicker">ACTION</div>
+            <div class="control-action-title">${esc(item.title || item.action_key)}</div>
+          </div>
 
-    return `
-      <div class="action-card">
-        <div class="action-title">${esc(title)}</div>
-        <div class="action-meta">
-          <div><b>action_key:</b> ${esc(key)}</div>
-          <div><b>role:</b> ${esc(role)}</div>
-          <div><b>operation:</b> ${esc(op)}</div>
-        </div>
-        <div class="action-row">
-          <button class="primary-btn" onclick="runAction('${esc(key)}')">Выполнить</button>
-        </div>
-      </div>
-    `;
-  }).join("");
-})();
+          <div class="control-action-meta">
+            <div><span>action_key:</span> ${esc(item.action_key || "")}</div>
+            <div><span>role:</span> ${esc(item.logical_role || "—")}</div>
+            <div><span>operation:</span> ${esc(item.operation || "—")}</div>
+          </div>
+
+          <div class="control-action-desc">
+            ${esc(item.description || "Через общий execution/ASK pipeline.")}
+          </div>
+
+          <button class="primary-btn control-run-btn" onclick='runAction(${JSON.stringify(item.action_key)})'>Выполнить</button>
+        </article>
+      `).join("")}
+    </div>
+  `;
+}
+
+async function loadActions() {
+  if (!requireAuth()) return;
+
+  const result = await ghTryGetVariants([
+    "/api/registry/actions",
+    "/api/registry/action_map"
+  ]);
+
+  if (!result.ok) {
+    pretty("action-result-box", result);
+    return;
+  }
+
+  ACTION_STATE = entriesFromActionMap(result.data);
+  renderActions();
+}
+
+async function runAction(actionKey) {
+  if (!requireAuth()) return;
+
+  document.getElementById("action-result-box").textContent = "Выполняю действие через pipeline...";
+
+  const result = await ghTryPostVariants([
+    { url: "/api/actions/execute", body: { action_key: actionKey } },
+    { url: "/api/actions/run", body: { action_key: actionKey } },
+    { url: "/api/actions/execute", body: { key: actionKey } }
+  ]);
+
+  pretty("action-result-box", result);
+}
+
+loadActions();
 </script>
 {% endblock %}

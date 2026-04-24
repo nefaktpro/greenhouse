@@ -9,8 +9,8 @@
 <body class="layout">
   <aside class="sidebar">
     <div class="brand">
-      <div class="brand-title">GREENHOUSE v17</div>
-      <div class="brand-subtitle">Web Admin</div>
+      <div class="brand-title">GH v17</div>
+      <div class="brand-subtitle">Admin</div>
     </div>
 
     <nav class="menu">

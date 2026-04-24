@@ -1,0 +1,197 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+  .action-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+    margin: 16px 0 18px 0;
+  }
+
+  .action-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 16px;
+    align-items: center;
+  }
+
+  .action-filters input {
+    border: 1px solid #284a86;
+    background: #091226;
+    color: #e8f0ff;
+    border-radius: 12px;
+    padding: 10px 12px;
+    min-width: 260px;
+  }
+
+  .action-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 16px;
+  }
+
+  .action-card {
+    background: rgba(9,18,38,.92);
+    border: 1px solid #223659;
+    border-radius: 18px;
+    padding: 18px;
+  }
+
+  .action-card h3 {
+    margin-bottom: 10px;
+  }
+
+  .action-meta {
+    font-size: 14px;
+    line-height: 1.45;
+    margin-bottom: 6px;
+    color: #d8e4fb;
+  }
+
+  .action-meta span {
+    color: #8fb3ff;
+    font-weight: 700;
+  }
+
+  .action-note {
+    color: #c7d5ee;
+    line-height: 1.45;
+    margin: 10px 0 14px 0;
+  }
+
+  .action-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+</style>
+
+<section class="cards-grid">
+  <article class="card wide">
+    <div class="card-label">Control</div>
+    <h2>Действия через общий pipeline</h2>
+    <p class="muted">
+      Здесь больше нет прямого вызова HA. Все кнопки идут через action-based flow, поэтому режимы TEST / ASK / MANUAL снова влияют на поведение.
+    </p>
+
+    <div class="action-toolbar">
+      <button class="primary-btn" onclick="loadActions()">Обновить actions</button>
+    </div>
+
+    <div class="action-filters">
+      <input id="action-search" type="text" placeholder="Поиск: action key, роль, операция..." oninput="renderActions()">
+    </div>
+
+    <div id="actions-box">Загрузка...</div>
+  </article>
+</section>
+
+<section class="cards-grid">
+  <article class="card wide">
+    <div class="card-label">Result</div>
+    <h3>Результат действия</h3>
+    <pre id="action-result-box" class="result-box">Ожидание...</pre>
+  </article>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let ACTION_STATE = [];
+
+function esc(text) {
+  return String(text ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;");
+}
+
+function entriesFromActionMap(payload) {
+  const data = payload?.data ?? payload ?? {};
+  if (Array.isArray(data)) return data;
+  if (data.items && Array.isArray(data.items)) return data.items;
+  if (typeof data === "object") {
+    return Object.entries(data).map(([action_key, value]) => ({
+      action_key,
+      ...(value || {})
+    }));
+  }
+  return [];
+}
+
+function renderActions() {
+  const q = (document.getElementById("action-search")?.value || "").trim().toLowerCase();
+  const box = document.getElementById("actions-box");
+
+  const filtered = ACTION_STATE.filter(item => {
+    const blob = [
+      item.action_key,
+      item.logical_role,
+      item.operation,
+      item.title,
+      item.description
+    ].map(v => String(v || "").toLowerCase()).join(" | ");
+    return !q || blob.includes(q);
+  });
+
+  if (!filtered.length) {
+    box.innerHTML = `<div class="card">Действия не найдены</div>`;
+    return;
+  }
+
+  box.innerHTML = `
+    <div class="action-grid">
+      ${filtered.map(item => `
+        <article class="action-card">
+          <div class="card-label">Action</div>
+          <h3>${esc(item.title || item.action_key)}</h3>
+          <div class="action-meta"><span>action_key:</span> ${esc(item.action_key || "")}</div>
+          <div class="action-meta"><span>logical_role:</span> ${esc(item.logical_role || "")}</div>
+          <div class="action-meta"><span>operation:</span> ${esc(item.operation || "")}</div>
+          <div class="action-note">${esc(item.description || "Действие пойдёт через общий execution/ASK pipeline.")}</div>
+          <div class="action-actions">
+            <button class="primary-btn" onclick='runAction(${JSON.stringify(item.action_key)})'>Выполнить</button>
+          </div>
+        </article>
+      `).join("")}
+    </div>
+  `;
+}
+
+async function loadActions() {
+  if (!requireAuth()) return;
+
+  const result = await ghTryGetVariants([
+    "/api/registry/actions",
+    "/api/registry/action_map"
+  ]);
+
+  if (!result.ok) {
+    pretty("action-result-box", result);
+    return;
+  }
+
+  ACTION_STATE = entriesFromActionMap(result.data);
+  renderActions();
+}
+
+async function runAction(actionKey) {
+  if (!requireAuth()) return;
+
+  document.getElementById("action-result-box").textContent = "Выполняю действие через pipeline...";
+
+  const result = await ghTryPostVariants([
+    { url: "/api/actions/execute", body: { action_key: actionKey } },
+    { url: "/api/actions/run", body: { action_key: actionKey } },
+    { url: "/api/actions/execute", body: { key: actionKey } }
+  ]);
+
+  pretty("action-result-box", result);
+}
+
+loadActions();
+</script>
+{% endblock %}
