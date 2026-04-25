@@ -16,7 +16,7 @@
 .ctx-desc{color:#c7d5ee;font-size:14px;line-height:1.4}
 .ctx-pill{display:inline-flex;border-radius:999px;padding:7px 10px;font-size:12px;font-weight:900;background:rgba(88,166,255,.12);color:#8fb3ff;border:1px solid rgba(88,166,255,.32);white-space:nowrap}
 .ctx-files{margin-top:14px;display:grid;gap:8px}
-.ctx-file{display:grid;grid-template-columns:minmax(0,1fr) 70px 120px 96px;gap:10px;align-items:center;background:rgba(7,16,34,.62);border:1px solid rgba(255,255,255,.07);border-radius:12px;padding:10px 12px}
+.ctx-file{display:grid;grid-template-columns:minmax(0,1fr) 70px 90px 96px;gap:10px;align-items:center;background:rgba(7,16,34,.62);border:1px solid rgba(255,255,255,.07);border-radius:12px;padding:10px 12px}
 .ctx-path{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:#eef5ff;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ctx-status-ok{color:#7ee787;font-weight:900}
 .ctx-status-bad{color:#ffc2cd;font-weight:900}
@@ -26,18 +26,30 @@
 .ctx-policy b{display:block;color:#8fb3ff;margin-bottom:4px}
 .ctx-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
 .ctx-raw{height:300px;overflow:auto;margin-top:14px}
+@media(max-width:1000px){.ctx-layout{grid-template-columns:1fr}.ctx-file{grid-template-columns:1fr}}
 .ctx-file-panel{margin-top:20px}
 .ctx-file-panel-head{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:14px}
 .ctx-file-panel h2{margin:0 0 6px;font-size:24px}
 .ctx-panel-actions{display:flex;gap:10px;flex-wrap:wrap}
-.ctx-file-viewer{width:100%;height:56vh;min-height:420px;overflow:auto;white-space:pre;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;line-height:1.45;tab-size:2;box-sizing:border-box;resize:vertical}
+.ctx-file-viewer{
+  width:100%;
+  height:56vh;
+  min-height:420px;
+  overflow:auto;
+  white-space:pre;
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+  font-size:13px;
+  line-height:1.45;
+  tab-size:2;
+  box-sizing:border-box;
+  resize:vertical;
+}
+
 .severity-dot{display:inline-flex;align-items:center;gap:6px;font-weight:900}
 .sev-safe_json:before{content:"🟢"}
-.sev-safe_runtime:before{content:"🟢"}
 .sev-careful:before,.sev-careful_json:before,.sev-careful_csv:before{content:"🟡"}
-.sev-critical:before,.sev-metadata_only:before{content:"🔴"}
-.sev-black:before,.sev-readonly:before,.sev-planned_or_optional:before{content:"⚫"}
-@media(max-width:1000px){.ctx-layout{grid-template-columns:1fr}.ctx-file{grid-template-columns:1fr}}
+.sev-critical:before{content:"🔴"}
+.sev-black:before{content:"⚫"}
 </style>
 
 <section class="ctx-page">
@@ -71,7 +83,7 @@
   <section id="filePanel" class="ctx-card ctx-file-panel" style="display:none;">
     <div class="ctx-file-panel-head">
       <div>
-        <div class="ctx-kicker">File preview / edit</div>
+        <div class="ctx-kicker">File preview</div>
         <h2 id="filePanelTitle">Файл</h2>
         <div id="filePanelMeta" class="ctx-desc">—</div>
       </div>
@@ -90,14 +102,9 @@
 {% block scripts %}
 <script>
 let CURRENT_FILE_PATH = null;
-let CURRENT_FILE_EDIT = "critical";
+let CURRENT_FILE_EDIT = "readonly";
 let CURRENT_RAW_CONTENT = "";
-
 function esc(v){return String(v ?? "—").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;")}
-
-function editLevel(f){
-  return f.edit || "critical";
-}
 
 function fileMeta(f){
   if(!f.exists) return "missing";
@@ -137,10 +144,7 @@ function renderCatalog(data){
               <div class="ctx-path" style="font-size:11px;color:#8fa3c2;margin-top:4px;">${esc(f.path)}</div>
             </div>
             <div class="${f.exists ? "ctx-status-ok" : "ctx-status-bad"}">${f.exists ? "OK" : "MISS"}</div>
-            <div class="ctx-meta">
-              ${esc(fileMeta(f))}<br>
-              <span class="severity-dot sev-${esc(editLevel(f))}">${esc(editLevel(f))}</span>
-            </div>
+            <div class="ctx-meta">${esc(fileMeta(f))}<br><span class="severity-dot sev-${esc(f.edit || "critical")}">${esc(f.edit || "critical")}</span></div>
             <button class="ghost-btn" onclick='openContextFile(${JSON.stringify(f.path)})' ${f.exists ? "" : "disabled"}>Открыть</button>
           </div>
         `).join("")}
@@ -162,10 +166,9 @@ async function openContextFile(path){
 
   panel.style.display = "block";
   CURRENT_FILE_PATH = path;
-  CURRENT_FILE_EDIT = "critical";
+  CURRENT_FILE_EDIT = "readonly";
   CURRENT_RAW_CONTENT = "";
-
-  viewer.readOnly = true;
+  document.getElementById("ctxViewer").readOnly = true;
   document.getElementById("saveFileBtn").style.display = "none";
   document.getElementById("editFileBtn").disabled = true;
 
@@ -178,29 +181,38 @@ async function openContextFile(path){
   }
 
   title.textContent = data.meta.title || data.meta.path;
-  CURRENT_FILE_EDIT = data.meta.edit || "critical";
+  meta.textContent = `${data.meta.path} · ${data.meta.edit || "readonly"} · ${data.truncated ? "truncated" : "full"}`;
+
+  CURRENT_FILE_EDIT = data.meta.edit || "readonly";
   CURRENT_RAW_CONTENT = data.content || "";
 
-  meta.textContent = `${data.meta.path} · ${CURRENT_FILE_EDIT} · ${data.truncated ? "truncated" : "full"}`;
-
-  document.getElementById("editFileBtn").disabled = false;
+  if (["safe_json", "careful", "careful_json", "careful_csv"].includes(CURRENT_FILE_EDIT) && !data.truncated) {
+    document.getElementById("editFileBtn").disabled = false;
+  }
 
   viewer.value =
     "PURPOSE: " + (data.meta.purpose || "") + "\n" +
     "PATH: " + data.meta.path + "\n" +
-    "EDIT: " + CURRENT_FILE_EDIT + "\n" +
+    "EDIT: " + (data.meta.edit || "readonly") + "\n" +
     "TRUNCATED: " + data.truncated + "\n" +
     "────────────────────────────────────────\n\n" +
-    CURRENT_RAW_CONTENT;
+    data.content;
 
   panel.scrollIntoView({behavior:"smooth", block:"start"});
+}
+
+function closeFilePanel(){
+  document.getElementById("filePanel").style.display = "none";
+  CURRENT_FILE_PATH = null;
+  CURRENT_FILE_EDIT = "readonly";
+  CURRENT_RAW_CONTENT = "";
 }
 
 function enableEdit(){
   const level = CURRENT_FILE_EDIT || "critical";
   let msg = "Редактирование файла проекта. Перед сохранением будет создан backup. Продолжить?";
 
-  if (["critical", "black", "readonly", "planned_or_optional", "metadata_only"].includes(level)) {
+  if (["critical", "black", "readonly", "planned_or_optional"].includes(level)) {
     msg = "⚠️ ОПАСНЫЙ ФАЙЛ (" + level + "). Это может сломать код/логику/память. Backup будет создан автоматически. Продолжить?";
   } else if (["careful", "careful_json", "careful_csv"].includes(level)) {
     msg = "⚠️ Осторожно: это source of truth / важный файл. Backup будет создан автоматически. Продолжить?";
@@ -220,20 +232,29 @@ async function saveFile(){
     return;
   }
 
-  const content = document.getElementById("ctxViewer").value;
+  const viewer = document.getElementById("ctxViewer");
+  const content = viewer.value;
 
   if (CURRENT_FILE_PATH.endsWith(".json")) {
-    try { JSON.parse(content); }
-    catch(e) {
+    if (CURRENT_FILE_PATH.endsWith(".json")) {
+      if (CURRENT_FILE_PATH.endsWith(".json")) {
+    try {
+      JSON.parse(content);
+    } catch(e) {
       alert("JSON невалидный: " + e.message);
       return;
+    }
+  }
     }
   }
 
   const res = await fetch("/api/ai/context/file/save", {
     method: "POST",
     headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({path: CURRENT_FILE_PATH, content})
+    body: JSON.stringify({
+      path: CURRENT_FILE_PATH,
+      content
+    })
   });
 
   const data = await res.json();
@@ -246,13 +267,6 @@ async function saveFile(){
   alert("Сохранено. Backup: " + data.backup);
   await openContextFile(CURRENT_FILE_PATH);
   await loadCatalog();
-}
-
-function closeFilePanel(){
-  document.getElementById("filePanel").style.display = "none";
-  CURRENT_FILE_PATH = null;
-  CURRENT_FILE_EDIT = "critical";
-  CURRENT_RAW_CONTENT = "";
 }
 
 async function loadCatalog(){

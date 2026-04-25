@@ -201,10 +201,14 @@ def read_context_file(path_str: str) -> Dict[str, Any]:
     if not path.exists():
         return {"ok": False, "error": "file_not_found", "meta": meta}
 
-    # Большой лимит для AI Context UI.
-    # Не бесконечный, чтобы случайно не положить браузер огромной историей.
-    # Для будущих больших чатов/памяти позже добавим пагинацию/чанки.
-    max_chars = 5_000_000
+    # Для UI-редактирования читаем registry/runtime/memory файлы целиком.
+    # devices.csv ~28KB, поэтому старый лимит 16KB его обрезал и блокировал кнопку.
+    if path.suffix in (".csv", ".json"):
+        max_chars = 300000
+    elif path.suffix == ".py":
+        max_chars = 120000
+    else:
+        max_chars = 80000
 
     content = path.read_text(encoding="utf-8", errors="replace")
     return {

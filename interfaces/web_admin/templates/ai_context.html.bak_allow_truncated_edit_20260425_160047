@@ -183,7 +183,7 @@ async function openContextFile(path){
 
   meta.textContent = `${data.meta.path} · ${CURRENT_FILE_EDIT} · ${data.truncated ? "truncated" : "full"}`;
 
-  document.getElementById("editFileBtn").disabled = false;
+  document.getElementById("editFileBtn").disabled = !!data.truncated;
 
   viewer.value =
     "PURPOSE: " + (data.meta.purpose || "") + "\n" +

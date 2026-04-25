@@ -201,10 +201,10 @@ def read_context_file(path_str: str) -> Dict[str, Any]:
     if not path.exists():
         return {"ok": False, "error": "file_not_found", "meta": meta}
 
-    # Большой лимит для AI Context UI.
-    # Не бесконечный, чтобы случайно не положить браузер огромной историей.
-    # Для будущих больших чатов/памяти позже добавим пагинацию/чанки.
-    max_chars = 5_000_000
+    if meta.get("edit") == "readonly" and path.suffix == ".py":
+        max_chars = 8000
+    else:
+        max_chars = 16000
 
     content = path.read_text(encoding="utf-8", errors="replace")
     return {
