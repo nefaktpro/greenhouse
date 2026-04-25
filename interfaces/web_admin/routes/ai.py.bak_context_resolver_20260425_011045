@@ -4,7 +4,6 @@ from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 
 from ai.router import route_ai_message
-from ai.context_resolver import get_context_catalog, read_context_file, save_context_file
 from chat.chat_router import handle_chat_message
 
 router = APIRouter(tags=["ai-lab"])
@@ -13,11 +12,6 @@ templates = Jinja2Templates(directory="interfaces/web_admin/templates")
 
 class AIMessageIn(BaseModel):
     text: str
-
-
-class ContextFileSaveIn(BaseModel):
-    path: str
-    content: str
 
 
 @router.get("/web/ai", response_class=HTMLResponse)
@@ -73,23 +67,3 @@ def create_ask_via_actions(payload: AIMessageIn):
     )
 
     return {"ok": True, "pending": state}
-
-
-@router.get("/web/ai/context", response_class=HTMLResponse)
-def ai_context_page(request: Request):
-    return templates.TemplateResponse(request, "ai_context.html", {})
-
-
-@router.get("/api/ai/context/catalog")
-def ai_context_catalog():
-    return get_context_catalog()
-
-
-@router.get("/api/ai/context/file")
-def ai_context_file(path: str):
-    return read_context_file(path)
-
-
-@router.post("/api/ai/context/file/save")
-def ai_context_file_save(payload: ContextFileSaveIn):
-    return save_context_file(payload.path, payload.content)

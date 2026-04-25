@@ -1,0 +1,10 @@
+2b275c7 add natural language action map for AI router 2026-04-25_01-07
+6f09848 remove accidental tracked backup files 2026-04-25_00-59
+9f83dd5 stabilize AI preview ASK chat and control flow 2026-04-25_00-59
+367d7a2 remove accidental tracked backup files 2026-04-25_00-04
+dc05c74 add AI router lab and AI to ASK flow 2026-04-24_23-54
+0516bc7 snapshot before AI layer start 2026-04-24_22-56
+5a26ded web admin ui direction and lab rename
+55486b1 web_admin: restore working design baseline
+b77e39c snapshot: before cleanup web_admin + ui + 500 files
+161056c backup before web admin restore

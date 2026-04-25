@@ -1,0 +1,25 @@
+D  ai/router.py.bak_nl_map_20260425_010653
+D  chat/intent_parser.py.bak_nl_map_20260425_010653
+ M data/registry/action_map.json
+ M interfaces/web_admin/routes/ai.py
+ M interfaces/web_admin/templates/base.html
+D  interfaces/web_admin/templates/modes.html.bak_ux_20260425_010322
+?? ai/context_resolver.py
+?? ai/context_resolver.py.bak_all_levels_edit_20260425_154716
+?? ai/context_resolver.py.bak_edit_20260425_153114
+?? ai/context_resolver.py.bak_edit_modes_20260425_153611
+?? ai/context_resolver.py.bak_file_descriptions_20260425_011346
+?? backups/manual_before_ai_context_rewrite_20260425_155738/
+?? data/registry/action_map.json.bak_ui_edit
+?? interfaces/web_admin/routes/ai.py.bak_context_preview_20260425_011346
+?? interfaces/web_admin/routes/ai.py.bak_context_resolver_20260425_011045
+?? interfaces/web_admin/routes/ai.py.bak_edit_20260425_153114
+?? interfaces/web_admin/templates/ai_context.html
+?? interfaces/web_admin/templates/ai_context.html.bak_all_levels_edit_20260425_154716
+?? interfaces/web_admin/templates/ai_context.html.bak_edit_20260425_153114
+?? interfaces/web_admin/templates/ai_context.html.bak_edit_modes_ui_20260425_153730
+?? interfaces/web_admin/templates/ai_context.html.bak_fix_edit_btn_20260425_153855
+?? interfaces/web_admin/templates/ai_context.html.bak_force_all_edit_20260425_155230
+?? interfaces/web_admin/templates/ai_context.html.bak_preview_20260425_011346
+?? interfaces/web_admin/templates/ai_context.html.bak_viewer_bottom_20260425_152907
+?? interfaces/web_admin/templates/base.html.bak_context_menu_20260425_011045
