@@ -2,6 +2,9 @@ from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
+from greenhouse_v17.services.ai_client import get_ai_connection_status, get_deepseek_connection_status, ask_ai_smoke_test
+import os
+import time
 
 from ai.router import route_ai_message
 from ai.context_resolver import get_context_catalog, read_context_file, save_context_file, list_backups, restore_backup
@@ -75,6 +78,11 @@ def create_ask_via_actions(payload: AIMessageIn):
     return {"ok": True, "pending": state}
 
 
+@router.get("/web/ai/status", response_class=HTMLResponse)
+def ai_status_page(request: Request):
+    return templates.TemplateResponse(request, "ai_status.html", {})
+
+
 @router.get("/web/ai/context", response_class=HTMLResponse)
 def ai_context_page(request: Request):
     return templates.TemplateResponse(request, "ai_context.html", {})
@@ -101,6 +109,9 @@ def ai_context_backups():
 
 
 from pydantic import BaseModel
+from greenhouse_v17.services.ai_client import get_ai_connection_status, get_deepseek_connection_status, ask_ai_smoke_test
+import os
+import time
 
 class RestoreIn(BaseModel):
     path: str
@@ -109,3 +120,128 @@ class RestoreIn(BaseModel):
 @router.post("/api/ai/context/restore")
 def ai_context_restore(payload: RestoreIn):
     return restore_backup(payload.path)
+
+
+
+def _check_ai_provider():
+    provider = os.getenv("AI_PROVIDER", "openai").strip().lower()
+    primary_model = os.getenv("AI_PRIMARY_MODEL") or os.getenv("OPENAI_MODEL") or "not_configured"
+
+    api_key = None
+    if provider == "openai":
+        api_key = os.getenv("OPENAI_API_KEY")
+    elif provider == "deepseek":
+        api_key = os.getenv("DEEPSEEK_API_KEY")
+    else:
+        api_key = os.getenv("OPENAI_API_KEY") or os.getenv("DEEPSEEK_API_KEY")
+
+    if not api_key:
+        return {
+            "ok": False,
+            "configured": False,
+            "error": "no_api_key",
+            "latency_ms": None,
+            "models_count": None,
+        }
+
+    try:
+        start = time.time()
+
+        # OpenAI SDK v1 compatible ping. Для DeepSeek тоже может работать,
+        # если переменные и base_url будут подключены позже.
+        from openai import OpenAI
+
+        if provider == "deepseek":
+            client = OpenAI(
+                api_key=api_key,
+                base_url=os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com"),
+            )
+        else:
+            client = OpenAI(api_key=api_key)
+
+        models = client.models.list()
+        latency = round((time.time() - start) * 1000)
+
+        return {
+            "ok": True,
+            "configured": True,
+            "error": None,
+            "latency_ms": latency,
+            "models_count": len(getattr(models, "data", []) or []),
+        }
+    except Exception as e:
+        return {
+            "ok": False,
+            "configured": True,
+            "error": str(e),
+            "latency_ms": None,
+            "models_count": None,
+        }
+
+
+@router.get("/api/ai/status")
+def ai_status():
+    provider = os.getenv("AI_PROVIDER", "openai").strip().lower()
+    return {
+        "ok": True,
+        "provider": provider,
+        "primary_model": os.getenv("AI_PRIMARY_MODEL") or os.getenv("OPENAI_MODEL") or "not_configured",
+        "backup_model": os.getenv("AI_BACKUP_MODEL") or os.getenv("DEEPSEEK_MODEL") or "deepseek_planned",
+        "fallback_model": os.getenv("AI_FALLBACK_MODEL") or "local_planned",
+        "vision_model": os.getenv("AI_VISION_MODEL") or os.getenv("OPENAI_VISION_MODEL") or "openai_vision_planned",
+        "models": {
+            "reasoning_primary": {
+                "provider": os.getenv("AI_PROVIDER", "openai"),
+                "model": os.getenv("AI_PRIMARY_MODEL") or os.getenv("OPENAI_MODEL") or "not_configured",
+                "api_key_present": bool(os.getenv("OPENAI_API_KEY") or os.getenv("AI_API_KEY")),
+            },
+            "reasoning_backup": {
+                "provider": "deepseek",
+                "model": os.getenv("DEEPSEEK_MODEL") or "deepseek-v4-pro",
+                "api_key_present": bool(os.getenv("DEEPSEEK_API_KEY")),
+            },
+            "vision_primary": {
+                "provider": "openai",
+                "model": os.getenv("AI_VISION_MODEL") or os.getenv("OPENAI_VISION_MODEL") or "gpt-4o",
+                "api_key_present": bool(os.getenv("OPENAI_API_KEY")),
+                "purpose": "camera/photo/plant visual analysis",
+            },
+            "local_fallback": {
+                "provider": "local",
+                "model": os.getenv("LOCAL_AI_MODEL") or "planned",
+                "api_key_present": False,
+                "purpose": "offline fallback, not implemented yet",
+            },
+        },
+        "health": get_ai_connection_status(),
+        "deepseek_health": get_deepseek_connection_status(),
+        "capabilities": {
+            "can_analyze_context": True,
+            "uses_context_resolver": True,
+            "can_generate_ask": True,
+            "can_read_memory_via_core": True,
+            "can_explain_decisions": True,
+
+            "can_execute_directly": False,
+            "can_access_ha_directly": False,
+            "can_access_files_directly": False,
+            "can_bypass_validation": False,
+        },
+        "policy": {
+            "ai_direct_execution": False,
+            "ai_direct_ha_access": False,
+            "ai_direct_file_access": False,
+            "resolver_required": True,
+        },
+        "status_note": "AI status page is wired. Real reasoning call is next step.",
+    }
+
+
+@router.get("/api/ai/health/full")
+def ai_health_full():
+    return get_ai_connection_status()
+
+
+@router.post("/api/ai/smoke-test")
+def ai_smoke_test():
+    return ask_ai_smoke_test()

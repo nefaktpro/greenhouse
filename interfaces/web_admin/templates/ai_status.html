@@ -1,0 +1,250 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+.ai-page{max-width:1280px;margin:0 auto}
+.ai-hero{margin-bottom:22px}
+.ai-kicker{font-size:12px;font-weight:900;letter-spacing:.14em;text-transform:uppercase;color:#8fb3ff;margin-bottom:10px}
+.ai-hero h1{font-size:36px;margin:0 0 10px;color:#fff}
+.ai-hero p{margin:0;color:#b9c8e4;font-size:16px;line-height:1.5;max-width:920px}
+.ai-toolbar{display:flex;gap:10px;flex-wrap:wrap;margin:20px 0}
+.ai-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+.ai-card{background:rgba(7,16,34,.94);border:1px solid rgba(71,115,190,.42);border-radius:24px;padding:22px;min-width:0;box-shadow:0 16px 50px rgba(0,0,0,.25)}
+.ai-card.primary{border-color:rgba(96,165,250,.55)}
+.ai-card.backup{border-color:rgba(167,139,250,.48)}
+.ai-card.local{border-color:rgba(148,163,184,.38)}
+.ai-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:18px}
+.ai-role{font-size:12px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:#8fb3ff}
+.ai-name{font-size:24px;font-weight:950;color:#fff;margin-top:5px}
+.ai-desc{color:#95a8c8;font-size:14px;line-height:1.45;margin-top:8px}
+.ai-badge{display:inline-flex;border-radius:999px;padding:8px 11px;font-size:12px;font-weight:950;border:1px solid rgba(255,255,255,.15);white-space:nowrap}
+.ai-badge.ok{background:rgba(126,231,135,.12);color:#7ee787;border-color:rgba(126,231,135,.34)}
+.ai-badge.bad{background:rgba(255,92,122,.10);color:#ffc2cd;border-color:rgba(255,92,122,.30)}
+.ai-badge.warn{background:rgba(255,216,102,.10);color:#ffd866;border-color:rgba(255,216,102,.30)}
+.ai-badge.off{background:rgba(148,163,184,.10);color:#cbd5e1;border-color:rgba(148,163,184,.28)}
+.ai-row{display:flex;justify-content:space-between;gap:14px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.07)}
+.ai-row:last-child{border-bottom:0}
+.ai-key{color:#9fb2d0}
+.ai-val{color:#fff;font-weight:900;text-align:right;word-break:break-word}
+.ai-error{color:#ff9aad}
+.ai-small{font-size:12px;color:#8395b5;margin-top:14px;line-height:1.45}
+.ai-policy{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin-top:18px}
+.ai-wide{grid-column:1/-1}
+.ai-pre{height:220px;overflow:auto;white-space:pre-wrap}
+.ai-test{margin-top:14px}
+@media(max-width:1100px){.ai-grid{grid-template-columns:1fr}.ai-policy{grid-template-columns:1fr}}
+</style>
+
+<section class="ai-page">
+  <div class="ai-hero">
+    <div class="ai-kicker">AI / Models / Health</div>
+    <h1>Статус AI-слоя</h1>
+    <p>
+      Здесь видно 3 рабочих слоя: Primary OpenAI для reasoning + vision, Backup DeepSeek для reasoning,
+      и Local fallback на будущее. AI не исполняет действия напрямую — только через Core / Validation / Execution.
+    </p>
+  </div>
+
+  <div class="ai-toolbar">
+    <button class="primary-btn" onclick="loadAIStatus()">Обновить статус</button>
+    <button class="ghost-btn" onclick="runAISmokeTest()">Smoke-test активной модели</button>
+    <a class="ghost-btn" href="/web/ai">AI Lab</a>
+    <a class="ghost-btn" href="/web/ai/context">AI Context</a>
+  </div>
+
+  <div id="aiGlobal" class="ai-card ai-wide" style="margin-bottom:18px;">Загрузка...</div>
+  <div id="aiModels" class="ai-grid">Загрузка...</div>
+
+  <div class="ai-policy">
+    <article class="ai-card">
+      <h2>Что AI может</h2>
+      <div id="aiCan"></div>
+    </article>
+    <article class="ai-card">
+      <h2>Что AI НЕ может</h2>
+      <div id="aiCannot"></div>
+    </article>
+  </div>
+
+  <pre id="aiSmokeResult" class="result-box ai-pre ai-test">Smoke-test ещё не запускался.</pre>
+
+  <details style="margin-top:18px;">
+    <summary style="cursor:pointer;color:#8fb3ff;font-weight:900;">Debug JSON</summary>
+    <pre id="aiStatusRaw" class="result-box ai-pre">{}</pre>
+  </details>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function esc(v){return String(v ?? "—").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;")}
+function row(k,v,cls=""){return `<div class="ai-row"><div class="ai-key">${esc(k)}</div><div class="ai-val ${cls}">${v}</div></div>`}
+function badge(text,kind){return `<span class="ai-badge ${kind}">${esc(text)}</span>`}
+function keyBadge(v){return v ? badge("KEY YES","ok") : badge("KEY NO","bad")}
+function boolBadge(v){return v ? badge("YES","ok") : badge("NO","bad")}
+
+
+function normalizeError(e){
+  if(!e) return "—";
+  const s = String(e);
+  const low = s.toLowerCase();
+
+  if(low.includes("insufficient balance") || s.includes("402")) return "Нужна оплата / пополнить баланс";
+  if(low.includes("insufficient_quota") || low.includes("quota") || low.includes("billing") || low.includes("payment")) return "Нужна оплата / лимит API";
+  if(low.includes("invalid_api_key") || low.includes("incorrect api key") || s.includes("401")) return "Неверный API key";
+  if(low.includes("unsupported_country_region_territory") || s.includes("403")) return "Регион заблокирован / нужен proxy";
+  if(low.includes("timeout") || low.includes("connection")) return "Ошибка сети / timeout";
+
+  return s.length > 120 ? s.slice(0,120) + "..." : s;
+}
+
+
+function modelCard(cls, role, title, desc, provider, model, key, status, latency, error, note){
+  let statusBadge = badge("NOT CONNECTED","bad");
+  if(status === "ok") statusBadge = badge("CONNECTED","ok");
+  if(status === "planned") statusBadge = badge("PLANNED","off");
+  if(status === "error") statusBadge = badge("ERROR","warn");
+
+  return `
+    <article class="ai-card ${cls}">
+      <div class="ai-top">
+        <div>
+          <div class="ai-role">${esc(role)}</div>
+          <div class="ai-name">${esc(title)}</div>
+          <div class="ai-desc">${esc(desc)}</div>
+        </div>
+        ${statusBadge}
+      </div>
+      ${row("Provider", esc(provider))}
+      ${row("Model", esc(model))}
+      ${row("API key", keyBadge(key))}
+      ${row("Latency", esc(latency ? latency + " ms" : "—"))}
+      ${row("Error", esc(normalizeError(error)), error ? "ai-error" : "")}
+      <div class="ai-small">${esc(note || "")}</div>
+    </article>
+  `;
+}
+
+
+function renderStatus(data){
+  const models = data.models || {};
+  const h = data.health || {};
+  const dh = data.deepseek_health || {};
+  const caps = data.capabilities || {};
+  const policy = data.policy || {};
+
+  const primary = models.reasoning_primary || {};
+  const backup = models.reasoning_backup || {};
+  const local = models.local_fallback || {};
+
+  const primaryWorks = !!h.ok;
+  const backupWorks = !!dh.ok;
+
+  let globalKind = "bad";
+  let globalText = "NO WORKING AI";
+  if(primaryWorks && backupWorks){ globalKind = "ok"; globalText = "PRIMARY + BACKUP CONNECTED"; }
+  else if(primaryWorks){ globalKind = "ok"; globalText = "AI CONNECTED"; }
+  else if(backupWorks){ globalKind = "warn"; globalText = "BACKUP AI CONNECTED"; }
+
+  document.getElementById("aiGlobal").innerHTML = `
+    <div class="ai-top">
+      <div>
+        <div class="ai-role">Global AI Health</div>
+        <div class="ai-name">${esc(globalText)}</div>
+        <div class="ai-desc">Проверки реальные: OpenAI через VLESS proxy, DeepSeek напрямую. Latency = реальный ответ API.</div>
+      </div>
+      ${badge(globalText, globalKind)}
+    </div>
+    ${row("Primary", esc((h.active_provider || "openai") + " / " + (h.active_model || primary.model || "—")))}
+    ${row("Primary latency", esc(h.latency_ms ? h.latency_ms + " ms" : "—"))}
+    ${row("Primary error", esc(normalizeError(h.error)), h.error ? "ai-error" : "")}
+    ${row("Backup", esc("deepseek / " + (backup.model || "deepseek-v4-pro")))}
+    ${row("Backup latency", esc(dh.latency_ms ? dh.latency_ms + " ms" : "—"))}
+    ${row("Backup error", esc(normalizeError(dh.error)), dh.error ? "ai-error" : "")}
+  `;
+
+  document.getElementById("aiModels").innerHTML = `
+    ${modelCard(
+      "primary",
+      "PRIMARY",
+      "OpenAI",
+      "Главный мозг: reasoning, chat, explanations + vision/photo/camera analysis.",
+      "openai",
+      primary.model || "gpt-4o",
+      primary.api_key_present,
+      primaryWorks ? "ok" : (primary.api_key_present ? "error" : "bad"),
+      h.latency_ms,
+      primaryWorks ? null : (h.error || "not tested"),
+      "Vision не отдельный мозг: фото и камеры смотрит тот же OpenAI-слой."
+    )}
+    ${modelCard(
+      "backup",
+      "BACKUP",
+      "DeepSeek",
+      "Запасной reasoning: JSON, текстовый анализ, fallback при недоступности OpenAI.",
+      "deepseek",
+      backup.model || "deepseek-v4-pro",
+      backup.api_key_present,
+      backupWorks ? "ok" : (backup.api_key_present ? "error" : "bad"),
+      dh.latency_ms,
+      backupWorks ? null : (dh.error || "not tested"),
+      "DeepSeek проверяется напрямую, без VLESS proxy."
+    )}
+    ${modelCard(
+      "local",
+      "FALLBACK",
+      "Local",
+      "Будущий оффлайн fallback для минимальных ответов без облачного API.",
+      "local",
+      local.model || "planned",
+      false,
+      "planned",
+      null,
+      "not implemented yet",
+      "Не используем для управления, пока не появится отдельный безопасный слой."
+    )}
+  `;
+
+  document.getElementById("aiCan").innerHTML = `
+    ${row("Analyze context", boolBadge(caps.can_analyze_context))}
+    ${row("Use Context Resolver", boolBadge(caps.uses_context_resolver))}
+    ${row("Create ASK", boolBadge(caps.can_generate_ask))}
+    ${row("Read memory/logs via Core", boolBadge(caps.can_read_memory_via_core))}
+    ${row("Explain decisions", boolBadge(caps.can_explain_decisions))}
+  `;
+
+  document.getElementById("aiCannot").innerHTML = `
+    ${row("Execute directly", boolBadge(caps.can_execute_directly))}
+    ${row("Access HA directly", boolBadge(caps.can_access_ha_directly))}
+    ${row("Access files directly", boolBadge(caps.can_access_files_directly))}
+    ${row("Bypass Validation", boolBadge(caps.can_bypass_validation))}
+    ${row("Resolver required", boolBadge(policy.resolver_required))}
+  `;
+
+  document.getElementById("aiStatusRaw").textContent = JSON.stringify(data, null, 2);
+}
+
+
+async function loadAIStatus(){
+  document.getElementById("aiGlobal").textContent = "Загрузка...";
+  document.getElementById("aiModels").textContent = "Загрузка...";
+  const res = await fetch("/api/ai/status");
+  const data = await res.json();
+  renderStatus(data);
+}
+
+async function runAISmokeTest(){
+  const out = document.getElementById("aiSmokeResult");
+  out.textContent = "Проверяю реальный AI-call...";
+  try{
+    const res = await fetch("/api/ai/smoke-test", {method:"POST"});
+    const data = await res.json();
+    out.textContent = JSON.stringify(data, null, 2);
+  }catch(e){
+    out.textContent = "Ошибка smoke-test: " + e;
+  }
+}
+
+document.addEventListener("DOMContentLoaded", loadAIStatus);
+</script>
+{% endblock %}
