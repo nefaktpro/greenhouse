@@ -11,3 +11,10 @@ data/memory/
 
 .env
 .env*
+
+# local/generated backups and caches
+*.bak_*
+*.bak_ui_edit
+backups/ui_edits/
+__pycache__/
+*.pyc
