@@ -22,11 +22,5 @@
       "role": "scenario_registry",
       "editable_via_interfaces": true
     }
-  },
-  "memory": [
-    "data/memory/knowledge.json",
-    "data/memory/decision_log.json",
-    "data/memory/strawberry_log.json",
-    "data/memory/chat_history.json"
-  ]
+  }
 }

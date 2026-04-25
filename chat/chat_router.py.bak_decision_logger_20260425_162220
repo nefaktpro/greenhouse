@@ -8,7 +8,6 @@ from ai.router import route_ai_message
 from chat.observation_store import add_observation
 from greenhouse_v17.services.mode_service import get_mode_flags
 from greenhouse_v17.services.webadmin_execution_service import create_pending_ask, execute_action, load_ask_state
-from greenhouse_v17.services.decision_logger import log_decision
 
 
 @dataclass
@@ -141,15 +140,6 @@ def _build_device_action_reply(parsed: ParsedIntent) -> ChatResponse:
             title=f"Chat: {human_action} {human_target}",
             source="chat",
         )
-        log_decision(
-            mode=mode_name,
-            source="chat",
-            event="ask_created",
-            action_key=action_key,
-            ok=True,
-            result="pending",
-            details={"text": text, "pending": pending},
-        )
         reply += "Создал ASK-подтверждение. Открой раздел ASK и подтверди или отмени."
         return ChatResponse(
             reply_text=reply,
@@ -161,15 +151,6 @@ def _build_device_action_reply(parsed: ParsedIntent) -> ChatResponse:
 
     reply += "Выполняю действие через общий execution pipeline."
     result = execute_action(action_key=action_key, dry_run=False, source="chat")
-    log_decision(
-        mode=mode_name,
-        source="chat",
-        event="action_executed",
-        action_key=action_key,
-        ok=bool(result.get("ok")),
-        result=result.get("status") or result.get("message"),
-        details={"text": text, "execution_result": result},
-    )
     return ChatResponse(
         reply_text=reply,
         parsed_intent=parsed,

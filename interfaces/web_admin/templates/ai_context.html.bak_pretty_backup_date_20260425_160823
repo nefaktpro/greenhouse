@@ -108,7 +108,6 @@
 let CURRENT_FILE_PATH = null;
 let CURRENT_FILE_EDIT = "critical";
 let CURRENT_RAW_CONTENT = "";
-let LOGS_COLLAPSED = true;
 
 function esc(v){return String(v ?? "—").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;")}
 
@@ -123,194 +122,7 @@ function fileMeta(f){
   return `${f.size_bytes ?? 0} b`;
 }
 
-
-function groupContextFiles(contexts){
-  const all = [];
-  for (const ctx of contexts || []) {
-    for (const f of ctx.files || []) {
-      all.push({...f, ctx_title: ctx.title});
-    }
-  }
-
-  const has = (f, x) => String(f.path || "").includes(x);
-
-  return {
-    important: all.filter(f =>
-      has(f,"system_state") ||
-      has(f,"ask_state") ||
-      has(f,"ask_log") ||
-      has(f,"manual_log")
-    ),
-    memory: all.filter(f =>
-      has(f,"knowledge") ||
-      has(f,"strawberry") ||
-      has(f,"chat_history")
-    ),
-    registry: all.filter(f =>
-      has(f,"data/registry/")
-    ),
-    logs: all.filter(f =>
-      has(f,"/logs/") &&
-      !has(f,"ask_log") &&
-      !has(f,"manual_log")
-    ),
-    tech: all.filter(f =>
-      has(f,".py") ||
-      has(f,"decision_log.json") ||
-      has(f,"registry_manifest")
-    )
-  };
-}
-
-function renderFileRow(f){
-  return `
-    <div class="ctx-file">
-      <div>
-        <div class="ctx-path" title="${esc(f.path)}">${esc(f.title || f.path)}</div>
-        <div class="ctx-desc" style="font-size:12px;margin-top:4px;">${esc(f.purpose)}</div>
-        <div class="ctx-path" style="font-size:11px;color:#8fa3c2;margin-top:4px;">${esc(f.path)}</div>
-      </div>
-      <div class="${f.exists ? "ctx-status-ok" : "ctx-status-bad"}">${f.exists ? "OK" : "MISS"}</div>
-      <div class="ctx-meta">
-        ${esc(fileMeta(f))}<br>
-        <span class="severity-dot sev-${esc(editLevel(f))}">${esc(editLevel(f))}</span>
-      </div>
-      <button class="ghost-btn" onclick='openContextFile(${JSON.stringify(f.path)})' ${f.exists ? "" : "disabled"}>Открыть</button>
-    </div>
-  `;
-}
-
-function renderGroup(title, subtitle, files, collapsed=false){
-  if (!files.length) return "";
-  if (collapsed) {
-    return `
-      <article class="ctx-item">
-        <div class="ctx-item-top">
-          <div>
-            <div class="ctx-title">${esc(title)} ▼</div>
-            <div class="ctx-desc">${esc(subtitle)} · файлов: ${files.length}</div>
-          </div>
-          <button class="ghost-btn" onclick="LOGS_COLLAPSED=false; renderCatalog(window.__CTX_LAST_DATA)">Показать</button>
-        </div>
-      </article>
-    `;
-  }
-
-  return `
-    <article class="ctx-item">
-      <div class="ctx-item-top">
-        <div>
-          <div class="ctx-title">${esc(title)}</div>
-          <div class="ctx-desc">${esc(subtitle)}</div>
-        </div>
-        ${title.includes("LOGS") ? `<button class="ghost-btn" onclick="LOGS_COLLAPSED=true; renderCatalog(window.__CTX_LAST_DATA)">Свернуть</button>` : ""}
-      </div>
-      <div class="ctx-files">
-        ${files.map(renderFileRow).join("")}
-      </div>
-    </article>
-  `;
-}
-
-
-let SECTION_OPEN = {
-  runtime: false,
-  registry: false,
-  memory: false,
-  logs: false,
-  code: false,
-  other: false
-};
-
-function sectionForFile(f){
-  const p = String(f.path || "");
-
-  if (p.includes("system_state") || p.includes("ask_state")) return "runtime";
-  if (p.includes("data/registry/")) return "registry";
-  if (
-    p.includes("knowledge") ||
-    p.includes("chat_history") ||
-    p.includes("strawberry_log") ||
-    p.includes("decision_log.json")
-  ) return "memory";
-  if (p.includes("data/memory/logs/")) return "logs";
-  if (p.endsWith(".py")) return "code";
-  return "other";
-}
-
-function groupContextFiles(contexts){
-  const groups = {
-    runtime: [],
-    registry: [],
-    memory: [],
-    logs: [],
-    code: [],
-    other: []
-  };
-
-  for (const ctx of contexts || []) {
-    for (const f of ctx.files || []) {
-      const item = {...f, ctx_title: ctx.title};
-      groups[sectionForFile(item)].push(item);
-    }
-  }
-
-  return groups;
-}
-
-function renderFileRow(f){
-  return `
-    <div class="ctx-file">
-      <div>
-        <div class="ctx-path" title="${esc(f.path)}">${esc(f.title || f.path)}</div>
-        <div class="ctx-desc" style="font-size:12px;margin-top:4px;">${esc(f.purpose)}</div>
-        <div class="ctx-path" style="font-size:11px;color:#8fa3c2;margin-top:4px;">${esc(f.path)}</div>
-      </div>
-
-      <div class="${f.exists ? "ctx-status-ok" : "ctx-status-bad"}">${f.exists ? "OK" : "MISS"}</div>
-
-      <div class="ctx-meta">
-        ${esc(fileMeta(f))}<br>
-        <span class="severity-dot sev-${esc(editLevel(f))}">${esc(editLevel(f))}</span>
-      </div>
-
-      <button class="ghost-btn" onclick='openContextFile(${JSON.stringify(f.path)})' ${f.exists ? "" : "disabled"}>Открыть</button>
-    </div>
-  `;
-}
-
-function renderSection(key, title, subtitle, files){
-  if (!files.length) return "";
-
-  const isOpen = SECTION_OPEN[key];
-
-  return `
-    <article class="ctx-item">
-      <div class="ctx-item-top">
-        <div>
-          <div class="ctx-title">${esc(title)} ${isOpen ? "▲" : "▼"}</div>
-          <div class="ctx-desc">${esc(subtitle)}</div>
-          <div class="ctx-desc" style="margin-top:8px;">Файлы: ${files.filter(x => x.exists).length}/${files.length}</div>
-        </div>
-
-        <button class="ghost-btn" onclick="toggleSection('${key}')">
-          ${isOpen ? "Свернуть" : "Развернуть"}
-        </button>
-      </div>
-
-      ${isOpen ? `<div class="ctx-files">${files.map(renderFileRow).join("")}</div>` : ""}
-    </article>
-  `;
-}
-
-function toggleSection(key){
-  SECTION_OPEN[key] = !SECTION_OPEN[key];
-  renderCatalog(window.__CTX_LAST_DATA || {});
-}
-
 function renderCatalog(data){
-  window.__CTX_LAST_DATA = data;
-
   const list = document.getElementById("ctx-list");
   const policy = document.getElementById("ctx-policy");
 
@@ -318,19 +130,42 @@ function renderCatalog(data){
     <div><b>${esc(k)}</b>${v ? "true" : "false"}</div>
   `).join("");
 
-  const g = groupContextFiles(data.contexts || []);
+  list.innerHTML = (data.contexts || []).map(ctx => `
+    <article class="ctx-item">
+      <div class="ctx-item-top">
+        <div>
+          <div class="ctx-title">${esc(ctx.title)}</div>
+          <div class="ctx-desc">${esc(ctx.description)}</div>
+        </div>
+        <span class="ctx-pill">${esc(ctx.access)}</span>
+      </div>
 
-  list.innerHTML =
-    renderSection("runtime", "⚙️ Runtime", "Текущий режим, ASK-state, оперативное состояние.", g.runtime) +
-    renderSection("registry", "🧩 Registry", "Устройства, action map, capabilities, scenarios, manifest, NL map.", g.registry) +
-    renderSection("memory", "🧠 Memory", "Знания, история чата, клубника, старые decision-файлы.", g.memory) +
-    renderSection("logs", "📚 Logs", "Раздельные логи режимов: manual / ask / test / auto / autopilot / index.", g.logs) +
-    renderSection("code", "🧱 Code", "Код AI, Chat и Context Resolver. Редактировать осторожно.", g.code) +
-    renderSection("other", "📦 Other", "Остальные файлы каталога.", g.other);
+      <div class="ctx-desc" style="margin-top:10px;">
+        Файлы: ${ctx.files_existing}/${ctx.files_total}
+      </div>
+
+      <div class="ctx-files">
+        ${(ctx.files || []).map(f => `
+          <div class="ctx-file">
+            <div>
+              <div class="ctx-path" title="${esc(f.path)}">${esc(f.title || f.path)}</div>
+              <div class="ctx-desc" style="font-size:12px;margin-top:4px;">${esc(f.purpose)}</div>
+              <div class="ctx-path" style="font-size:11px;color:#8fa3c2;margin-top:4px;">${esc(f.path)}</div>
+            </div>
+            <div class="${f.exists ? "ctx-status-ok" : "ctx-status-bad"}">${f.exists ? "OK" : "MISS"}</div>
+            <div class="ctx-meta">
+              ${esc(fileMeta(f))}<br>
+              <span class="severity-dot sev-${esc(editLevel(f))}">${esc(editLevel(f))}</span>
+            </div>
+            <button class="ghost-btn" onclick='openContextFile(${JSON.stringify(f.path)})' ${f.exists ? "" : "disabled"}>Открыть</button>
+          </div>
+        `).join("")}
+      </div>
+    </article>
+  `).join("");
 
   pretty("ctx-raw", data);
 }
-
 
 async function openContextFile(path){
   const res = await fetch("/api/ai/context/file?path=" + encodeURIComponent(path));
@@ -436,26 +271,7 @@ function closeFilePanel(){
   CURRENT_RAW_CONTENT = "";
 }
 
-
-function formatBackupDate(path){
-  try{
-    const match = path.match(/ui_edits\/(\d{8})_(\d{6})/);
-    if(!match) return null;
-
-    const d = match[1];
-    const t = match[2];
-
-    const date = `${d.slice(6,8)}.${d.slice(4,6)}.${d.slice(0,4)}`;
-    const time = `${t.slice(0,2)}:${t.slice(2,4)}:${t.slice(4,6)}`;
-
-    return {date, time};
-  }catch(e){
-    return null;
-  }
-}
-
 async function loadBackups(){
-
   const panel = document.getElementById("backupPanel");
   const list = document.getElementById("backupList");
   panel.style.display = "block";
@@ -476,42 +292,22 @@ async function loadBackups(){
     return;
   }
 
-  
-list.innerHTML = items.map(item => {
-  const dt = formatBackupDate(item.path);
-
-  return `
+  list.innerHTML = items.map(item => `
     <article class="ctx-item">
       <div class="ctx-item-top">
         <div>
           <div class="ctx-title">${esc(item.name)}</div>
-
-          ${dt ? `
-            <div style="margin-top:6px;font-size:14px;color:#9fb3d1;">
-              📅 ${dt.date} &nbsp;&nbsp; ⏰ ${dt.time}
-            </div>
-          ` : ""}
-
-          <div class="ctx-desc" style="margin-top:6px;">
-            ${esc(item.path)}
-          </div>
-
-          <div class="ctx-desc" style="margin-top:6px;">
-            size: ${esc(item.size)} bytes
-          </div>
+          <div class="ctx-desc">${esc(item.path)}</div>
+          <div class="ctx-desc" style="margin-top:6px;">size: ${esc(item.size)} bytes</div>
         </div>
-
         <span class="ctx-pill">backup</span>
       </div>
-
       <div class="ctx-actions">
         <button class="ghost-btn" onclick='openBackup(${JSON.stringify(item.path)})'>Открыть</button>
         <button class="primary-btn" onclick='restoreBackup(${JSON.stringify(item.path)})'>Восстановить</button>
       </div>
     </article>
-  `;
-}).join("");
-
+  `).join("");
 }
 
 async function openBackup(path){
@@ -551,31 +347,5 @@ async function loadCatalog(){
 }
 
 document.addEventListener("DOMContentLoaded", loadCatalog);
-
-// === GROUPING ===
-function groupFiles(items){
-  return {
-    system: items.filter(i => i.path.includes("system_state") || i.path.includes("ask_state")),
-    control: items.filter(i => i.path.includes("ask_log") || i.path.includes("manual_log")),
-    memory: items.filter(i =>
-      i.path.includes("knowledge") ||
-      i.path.includes("strawberry") ||
-      i.path.includes("chat_history")
-    ),
-    logs: items.filter(i =>
-      i.path.includes("/logs/") &&
-      !i.path.includes("ask_log") &&
-      !i.path.includes("manual_log")
-    )
-  }
-}
-
-let logsCollapsed = true;
-
-function toggleLogs(){
-  logsCollapsed = !logsCollapsed;
-  renderCatalog(currentItems);
-}
 </script>
-
 {% endblock %}

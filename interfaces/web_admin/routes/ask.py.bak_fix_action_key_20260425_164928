@@ -25,18 +25,11 @@ def ask_confirm():
     result = confirm_pending_ask()
 
     try:
-        # вытаскиваем action_key из глубины результата
-        action_key = None
-        try:
-            action_key = result.get("result", {}).get("action_key")
-        except:
-            pass
-
         log_decision(
             mode="ASK",
             source="web_admin",
             event="ask_confirmed",
-            action_key=action_key,
+            action_key=result.get("action_key") if isinstance(result, dict) else None,
             ok=True,
             result="confirmed",
             details={"result": result}
@@ -52,20 +45,11 @@ def ask_cancel():
     result = cancel_pending_ask()
 
     try:
-        # cancel не возвращает action_key — берем из текущего pending до сброса
-        action_key = None
-        try:
-            state = load_ask_state()
-            if state and state.get("action_key"):
-                action_key = state.get("action_key")
-        except:
-            pass
-
         log_decision(
             mode="ASK",
             source="web_admin",
             event="ask_cancelled",
-            action_key=action_key,
+            action_key=result.get("action_key") if isinstance(result, dict) else None,
             ok=True,
             result="cancelled",
             details={"result": result}

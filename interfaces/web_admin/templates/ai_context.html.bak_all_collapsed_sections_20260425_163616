@@ -212,102 +212,6 @@ function renderGroup(title, subtitle, files, collapsed=false){
   `;
 }
 
-
-let SECTION_OPEN = {
-  runtime: false,
-  registry: false,
-  memory: false,
-  logs: false,
-  code: false,
-  other: false
-};
-
-function sectionForFile(f){
-  const p = String(f.path || "");
-
-  if (p.includes("system_state") || p.includes("ask_state")) return "runtime";
-  if (p.includes("data/registry/")) return "registry";
-  if (
-    p.includes("knowledge") ||
-    p.includes("chat_history") ||
-    p.includes("strawberry_log") ||
-    p.includes("decision_log.json")
-  ) return "memory";
-  if (p.includes("data/memory/logs/")) return "logs";
-  if (p.endsWith(".py")) return "code";
-  return "other";
-}
-
-function groupContextFiles(contexts){
-  const groups = {
-    runtime: [],
-    registry: [],
-    memory: [],
-    logs: [],
-    code: [],
-    other: []
-  };
-
-  for (const ctx of contexts || []) {
-    for (const f of ctx.files || []) {
-      const item = {...f, ctx_title: ctx.title};
-      groups[sectionForFile(item)].push(item);
-    }
-  }
-
-  return groups;
-}
-
-function renderFileRow(f){
-  return `
-    <div class="ctx-file">
-      <div>
-        <div class="ctx-path" title="${esc(f.path)}">${esc(f.title || f.path)}</div>
-        <div class="ctx-desc" style="font-size:12px;margin-top:4px;">${esc(f.purpose)}</div>
-        <div class="ctx-path" style="font-size:11px;color:#8fa3c2;margin-top:4px;">${esc(f.path)}</div>
-      </div>
-
-      <div class="${f.exists ? "ctx-status-ok" : "ctx-status-bad"}">${f.exists ? "OK" : "MISS"}</div>
-
-      <div class="ctx-meta">
-        ${esc(fileMeta(f))}<br>
-        <span class="severity-dot sev-${esc(editLevel(f))}">${esc(editLevel(f))}</span>
-      </div>
-
-      <button class="ghost-btn" onclick='openContextFile(${JSON.stringify(f.path)})' ${f.exists ? "" : "disabled"}>Открыть</button>
-    </div>
-  `;
-}
-
-function renderSection(key, title, subtitle, files){
-  if (!files.length) return "";
-
-  const isOpen = SECTION_OPEN[key];
-
-  return `
-    <article class="ctx-item">
-      <div class="ctx-item-top">
-        <div>
-          <div class="ctx-title">${esc(title)} ${isOpen ? "▲" : "▼"}</div>
-          <div class="ctx-desc">${esc(subtitle)}</div>
-          <div class="ctx-desc" style="margin-top:8px;">Файлы: ${files.filter(x => x.exists).length}/${files.length}</div>
-        </div>
-
-        <button class="ghost-btn" onclick="toggleSection('${key}')">
-          ${isOpen ? "Свернуть" : "Развернуть"}
-        </button>
-      </div>
-
-      ${isOpen ? `<div class="ctx-files">${files.map(renderFileRow).join("")}</div>` : ""}
-    </article>
-  `;
-}
-
-function toggleSection(key){
-  SECTION_OPEN[key] = !SECTION_OPEN[key];
-  renderCatalog(window.__CTX_LAST_DATA || {});
-}
-
 function renderCatalog(data){
   window.__CTX_LAST_DATA = data;
 
@@ -321,12 +225,11 @@ function renderCatalog(data){
   const g = groupContextFiles(data.contexts || []);
 
   list.innerHTML =
-    renderSection("runtime", "⚙️ Runtime", "Текущий режим, ASK-state, оперативное состояние.", g.runtime) +
-    renderSection("registry", "🧩 Registry", "Устройства, action map, capabilities, scenarios, manifest, NL map.", g.registry) +
-    renderSection("memory", "🧠 Memory", "Знания, история чата, клубника, старые decision-файлы.", g.memory) +
-    renderSection("logs", "📚 Logs", "Раздельные логи режимов: manual / ask / test / auto / autopilot / index.", g.logs) +
-    renderSection("code", "🧱 Code", "Код AI, Chat и Context Resolver. Редактировать осторожно.", g.code) +
-    renderSection("other", "📦 Other", "Остальные файлы каталога.", g.other);
+    renderGroup("🔥 Часто нужно", "Режим, ASK-state, ручные и ASK-логи", g.important) +
+    renderGroup("🧠 AI Memory", "Знания, история чата, клубника", g.memory) +
+    renderGroup("🧩 Registry", "Устройства, action map, capabilities, сценарии", g.registry) +
+    renderGroup("📚 LOGS", "Технические и режимные логи", g.logs, LOGS_COLLAPSED) +
+    renderGroup("🧱 Tech / Code", "Код и технические файлы, менять осторожно", g.tech);
 
   pretty("ctx-raw", data);
 }

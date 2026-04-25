@@ -4,7 +4,7 @@ from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 
 from ai.router import route_ai_message
-from ai.context_resolver import get_context_catalog, read_context_file, save_context_file
+from ai.context_resolver import get_context_catalog, read_context_file, save_context_file, list_backups, restore_backup
 from chat.chat_router import handle_chat_message
 
 router = APIRouter(tags=["ai-lab"])
@@ -93,3 +93,19 @@ def ai_context_file(path: str):
 @router.post("/api/ai/context/file/save")
 def ai_context_file_save(payload: ContextFileSaveIn):
     return save_context_file(payload.path, payload.content)
+
+
+@router.get("/api/ai/context/backups")
+def ai_context_backups():
+    return list_backups()
+
+
+from pydantic import BaseModel
+
+class RestoreIn(BaseModel):
+    path: str
+
+
+@router.post("/api/ai/context/restore")
+def ai_context_restore(payload: RestoreIn):
+    return restore_backup(payload.path)

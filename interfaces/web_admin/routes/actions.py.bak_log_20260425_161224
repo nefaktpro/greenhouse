@@ -3,7 +3,6 @@ from __future__ import annotations
 from fastapi import APIRouter
 from pydantic import BaseModel
 from greenhouse_v17.services.mode_service import get_mode_flags
-from greenhouse_v17.services.decision_logger import log_decision
 
 from greenhouse_v17.services.webadmin_execution_service import execute_action, create_pending_ask, debug_action_map_full, load_action_map, resolve_action, _read_state_value, load_ask_state
 
@@ -40,15 +39,6 @@ def execute_action_route(payload: ExecuteActionIn):
             title=payload.title or payload.action_key,
             source="web_admin"
         )
-        log_decision(
-            mode=mode_name,
-            source="control",
-            event="ask_created",
-            action_key=payload.action_key,
-            ok=True,
-            result="pending",
-            details={"pending": state},
-        )
         return {
             "ok": True,
             "mode": mode_name,
@@ -57,15 +47,6 @@ def execute_action_route(payload: ExecuteActionIn):
         }
 
     result = execute_action(action_key=payload.action_key)
-    log_decision(
-        mode=mode_name,
-        source="control",
-        event="action_executed",
-        action_key=payload.action_key,
-        ok=bool(result.get("ok")),
-        result=result.get("status") or result.get("message"),
-        details={"execution_result": result},
-    )
     return {
         "ok": bool(result.get("ok")),
         "mode": mode_name,
