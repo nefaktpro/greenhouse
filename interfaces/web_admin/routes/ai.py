@@ -403,3 +403,15 @@ except NameError:
     def ai_chat_history_endpoint():
         from greenhouse_v17.services.ai_chat_memory import load_history
         return {"ok": True, "history": load_history()[-80:]}
+
+# --- AI Logs alias ---
+try:
+    _AI_LOGS_ALIAS_ADDED
+except NameError:
+    _AI_LOGS_ALIAS_ADDED = True
+
+    from fastapi.responses import RedirectResponse
+
+    @router.get("/web/ai/logs")
+    def web_ai_logs_alias():
+        return RedirectResponse(url="/web/ai/memory", status_code=302)

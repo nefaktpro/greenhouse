@@ -21,3 +21,13 @@ __pycache__/
 backups/
 *.bak_*
 *.BROKEN_*
+
+# GREENHOUSE generated/runtime/backups
+backups/
+*.bak_*
+*.BROKEN_*
+*.BAD_DESIGN_*
+*.tar.gz
+__pycache__/
+*.pyc
+data/runtime/*.tmp
