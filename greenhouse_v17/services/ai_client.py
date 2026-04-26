@@ -398,7 +398,7 @@ def ask_ai_with_fallback(message: str):
                     },
                     {"role": "user", "content": message},
                 ],
-                max_tokens=220,
+                max_tokens=1600,
             )
             return {
                 "ok": True,
@@ -433,7 +433,7 @@ def ask_ai_with_fallback(message: str):
                     },
                     {"role": "user", "content": message},
                 ],
-                max_tokens=220,
+                max_tokens=1600,
             )
             return {
                 "ok": True,

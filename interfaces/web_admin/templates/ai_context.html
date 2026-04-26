@@ -1,6 +1,10 @@
 {% extends "base.html" %}
 
 {% block content %}
+
+
+
+
 <style>
 .ctx-page{max-width:1240px;margin:0 auto}
 .ctx-head{margin-bottom:22px}
@@ -104,6 +108,35 @@
 {% endblock %}
 
 {% block scripts %}
+
+<script>
+async function loadAiContextMapSummary(){
+  const el = document.getElementById("aiContextMapSummary");
+  if(!el) return;
+  try{
+    const res = await fetch("/api/ai/context/catalog");
+    const data = await res.json();
+    let total = 0, requestable = 0, watch = 0;
+    const sections = [];
+    (data.contexts || []).forEach(ctx => {
+      const files = ctx.files || [];
+      total += files.length;
+      requestable += files.filter(f => f.ai_requestable).length;
+      watch += files.filter(f => f.ai_watch).length;
+      sections.push(`${ctx.title || ctx.key}: ${files.length}`);
+    });
+    el.innerHTML =
+      `Сейчас в каталоге: <b>${total}</b> файлов · ` +
+      `AI REQUESTABLE: <b>${requestable}</b> · ` +
+      `WATCH: <b>${watch}</b><br>` +
+      `Разделы: ${sections.join(" · ")}`;
+  }catch(e){
+    el.textContent = "Не удалось загрузить карту контекста: " + e;
+  }
+}
+document.addEventListener("DOMContentLoaded", loadAiContextMapSummary);
+</script>
+
 <script>
 let CURRENT_FILE_PATH = null;
 let CURRENT_FILE_EDIT = "critical";
@@ -130,6 +163,28 @@ function groupContextFiles(contexts){
     for (const f of ctx.files || []) {
       all.push({...f, ctx_title: ctx.title});
     }
+  }
+
+  if (!all.some(f => String(f.path || "") === "data/memory/ai_chat_system_prompt.md")) {
+    all.push({
+      path: "data/memory/ai_chat_system_prompt.md",
+      title: "AI Chat System Prompt",
+      purpose: "Всегда добавляется к каждому сообщению в AI Chat: роль ИИ, правила поведения и базовое знание о GREENHOUSE v17.",
+      exists: true,
+      edit: "careful",
+      ctx_title: "Memory"
+    });
+  }
+
+  if (!all.some(f => String(f.path || "") === "data/memory/ai_chat_system_prompt.md")) {
+    all.push({
+      path: "data/memory/ai_chat_system_prompt.md",
+      title: "AI Chat System Prompt",
+      purpose: "Всегда добавляется к каждому сообщению в AI Chat: роль ИИ, правила поведения и базовое знание о GREENHOUSE v17.",
+      exists: true,
+      edit: "careful",
+      ctx_title: "Memory"
+    });
   }
 
   const has = (f, x) => String(f.path || "").includes(x);
@@ -168,6 +223,9 @@ function renderFileRow(f){
       <div>
         <div class="ctx-path" title="${esc(f.path)}">${esc(f.title || f.path)}</div>
         <div class="ctx-desc" style="font-size:12px;margin-top:4px;">${esc(f.purpose)}</div>
+        ${f.ai_requestable ? `<div style="margin-top:6px;color:#8fb3ff;font-weight:900;font-size:12px;">AI REQUESTABLE — может быть запрошен через REQUEST_CONTEXT</div>` : ""}
+        ${f.ai_watch ? `<div style="margin-top:4px;color:#7ee787;font-weight:900;font-size:12px;">WATCH — ${esc(f.ai_watch_hint || "важный файл для ИИ")}</div>` : ""}
+
         <div class="ctx-path" style="font-size:11px;color:#8fa3c2;margin-top:4px;">${esc(f.path)}</div>
       </div>
       <div class="${f.exists ? "ctx-status-ok" : "ctx-status-bad"}">${f.exists ? "OK" : "MISS"}</div>
@@ -214,6 +272,7 @@ function renderGroup(title, subtitle, files, collapsed=false){
 
 
 let SECTION_OPEN = {
+  ai_core: false,
   runtime: false,
   registry: false,
   memory: false,
@@ -224,6 +283,16 @@ let SECTION_OPEN = {
 
 function sectionForFile(f){
   const p = String(f.path || "");
+  const ctx = String(f.ctx_title || f.ctx_key || f.section || "");
+  if (
+    ctx.includes("Основное для ИИ") ||
+    ctx.includes("ai_core") ||
+    p.includes("CURRENT_CONTEXT") ||
+    p.includes("AVAILABLE_CONTEXT_CATALOG") ||
+    p.includes("ai_chat_live_history.json") ||
+    p.includes("ai_context_catalog_overrides.json") ||
+    p.includes("ai_chat_io_log.jsonl")
+  ) return "ai_core";
 
   if (p.includes("system_state") || p.includes("ask_state")) return "runtime";
   if (p.includes("data/registry/")) return "registry";
@@ -231,7 +300,9 @@ function sectionForFile(f){
     p.includes("knowledge") ||
     p.includes("chat_history") ||
     p.includes("strawberry_log") ||
-    p.includes("decision_log.json")
+    p.includes("decision_log.json") ||
+    p.includes("ai_chat_system_prompt.md") ||
+    p.includes("ai_chat_system_prompt.md")
   ) return "memory";
   if (p.includes("data/memory/logs/")) return "logs";
   if (p.endsWith(".py")) return "code";
@@ -240,6 +311,7 @@ function sectionForFile(f){
 
 function groupContextFiles(contexts){
   const groups = {
+    ai_core: [],
     runtime: [],
     registry: [],
     memory: [],
@@ -248,9 +320,17 @@ function groupContextFiles(contexts){
     other: []
   };
 
+  const seen = new Set();
+
   for (const ctx of contexts || []) {
     for (const f of ctx.files || []) {
-      const item = {...f, ctx_title: ctx.title};
+      const item = {...f, ctx_title: ctx.title, ctx_key: ctx.key};
+      const path = String(item.path || "");
+
+      // Если файл уже пришёл в "Основное для ИИ", ниже его не дублируем.
+      if (seen.has(path)) continue;
+      seen.add(path);
+
       groups[sectionForFile(item)].push(item);
     }
   }
@@ -264,6 +344,9 @@ function renderFileRow(f){
       <div>
         <div class="ctx-path" title="${esc(f.path)}">${esc(f.title || f.path)}</div>
         <div class="ctx-desc" style="font-size:12px;margin-top:4px;">${esc(f.purpose)}</div>
+        ${f.ai_requestable ? `<div style="margin-top:6px;color:#8fb3ff;font-weight:900;font-size:12px;">AI REQUESTABLE — может быть запрошен через REQUEST_CONTEXT</div>` : ""}
+        ${f.ai_watch ? `<div style="margin-top:4px;color:#7ee787;font-weight:900;font-size:12px;">WATCH — ${esc(f.ai_watch_hint || "важный файл для ИИ")}</div>` : ""}
+
         <div class="ctx-path" style="font-size:11px;color:#8fa3c2;margin-top:4px;">${esc(f.path)}</div>
       </div>
 
@@ -321,6 +404,7 @@ function renderCatalog(data){
   const g = groupContextFiles(data.contexts || []);
 
   list.innerHTML =
+    renderSection("ai_core", "🧠 Основное для ИИ", "Что постоянно уходит в AI Chat и чем он пользуется для запросов.", g.ai_core) +
     renderSection("runtime", "⚙️ Runtime", "Текущий режим, ASK-state, оперативное состояние.", g.runtime) +
     renderSection("registry", "🧩 Registry", "Устройства, action map, capabilities, scenarios, manifest, NL map.", g.registry) +
     renderSection("memory", "🧠 Memory", "Знания, история чата, клубника, старые decision-файлы.", g.memory) +

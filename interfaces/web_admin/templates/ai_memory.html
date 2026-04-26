@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+.ai-memory-page{max-width:1240px;margin:0 auto}
+.ai-memory-head{margin-bottom:22px}
+.ai-memory-kicker{font-size:12px;font-weight:900;letter-spacing:.14em;text-transform:uppercase;color:#8fb3ff;margin-bottom:10px}
+.ai-memory-head h1{font-size:36px;margin:0 0 10px;color:#fff}
+.ai-memory-head p{margin:0;color:#b9c8e4;font-size:16px;line-height:1.5;max-width:980px}
+.log-card{background:rgba(7,16,34,.94);border:1px solid rgba(71,115,190,.42);border-radius:24px;padding:18px;margin-bottom:14px}
+.log-meta{display:flex;gap:10px;flex-wrap:wrap;color:#8fb3ff;font-weight:900;font-size:13px;margin-bottom:10px}
+.log-block{background:rgba(2,8,23,.72);border:1px solid rgba(120,160,220,.22);border-radius:14px;padding:12px;margin-top:10px;white-space:pre-wrap;overflow:auto;max-height:360px}
+.log-actions{display:flex;gap:10px;margin-bottom:16px}
+</style>
+
+<section class="ai-memory-page">
+  <div class="ai-memory-head">
+    <div class="ai-memory-kicker">AI Memory / IO Log</div>
+    <h1>AI Logs</h1>
+    <p>Длинный лог: что именно ушло в ИИ, какой context был приложен, какая история была отправлена и что ИИ ответил.</p>
+  </div>
+
+  <div class="log-actions">
+    <button class="primary-btn" onclick="loadLogs()">Обновить</button>
+    <button class="ghost-btn" onclick="clearLogs()">Очистить лог</button>
+    <select id="logLimit" class="ghost-btn" onchange="loadLogs()">
+      <option value="20">20 записей</option>
+      <option value="50" selected>50 записей</option>
+      <option value="100">100 записей</option>
+    </select>
+    <a class="ghost-btn" href="/web/ai/chat">AI Chat</a>
+    <a class="ghost-btn" href="/web/ai/context">AI Context</a>
+    <a class="ghost-btn" href="/web/ai/status">AI Status</a>
+  </div>
+
+  <div id="logBox">Загрузка...</div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function esc(v){return String(v ?? "—")}
+function renderLogItem(x, i){
+  return `
+    <article class="log-card">
+      <div class="log-meta">
+        <span>#${i+1}</span>
+        <span>${new Date((x.ts || 0) * 1000).toLocaleString()}</span>
+        <span>provider: ${esc(x.provider)}</span>
+        <span>latency: ${esc(x.latency_ms)} ms</span>
+        <span>fallback: ${esc(x.fallback_used)}</span>
+      </div>
+      <h3>Сообщение пользователя</h3>
+      <div class="log-block">${esc(x.user_message)}</div>
+      <h3>Ответ ИИ</h3>
+      <div class="log-block">${esc(x.answer)}</div>
+      <details>
+        <summary>Что ушло в ИИ целиком</summary>
+        <div class="log-block">${esc(x.prompt_sent)}</div>
+      </details>
+      <details>
+        <summary>Context sent</summary>
+        <div class="log-block">${esc(JSON.stringify(x.context_sent, null, 2))}</div>
+      </details>
+      <details>
+        <summary>History sent</summary>
+        <div class="log-block">${esc(JSON.stringify(x.history_sent, null, 2))}</div>
+      </details>
+    </article>
+  `;
+}
+async function loadLogs(){
+  const box = document.getElementById("logBox");
+  box.textContent = "Загрузка...";
+  const limit = document.getElementById("logLimit")?.value || 50;
+  const res = await fetch("/api/ai/chat-live/logs?limit=" + encodeURIComponent(limit));
+  const data = await res.json();
+  const items = (data.items || []).reverse();
+  box.innerHTML = items.length ? items.map(renderLogItem).join("") : "Лог пока пуст.";
+}
+async function clearLogs(){
+  if(!confirm("Очистить AI Logs? История чата не удалится, только IO-log.")) return;
+  await fetch("/api/ai/chat-live/logs/clear", {method:"POST"});
+  loadLogs();
+}
+document.addEventListener("DOMContentLoaded", loadLogs);
+</script>
+{% endblock %}

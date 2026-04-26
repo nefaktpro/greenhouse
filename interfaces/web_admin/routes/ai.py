@@ -2,6 +2,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
+from greenhouse_v17.services.ai_chat_controller import handle_chat_message
 from greenhouse_v17.services.ai_client import get_ai_connection_status, get_deepseek_connection_status, ask_ai_smoke_test
 import os
 import time
@@ -78,6 +79,15 @@ def create_ask_via_actions(payload: AIMessageIn):
     return {"ok": True, "pending": state}
 
 
+
+
+@router.get("/web/ai/memory", response_class=HTMLResponse)
+def ai_memory_page(request: Request):
+    return templates.TemplateResponse(request, "ai_memory.html", {})
+
+@router.get("/web/ai/chat", response_class=HTMLResponse)
+def ai_chat_page(request: Request):
+    return templates.TemplateResponse(request, "ai_chat.html", {})
 @router.get("/web/ai/status", response_class=HTMLResponse)
 def ai_status_page(request: Request):
     return templates.TemplateResponse(request, "ai_status.html", {})
@@ -109,6 +119,7 @@ def ai_context_backups():
 
 
 from pydantic import BaseModel
+from greenhouse_v17.services.ai_chat_controller import handle_chat_message
 from greenhouse_v17.services.ai_client import get_ai_connection_status, get_deepseek_connection_status, ask_ai_smoke_test
 import os
 import time
@@ -245,3 +256,84 @@ def ai_health_full():
 @router.post("/api/ai/smoke-test")
 def ai_smoke_test():
     return ask_ai_smoke_test()
+
+
+class AIChatRequest(BaseModel):
+    message: str
+
+
+@router.post("/api/ai/chat")
+def ai_chat(req: AIChatRequest):
+    return handle_chat_message(req.message)
+
+
+from greenhouse_v17.services.context.context_service import build_context
+from greenhouse_v17.services.ai_client import ask_ai_with_fallback
+
+class AIChatV2Request(BaseModel):
+    message: str
+
+
+@router.post("/api/ai/chat2")
+def ai_chat_v2(req: AIChatV2Request):
+    return ask_ai_chat2(req.message)
+
+
+class AIChatPromptSaveIn(BaseModel):
+    text: str
+
+@router.get("/api/ai/chat2/history")
+def ai_chat2_history():
+    return {"ok": True, "history": load_ai_chat2_history()}
+
+
+@router.post("/api/ai/chat2/clear")
+def ai_chat2_clear():
+    return clear_ai_chat2_history()
+
+
+@router.get("/api/ai/chat2/prompt")
+def ai_chat2_prompt_get():
+    return {"ok": True, "text": get_ai_chat_prompt()}
+
+
+@router.post("/api/ai/chat2/prompt")
+def ai_chat2_prompt_save(payload: AIChatPromptSaveIn):
+    return save_ai_chat_prompt(payload.text)
+
+
+from greenhouse_v17.services.ai_chat_memory import (
+    ask_ai_chat_live,
+    load_history as load_ai_chat_live_history,
+    clear_history as clear_ai_chat_live_history,
+    load_io_logs as load_ai_chat_io_logs,
+    clear_io_logs as clear_ai_chat_io_logs,
+)
+
+class AIChatLiveRequest(BaseModel):
+    message: str
+
+
+@router.post("/api/ai/chat-live")
+def ai_chat_live(payload: AIChatLiveRequest):
+    return ask_ai_chat_live(payload.message)
+
+
+@router.get("/api/ai/chat-live/history")
+def ai_chat_live_history():
+    return {"ok": True, "history": load_ai_chat_live_history()}
+
+
+@router.post("/api/ai/chat-live/clear")
+def ai_chat_live_clear():
+    return clear_ai_chat_live_history()
+
+
+@router.get("/api/ai/chat-live/logs")
+def ai_chat_live_logs(limit: int = 80):
+    return {"ok": True, "items": load_ai_chat_io_logs(limit)}
+
+
+@router.post("/api/ai/chat-live/logs/clear")
+def ai_chat_live_logs_clear():
+    return clear_ai_chat_io_logs()

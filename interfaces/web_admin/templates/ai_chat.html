@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+.ai-chat-page{max-width:1100px;margin:0 auto}
+.ai-chat-head{margin-bottom:22px}
+.ai-chat-kicker{font-size:12px;font-weight:900;letter-spacing:.14em;text-transform:uppercase;color:#8fb3ff;margin-bottom:10px}
+.ai-chat-head h1{font-size:36px;margin:0 0 10px;color:#fff}
+.ai-chat-head p{margin:0;color:#b9c8e4;font-size:16px;line-height:1.5;max-width:920px}
+.chat-shell{background:rgba(7,16,34,.94);border:1px solid rgba(71,115,190,.42);border-radius:24px;padding:18px}
+.chat-window{height:520px;overflow:auto;border:1px solid rgba(120,160,220,.25);border-radius:18px;padding:16px;background:rgba(2,8,23,.55)}
+.msg{max-width:82%;margin:0 0 14px;padding:13px 15px;border-radius:16px;line-height:1.45;white-space:pre-wrap}
+.msg.user{margin-left:auto;background:rgba(80,140,255,.22);border:1px solid rgba(80,140,255,.35);color:#fff}
+.msg.ai{margin-right:auto;background:rgba(126,231,135,.10);border:1px solid rgba(126,231,135,.22);color:#dfffe5}
+.msg.meta{margin:0 auto 14px;background:rgba(255,216,102,.08);border:1px solid rgba(255,216,102,.20);color:#ffd866;font-size:13px}
+.chat-row{display:flex;gap:10px;margin-top:14px}
+.chat-row textarea{flex:1;min-height:72px;border-radius:16px;border:1px solid rgba(120,160,220,.35);background:rgba(2,8,23,.75);color:#fff;padding:13px 14px;font-size:15px;resize:vertical}
+.chat-actions{display:flex;flex-direction:column;gap:8px}
+</style>
+
+<section class="ai-chat-page">
+  <div class="ai-chat-head">
+    <div class="ai-chat-kicker">AI Chat / Context</div>
+    <h1>Чат с ИИ</h1>
+    <p>Отдельный разговорный чат. Команды управления оставляем в AI Lab, а здесь можно спрашивать, обсуждать систему, файлы, идеи и контекст.</p>
+  </div>
+
+  <article class="chat-shell">
+    <div id="chatWindow" class="chat-window">
+      <div class="msg meta">AI Chat готов. История сохраняется. Enter — отправить, Shift+Enter — новая строка.</div>
+    </div>
+
+    <div class="chat-row">
+      <textarea id="chatInput" placeholder="Например: что ты думаешь о текущем состоянии системы?"></textarea>
+      <div class="chat-actions">
+        <button class="primary-btn" onclick="sendAIChat()">Отправить</button>
+        <button class="ghost-btn" onclick="clearChat()">Очистить экран</button>
+        <a class="ghost-btn" href="/web/ai/memory">AI Log</a>
+        <a class="ghost-btn" href="/web/ai">AI Lab</a>
+      </div>
+    </div>
+  </article>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function addMsg(role, text){
+  const box = document.getElementById("chatWindow");
+  const div = document.createElement("div");
+  div.className = "msg " + role;
+  div.textContent = text || "—";
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+}
+function renderHistory(history){
+  const box = document.getElementById("chatWindow");
+  box.innerHTML = '<div class="msg meta">AI Chat готов. История сохраняется. Enter — отправить, Shift+Enter — новая строка.</div>';
+  (history || []).forEach(m => addMsg(m.role === "user" ? "user" : "ai", m.content || ""));
+}
+async function loadHistory(){
+  const res = await fetch("/api/ai/chat-live/history");
+  const data = await res.json();
+  renderHistory(data.history || []);
+}
+async function sendAIChat(){
+  const input = document.getElementById("chatInput");
+  const message = input.value.trim();
+  if(!message) return;
+
+  addMsg("user", message);
+  input.value = "";
+  addMsg("meta", "Думаю...");
+
+  try{
+    const res = await fetch("/api/ai/chat-live", {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({message})
+    });
+    const data = await res.json();
+    const metas = document.querySelectorAll(".msg.meta");
+    if(metas.length) metas[metas.length-1].remove();
+    addMsg("ai", data.answer || JSON.stringify(data, null, 2));
+  }catch(e){
+    const metas = document.querySelectorAll(".msg.meta");
+    if(metas.length) metas[metas.length-1].remove();
+    addMsg("ai", "Ошибка: " + e);
+  }
+}
+async function clearChat(){
+  await fetch("/api/ai/chat-live/clear", {method:"POST"});
+  renderHistory([]);
+}
+document.getElementById("chatInput").addEventListener("keydown", function(e){
+  if(e.key === "Enter" && !e.shiftKey){
+    e.preventDefault();
+    sendAIChat();
+  }
+});
+document.addEventListener("DOMContentLoaded", loadHistory);
+</script>
+{% endblock %}
