@@ -124,6 +124,28 @@ def load_io_logs(limit: int = 80) -> List[Dict[str, Any]]:
     return out
 
 
+
+def ask_ai_chat_live(message: str) -> Dict[str, Any]:
+    _ensure()
+
+    # --- STEP 1: try control layer first ---
+    try:
+        from greenhouse_v17.services.ai_chat_controller import handle_chat_message
+        control = handle_chat_message(message)
+
+        if control:
+            return {
+                "ok": True,
+                "kind": "control",
+                "answer": control.get("message"),
+                "control": control,
+                "history": load_history(),
+            }
+    except Exception as e:
+        print("AI control layer error:", e)
+
+    # --- STEP 2: fallback to LLM ---
+
 def ask_ai_chat_live(message: str) -> Dict[str, Any]:
     _ensure()
 

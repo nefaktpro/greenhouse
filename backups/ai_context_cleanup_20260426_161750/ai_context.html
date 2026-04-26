@@ -1,0 +1,654 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+
+
+
+<style>
+.ctx-page{max-width:1240px;margin:0 auto}
+.ctx-head{margin-bottom:22px}
+.ctx-kicker{font-size:13px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:#8fb3ff;margin-bottom:10px}
+.ctx-head h1{font-size:34px;margin:0 0 10px;color:#fff}
+.ctx-head p{margin:0;color:#c7d5ee;font-size:16px;line-height:1.45;max-width:820px}
+.ctx-layout{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:20px;align-items:start}
+.ctx-card{background:rgba(7,16,34,.92);border:1px solid rgba(71,115,190,.42);border-radius:22px;padding:22px;min-width:0}
+.ctx-grid{display:grid;gap:14px}
+.ctx-item{background:rgba(14,30,62,.72);border:1px solid rgba(71,115,190,.26);border-radius:18px;padding:18px}
+.ctx-item-top{display:flex;justify-content:space-between;gap:14px;align-items:flex-start}
+.ctx-title{font-size:20px;font-weight:950;color:#fff;margin-bottom:6px}
+.ctx-desc{color:#c7d5ee;font-size:14px;line-height:1.4}
+.ctx-pill{display:inline-flex;border-radius:999px;padding:7px 10px;font-size:12px;font-weight:900;background:rgba(88,166,255,.12);color:#8fb3ff;border:1px solid rgba(88,166,255,.32);white-space:nowrap}
+.ctx-files{margin-top:14px;display:grid;gap:8px}
+.ctx-file{display:grid;grid-template-columns:minmax(0,1fr) 70px 120px 96px;gap:10px;align-items:center;background:rgba(7,16,34,.62);border:1px solid rgba(255,255,255,.07);border-radius:12px;padding:10px 12px}
+.ctx-path{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:#eef5ff;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ctx-status-ok{color:#7ee787;font-weight:900}
+.ctx-status-bad{color:#ffc2cd;font-weight:900}
+.ctx-meta{color:#9fb2d0;font-size:12px;text-align:right}
+.ctx-policy{display:grid;gap:10px}
+.ctx-policy div{background:rgba(14,30,62,.72);border:1px solid rgba(71,115,190,.24);border-radius:14px;padding:13px}
+.ctx-policy b{display:block;color:#8fb3ff;margin-bottom:4px}
+.ctx-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+.ctx-raw{height:300px;overflow:auto;margin-top:14px}
+.ctx-file-panel{margin-top:20px}
+.ctx-file-panel-head{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:14px}
+.ctx-file-panel h2{margin:0 0 6px;font-size:24px}
+.ctx-panel-actions{display:flex;gap:10px;flex-wrap:wrap}
+.ctx-file-viewer{width:100%;height:56vh;min-height:420px;overflow:auto;white-space:pre;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;line-height:1.45;tab-size:2;box-sizing:border-box;resize:vertical}
+.severity-dot{display:inline-flex;align-items:center;gap:6px;font-weight:900}
+.sev-safe_json:before{content:"🟢"}
+.sev-safe_runtime:before{content:"🟢"}
+.sev-careful:before,.sev-careful_json:before,.sev-careful_csv:before{content:"🟡"}
+.sev-critical:before,.sev-metadata_only:before{content:"🔴"}
+.sev-black:before,.sev-readonly:before,.sev-planned_or_optional:before{content:"⚫"}
+@media(max-width:1000px){.ctx-layout{grid-template-columns:1fr}.ctx-file{grid-template-columns:1fr}}
+</style>
+
+<section class="ctx-page">
+  <div class="ctx-head">
+    <div class="ctx-kicker">AI / Context Resolver</div>
+    <h1>Каталог контекстов AI</h1>
+    <p>AI не читает файлы и Home Assistant напрямую. Он видит только разрешённые типы контекста и безопасные метаданные через Resolver.</p>
+  </div>
+
+  <div class="ctx-layout">
+    <main class="ctx-card">
+      <div class="ctx-actions">
+        <button class="primary-btn" onclick="loadCatalog()">Обновить каталог</button>
+        <button class="ghost-btn" onclick="loadBackups()">Backups / Restore</button>
+        <a class="ghost-btn" href="/web/ai">AI Lab</a>
+      </div>
+      <div id="ctx-list" class="ctx-grid" style="margin-top:18px;">Загрузка...</div>
+    </main>
+
+    <aside class="ctx-card">
+      <div class="ctx-kicker">Policy</div>
+      <h2>Ограничения</h2>
+      <div id="ctx-policy" class="ctx-policy"></div>
+
+      <details style="margin-top:14px;">
+        <summary style="cursor:pointer;color:#8fb3ff;font-weight:900;">Debug JSON</summary>
+        <pre id="ctx-raw" class="result-box ctx-raw">{}</pre>
+      </details>
+    </aside>
+  </div>
+
+  <section id="backupPanel" class="ctx-card ctx-file-panel" style="display:none;">
+    <div class="ctx-file-panel-head">
+      <div>
+        <div class="ctx-kicker">Backups / Restore</div>
+        <h2>История UI-правок</h2>
+        <div class="ctx-desc">Backup создаётся автоматически при сохранении файла из AI Context.</div>
+      </div>
+      <div class="ctx-panel-actions">
+        <button class="ghost-btn" onclick="loadBackups()">Обновить</button>
+        <button class="ghost-btn" onclick="closeBackupPanel()">Закрыть</button>
+      </div>
+    </div>
+    <div id="backupList" class="ctx-grid">Загрузка...</div>
+  </section>
+
+  <section id="filePanel" class="ctx-card ctx-file-panel" style="display:none;">
+    <div class="ctx-file-panel-head">
+      <div>
+        <div class="ctx-kicker">File preview / edit</div>
+        <h2 id="filePanelTitle">Файл</h2>
+        <div id="filePanelMeta" class="ctx-desc">—</div>
+      </div>
+      <div class="ctx-panel-actions">
+        <button id="editFileBtn" class="ghost-btn" onclick="enableEdit()" disabled>Редактировать</button>
+        <button id="saveFileBtn" class="primary-btn" onclick="saveFile()" style="display:none;">Сохранить</button>
+        <button class="ghost-btn" onclick="closeFilePanel()">Закрыть</button>
+      </div>
+    </div>
+
+    <textarea id="ctxViewer" class="result-box ctx-file-viewer" readonly>Выбери файл слева</textarea>
+  </section>
+</section>
+{% endblock %}
+
+{% block scripts %}
+
+<script>
+async function loadAiContextMapSummary(){
+  const el = document.getElementById("aiContextMapSummary");
+  if(!el) return;
+  try{
+    const res = await fetch("/api/ai/context/catalog");
+    const data = await res.json();
+    let total = 0, requestable = 0, watch = 0;
+    const sections = [];
+    (data.contexts || []).forEach(ctx => {
+      const files = ctx.files || [];
+      total += files.length;
+      requestable += files.filter(f => f.ai_requestable).length;
+      watch += files.filter(f => f.ai_watch).length;
+      sections.push(`${ctx.title || ctx.key}: ${files.length}`);
+    });
+    el.innerHTML =
+      `Сейчас в каталоге: <b>${total}</b> файлов · ` +
+      `AI REQUESTABLE: <b>${requestable}</b> · ` +
+      `WATCH: <b>${watch}</b><br>` +
+      `Разделы: ${sections.join(" · ")}`;
+  }catch(e){
+    el.textContent = "Не удалось загрузить карту контекста: " + e;
+  }
+}
+document.addEventListener("DOMContentLoaded", loadAiContextMapSummary);
+</script>
+
+<script>
+let CURRENT_FILE_PATH = null;
+let CURRENT_FILE_EDIT = "critical";
+let CURRENT_RAW_CONTENT = "";
+let LOGS_COLLAPSED = true;
+
+function esc(v){return String(v ?? "—").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;")}
+
+function editLevel(f){
+  return f.edit || "critical";
+}
+
+function fileMeta(f){
+  if(!f.exists) return "missing";
+  if(f.json) return `${f.json.type} / ${f.json.size ?? "?"}`;
+  if(f.csv) return `${f.csv.lines ?? "?"} lines`;
+  return `${f.size_bytes ?? 0} b`;
+}
+
+
+function groupContextFiles(contexts){
+  const all = [];
+  for (const ctx of contexts || []) {
+    for (const f of ctx.files || []) {
+      all.push({...f, ctx_title: ctx.title});
+    }
+  }
+
+  if (!all.some(f => String(f.path || "") === "data/memory/ai_chat_system_prompt.md")) {
+    all.push({
+      path: "data/memory/ai_chat_system_prompt.md",
+      title: "AI Chat System Prompt",
+      purpose: "Всегда добавляется к каждому сообщению в AI Chat: роль ИИ, правила поведения и базовое знание о GREENHOUSE v17.",
+      exists: true,
+      edit: "careful",
+      ctx_title: "Memory"
+    });
+  }
+
+  if (!all.some(f => String(f.path || "") === "data/memory/ai_chat_system_prompt.md")) {
+    all.push({
+      path: "data/memory/ai_chat_system_prompt.md",
+      title: "AI Chat System Prompt",
+      purpose: "Всегда добавляется к каждому сообщению в AI Chat: роль ИИ, правила поведения и базовое знание о GREENHOUSE v17.",
+      exists: true,
+      edit: "careful",
+      ctx_title: "Memory"
+    });
+  }
+
+  const has = (f, x) => String(f.path || "").includes(x);
+
+  return {
+    important: all.filter(f =>
+      has(f,"system_state") ||
+      has(f,"ask_state") ||
+      has(f,"ask_log") ||
+      has(f,"manual_log")
+    ),
+    memory: all.filter(f =>
+      has(f,"knowledge") ||
+      has(f,"strawberry") ||
+      has(f,"chat_history")
+    ),
+    registry: all.filter(f =>
+      has(f,"data/registry/")
+    ),
+    logs: all.filter(f =>
+      has(f,"/logs/") &&
+      !has(f,"ask_log") &&
+      !has(f,"manual_log")
+    ),
+    tech: all.filter(f =>
+      has(f,".py") ||
+      has(f,"decision_log.json") ||
+      has(f,"registry_manifest")
+    )
+  };
+}
+
+function renderFileRow(f){
+  return `
+    <div class="ctx-file">
+      <div>
+        <div class="ctx-path" title="${esc(f.path)}">${esc(f.title || f.path)}</div>
+        <div class="ctx-desc" style="font-size:12px;margin-top:4px;">${esc(f.purpose)}</div>
+        ${f.ai_requestable ? `<div style="margin-top:6px;color:#8fb3ff;font-weight:900;font-size:12px;">AI REQUESTABLE — может быть запрошен через REQUEST_CONTEXT</div>` : ""}
+        ${f.ai_watch ? `<div style="margin-top:4px;color:#7ee787;font-weight:900;font-size:12px;">WATCH — ${esc(f.ai_watch_hint || "важный файл для ИИ")}</div>` : ""}
+
+        <div class="ctx-path" style="font-size:11px;color:#8fa3c2;margin-top:4px;">${esc(f.path)}</div>
+      </div>
+      <div class="${f.exists ? "ctx-status-ok" : "ctx-status-bad"}">${f.exists ? "OK" : "MISS"}</div>
+      <div class="ctx-meta">
+        ${esc(fileMeta(f))}<br>
+        <span class="severity-dot sev-${esc(editLevel(f))}">${esc(editLevel(f))}</span>
+      </div>
+      <button class="ghost-btn" onclick='openContextFile(${JSON.stringify(f.path)})' ${f.exists ? "" : "disabled"}>Открыть</button>
+    </div>
+  `;
+}
+
+function renderGroup(title, subtitle, files, collapsed=false){
+  if (!files.length) return "";
+  if (collapsed) {
+    return `
+      <article class="ctx-item">
+        <div class="ctx-item-top">
+          <div>
+            <div class="ctx-title">${esc(title)} ▼</div>
+            <div class="ctx-desc">${esc(subtitle)} · файлов: ${files.length}</div>
+          </div>
+          <button class="ghost-btn" onclick="LOGS_COLLAPSED=false; renderCatalog(window.__CTX_LAST_DATA)">Показать</button>
+        </div>
+      </article>
+    `;
+  }
+
+  return `
+    <article class="ctx-item">
+      <div class="ctx-item-top">
+        <div>
+          <div class="ctx-title">${esc(title)}</div>
+          <div class="ctx-desc">${esc(subtitle)}</div>
+        </div>
+        ${title.includes("LOGS") ? `<button class="ghost-btn" onclick="LOGS_COLLAPSED=true; renderCatalog(window.__CTX_LAST_DATA)">Свернуть</button>` : ""}
+      </div>
+      <div class="ctx-files">
+        ${files.map(renderFileRow).join("")}
+      </div>
+    </article>
+  `;
+}
+
+
+let SECTION_OPEN = {
+  ai_core: false,
+  runtime: false,
+  registry: false,
+  memory: false,
+  logs: false,
+  code: false,
+  other: false
+};
+
+function sectionForFile(f){
+  const p = String(f.path || "");
+  const ctx = String(f.ctx_title || f.ctx_key || f.section || "");
+  if (
+    ctx.includes("Основное для ИИ") ||
+    ctx.includes("ai_core") ||
+    p.includes("CURRENT_CONTEXT") ||
+    p.includes("AVAILABLE_CONTEXT_CATALOG")
+  ) return "ai_core";
+
+  if (p.includes("system_state") || p.includes("ask_state")) return "runtime";
+  if (p.includes("data/registry/")) return "registry";
+  if (
+    p.includes("knowledge") ||
+    p.includes("chat_history") ||
+    p.includes("strawberry_log") ||
+    p.includes("decision_log.json") ||
+    p.includes("ai_chat_system_prompt.md") ||
+    p.includes("ai_chat_system_prompt.md")
+  ) return "memory";
+  if (p.includes("data/memory/logs/")) return "logs";
+  if (p.endsWith(".py")) return "code";
+  return "other";
+}
+
+function groupContextFiles(contexts){
+  const groups = {
+    ai_core: [],
+    runtime: [],
+    registry: [],
+    memory: [],
+    logs: [],
+    code: [],
+    other: []
+  };
+
+  for (const ctx of contexts || []) {
+    for (const f of ctx.files || []) {
+      const item = {...f, ctx_title: ctx.title};
+      groups[sectionForFile(item)].push(item);
+    }
+  }
+
+  return groups;
+}
+
+function renderFileRow(f){
+  return `
+    <div class="ctx-file">
+      <div>
+        <div class="ctx-path" title="${esc(f.path)}">${esc(f.title || f.path)}</div>
+        <div class="ctx-desc" style="font-size:12px;margin-top:4px;">${esc(f.purpose)}</div>
+        ${f.ai_requestable ? `<div style="margin-top:6px;color:#8fb3ff;font-weight:900;font-size:12px;">AI REQUESTABLE — может быть запрошен через REQUEST_CONTEXT</div>` : ""}
+        ${f.ai_watch ? `<div style="margin-top:4px;color:#7ee787;font-weight:900;font-size:12px;">WATCH — ${esc(f.ai_watch_hint || "важный файл для ИИ")}</div>` : ""}
+
+        <div class="ctx-path" style="font-size:11px;color:#8fa3c2;margin-top:4px;">${esc(f.path)}</div>
+      </div>
+
+      <div class="${f.exists ? "ctx-status-ok" : "ctx-status-bad"}">${f.exists ? "OK" : "MISS"}</div>
+
+      <div class="ctx-meta">
+        ${esc(fileMeta(f))}<br>
+        <span class="severity-dot sev-${esc(editLevel(f))}">${esc(editLevel(f))}</span>
+      </div>
+
+      <button class="ghost-btn" onclick='openContextFile(${JSON.stringify(f.path)})' ${f.exists ? "" : "disabled"}>Открыть</button>
+    </div>
+  `;
+}
+
+function renderSection(key, title, subtitle, files){
+  if (!files.length) return "";
+
+  const isOpen = SECTION_OPEN[key];
+
+  return `
+    <article class="ctx-item">
+      <div class="ctx-item-top">
+        <div>
+          <div class="ctx-title">${esc(title)} ${isOpen ? "▲" : "▼"}</div>
+          <div class="ctx-desc">${esc(subtitle)}</div>
+          <div class="ctx-desc" style="margin-top:8px;">Файлы: ${files.filter(x => x.exists).length}/${files.length}</div>
+        </div>
+
+        <button class="ghost-btn" onclick="toggleSection('${key}')">
+          ${isOpen ? "Свернуть" : "Развернуть"}
+        </button>
+      </div>
+
+      ${isOpen ? `<div class="ctx-files">${files.map(renderFileRow).join("")}</div>` : ""}
+    </article>
+  `;
+}
+
+function toggleSection(key){
+  SECTION_OPEN[key] = !SECTION_OPEN[key];
+  renderCatalog(window.__CTX_LAST_DATA || {});
+}
+
+function renderCatalog(data){
+  window.__CTX_LAST_DATA = data;
+
+  const list = document.getElementById("ctx-list");
+  const policy = document.getElementById("ctx-policy");
+
+  policy.innerHTML = Object.entries(data.policy || {}).map(([k,v]) => `
+    <div><b>${esc(k)}</b>${v ? "true" : "false"}</div>
+  `).join("");
+
+  const g = groupContextFiles(data.contexts || []);
+
+  list.innerHTML =
+    renderSection("ai_core", "🧠 Основное для ИИ", "Что постоянно уходит в AI Chat и чем он пользуется для запросов.", g.ai_core) +
+    renderSection("runtime", "⚙️ Runtime", "Текущий режим, ASK-state, оперативное состояние.", g.runtime) +
+    renderSection("registry", "🧩 Registry", "Устройства, action map, capabilities, scenarios, manifest, NL map.", g.registry) +
+    renderSection("memory", "🧠 Memory", "Знания, история чата, клубника, старые decision-файлы.", g.memory) +
+    renderSection("logs", "📚 Logs", "Раздельные логи режимов: manual / ask / test / auto / autopilot / index.", g.logs) +
+    renderSection("code", "🧱 Code", "Код AI, Chat и Context Resolver. Редактировать осторожно.", g.code) +
+    renderSection("other", "📦 Other", "Остальные файлы каталога.", g.other);
+
+  pretty("ctx-raw", data);
+}
+
+
+async function openContextFile(path){
+  const res = await fetch("/api/ai/context/file?path=" + encodeURIComponent(path));
+  const data = await res.json();
+
+  const panel = document.getElementById("filePanel");
+  const viewer = document.getElementById("ctxViewer");
+  const title = document.getElementById("filePanelTitle");
+  const meta = document.getElementById("filePanelMeta");
+
+  panel.style.display = "block";
+  CURRENT_FILE_PATH = path;
+  CURRENT_FILE_EDIT = "critical";
+  CURRENT_RAW_CONTENT = "";
+
+  viewer.readOnly = true;
+  document.getElementById("saveFileBtn").style.display = "none";
+  document.getElementById("editFileBtn").disabled = true;
+
+  if(!data.ok){
+    title.textContent = "Ошибка открытия";
+    meta.textContent = path;
+    viewer.value = JSON.stringify(data, null, 2);
+    panel.scrollIntoView({behavior:"smooth", block:"start"});
+    return;
+  }
+
+  title.textContent = data.meta.title || data.meta.path;
+  CURRENT_FILE_EDIT = data.meta.edit || "critical";
+  CURRENT_RAW_CONTENT = data.content || "";
+
+  meta.textContent = `${data.meta.path} · ${CURRENT_FILE_EDIT} · ${data.truncated ? "truncated" : "full"}`;
+
+  document.getElementById("editFileBtn").disabled = false;
+
+  viewer.value =
+    "PURPOSE: " + (data.meta.purpose || "") + "\n" +
+    "PATH: " + data.meta.path + "\n" +
+    "EDIT: " + CURRENT_FILE_EDIT + "\n" +
+    "TRUNCATED: " + data.truncated + "\n" +
+    "────────────────────────────────────────\n\n" +
+    CURRENT_RAW_CONTENT;
+
+  panel.scrollIntoView({behavior:"smooth", block:"start"});
+}
+
+function enableEdit(){
+  const level = CURRENT_FILE_EDIT || "critical";
+  let msg = "Редактирование файла проекта. Перед сохранением будет создан backup. Продолжить?";
+
+  if (["critical", "black", "readonly", "planned_or_optional", "metadata_only"].includes(level)) {
+    msg = "⚠️ ОПАСНЫЙ ФАЙЛ (" + level + "). Это может сломать код/логику/память. Backup будет создан автоматически. Продолжить?";
+  } else if (["careful", "careful_json", "careful_csv"].includes(level)) {
+    msg = "⚠️ Осторожно: это source of truth / важный файл. Backup будет создан автоматически. Продолжить?";
+  }
+
+  if (!confirm(msg)) return;
+
+  const viewer = document.getElementById("ctxViewer");
+  viewer.readOnly = false;
+  viewer.value = CURRENT_RAW_CONTENT;
+  document.getElementById("saveFileBtn").style.display = "inline-flex";
+}
+
+async function saveFile(){
+  if (!CURRENT_FILE_PATH) {
+    alert("Файл не выбран");
+    return;
+  }
+
+  const content = document.getElementById("ctxViewer").value;
+
+  if (CURRENT_FILE_PATH.endsWith(".json")) {
+    try { JSON.parse(content); }
+    catch(e) {
+      alert("JSON невалидный: " + e.message);
+      return;
+    }
+  }
+
+  const res = await fetch("/api/ai/context/file/save", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({path: CURRENT_FILE_PATH, content})
+  });
+
+  const data = await res.json();
+
+  if (!data.ok) {
+    alert("Не сохранено: " + (data.error || "unknown_error"));
+    return;
+  }
+
+  alert("Сохранено. Backup: " + data.backup);
+  await openContextFile(CURRENT_FILE_PATH);
+  await loadCatalog();
+}
+
+function closeFilePanel(){
+  document.getElementById("filePanel").style.display = "none";
+  CURRENT_FILE_PATH = null;
+  CURRENT_FILE_EDIT = "critical";
+  CURRENT_RAW_CONTENT = "";
+}
+
+
+function formatBackupDate(path){
+  try{
+    const match = path.match(/ui_edits\/(\d{8})_(\d{6})/);
+    if(!match) return null;
+
+    const d = match[1];
+    const t = match[2];
+
+    const date = `${d.slice(6,8)}.${d.slice(4,6)}.${d.slice(0,4)}`;
+    const time = `${t.slice(0,2)}:${t.slice(2,4)}:${t.slice(4,6)}`;
+
+    return {date, time};
+  }catch(e){
+    return null;
+  }
+}
+
+async function loadBackups(){
+
+  const panel = document.getElementById("backupPanel");
+  const list = document.getElementById("backupList");
+  panel.style.display = "block";
+  list.innerHTML = "Загрузка...";
+  panel.scrollIntoView({behavior:"smooth", block:"start"});
+
+  const res = await fetch("/api/ai/context/backups");
+  const data = await res.json();
+
+  if(!data.ok){
+    list.innerHTML = "<div class='ctx-item'>Ошибка загрузки backup</div>";
+    return;
+  }
+
+  const items = data.items || [];
+  if(!items.length){
+    list.innerHTML = "<div class='ctx-item'>Backup пока нет. Они появятся после первого сохранения файла.</div>";
+    return;
+  }
+
+  
+list.innerHTML = items.map(item => {
+  const dt = formatBackupDate(item.path);
+
+  return `
+    <article class="ctx-item">
+      <div class="ctx-item-top">
+        <div>
+          <div class="ctx-title">${esc(item.name)}</div>
+
+          ${dt ? `
+            <div style="margin-top:6px;font-size:14px;color:#9fb3d1;">
+              📅 ${dt.date} &nbsp;&nbsp; ⏰ ${dt.time}
+            </div>
+          ` : ""}
+
+          <div class="ctx-desc" style="margin-top:6px;">
+            ${esc(item.path)}
+          </div>
+
+          <div class="ctx-desc" style="margin-top:6px;">
+            size: ${esc(item.size)} bytes
+          </div>
+        </div>
+
+        <span class="ctx-pill">backup</span>
+      </div>
+
+      <div class="ctx-actions">
+        <button class="ghost-btn" onclick='openBackup(${JSON.stringify(item.path)})'>Открыть</button>
+        <button class="primary-btn" onclick='restoreBackup(${JSON.stringify(item.path)})'>Восстановить</button>
+      </div>
+    </article>
+  `;
+}).join("");
+
+}
+
+async function openBackup(path){
+  await openContextFile(path);
+}
+
+async function restoreBackup(path){
+  if(!confirm("⚠️ Восстановить файл из backup? Текущая версия будет заменена содержимым backup.")){
+    return;
+  }
+
+  const res = await fetch("/api/ai/context/restore", {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({path})
+  });
+
+  const data = await res.json();
+
+  if(!data.ok){
+    alert("Не восстановлено: " + (data.error || "unknown_error"));
+    return;
+  }
+
+  alert("Восстановлено: " + data.restored_to);
+  await loadCatalog();
+}
+
+function closeBackupPanel(){
+  document.getElementById("backupPanel").style.display = "none";
+}
+
+async function loadCatalog(){
+  const res = await fetch("/api/ai/context/catalog");
+  const data = await res.json();
+  renderCatalog(data);
+}
+
+document.addEventListener("DOMContentLoaded", loadCatalog);
+
+// === GROUPING ===
+function groupFiles(items){
+  return {
+    system: items.filter(i => i.path.includes("system_state") || i.path.includes("ask_state")),
+    control: items.filter(i => i.path.includes("ask_log") || i.path.includes("manual_log")),
+    memory: items.filter(i =>
+      i.path.includes("knowledge") ||
+      i.path.includes("strawberry") ||
+      i.path.includes("chat_history")
+    ),
+    logs: items.filter(i =>
+      i.path.includes("/logs/") &&
+      !i.path.includes("ask_log") &&
+      !i.path.includes("manual_log")
+    )
+  }
+}
+
+let logsCollapsed = true;
+
+function toggleLogs(){
+  logsCollapsed = !logsCollapsed;
+  renderCatalog(currentItems);
+}
+</script>
+
+{% endblock %}

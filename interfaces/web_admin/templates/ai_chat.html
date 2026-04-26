@@ -1,103 +1,293 @@
 {% extends "base.html" %}
 
 {% block content %}
-<style>
-.ai-chat-page{max-width:1100px;margin:0 auto}
-.ai-chat-head{margin-bottom:22px}
-.ai-chat-kicker{font-size:12px;font-weight:900;letter-spacing:.14em;text-transform:uppercase;color:#8fb3ff;margin-bottom:10px}
-.ai-chat-head h1{font-size:36px;margin:0 0 10px;color:#fff}
-.ai-chat-head p{margin:0;color:#b9c8e4;font-size:16px;line-height:1.5;max-width:920px}
-.chat-shell{background:rgba(7,16,34,.94);border:1px solid rgba(71,115,190,.42);border-radius:24px;padding:18px}
-.chat-window{height:520px;overflow:auto;border:1px solid rgba(120,160,220,.25);border-radius:18px;padding:16px;background:rgba(2,8,23,.55)}
-.msg{max-width:82%;margin:0 0 14px;padding:13px 15px;border-radius:16px;line-height:1.45;white-space:pre-wrap}
-.msg.user{margin-left:auto;background:rgba(80,140,255,.22);border:1px solid rgba(80,140,255,.35);color:#fff}
-.msg.ai{margin-right:auto;background:rgba(126,231,135,.10);border:1px solid rgba(126,231,135,.22);color:#dfffe5}
-.msg.meta{margin:0 auto 14px;background:rgba(255,216,102,.08);border:1px solid rgba(255,216,102,.20);color:#ffd866;font-size:13px}
-.chat-row{display:flex;gap:10px;margin-top:14px}
-.chat-row textarea{flex:1;min-height:72px;border-radius:16px;border:1px solid rgba(120,160,220,.35);background:rgba(2,8,23,.75);color:#fff;padding:13px 14px;font-size:15px;resize:vertical}
-.chat-actions{display:flex;flex-direction:column;gap:8px}
-</style>
-
-<section class="ai-chat-page">
+<div class="ai-chat-page">
   <div class="ai-chat-head">
-    <div class="ai-chat-kicker">AI Chat / Context</div>
+    <div class="ai-chat-kicker">AI CHAT / CONTEXT</div>
     <h1>Чат с ИИ</h1>
     <p>Отдельный разговорный чат. Команды управления оставляем в AI Lab, а здесь можно спрашивать, обсуждать систему, файлы, идеи и контекст.</p>
   </div>
 
-  <article class="chat-shell">
-    <div id="chatWindow" class="chat-window">
-      <div class="msg meta">AI Chat готов. История сохраняется. Enter — отправить, Shift+Enter — новая строка.</div>
-    </div>
+  <div class="ai-chat-shell">
+    <div class="ai-chat-status">AI Chat готов. История сохраняется. Enter — отправить, Shift+Enter — новая строка.</div>
 
-    <div class="chat-row">
+    <div id="chatMessages" class="ai-chat-window"></div>
+
+    <div class="ai-chat-input-row">
       <textarea id="chatInput" placeholder="Например: что ты думаешь о текущем состоянии системы?"></textarea>
-      <div class="chat-actions">
-        <button class="primary-btn" onclick="sendAIChat()">Отправить</button>
-        <button class="ghost-btn" onclick="clearChat()">Очистить экран</button>
-        <a class="ghost-btn" href="/web/ai/memory">AI Log</a>
-        <a class="ghost-btn" href="/web/ai">AI Lab</a>
+
+      <div class="ai-chat-actions">
+        <button id="sendBtn" class="btn primary">Отправить</button>
+        <button id="clearBtn" class="btn">Очистить экран</button>
+        <a href="/web/ai/logs">AI Log</a>
+        <a href="/web/ai">AI Lab</a>
       </div>
     </div>
-  </article>
-</section>
+  </div>
+</div>
+
+<style>
+.ai-chat-page{
+  width:min(100%,1120px);
+  margin:0 auto;
+  box-sizing:border-box;
+}
+
+.ai-chat-head{
+  margin-bottom:22px;
+}
+
+.ai-chat-kicker{
+  font-size:13px;
+  font-weight:900;
+  letter-spacing:.18em;
+  text-transform:uppercase;
+  color:#8fb3ff;
+  margin-bottom:12px;
+}
+
+.ai-chat-head h1{
+  margin:0 0 18px;
+  color:#fff;
+  font-size:40px;
+  line-height:1.05;
+}
+
+.ai-chat-head p{
+  margin:0;
+  max-width:980px;
+  color:#b9c8e4;
+  font-size:20px;
+  line-height:1.45;
+}
+
+.ai-chat-shell{
+  width:100%;
+  box-sizing:border-box;
+  border:1px solid rgba(68,112,190,.55);
+  border-radius:24px;
+  background:rgba(5,13,30,.72);
+  padding:20px;
+  overflow:hidden;
+}
+
+.ai-chat-status{
+  width:min(820px,90%);
+  margin:0 auto 18px;
+  padding:14px 18px;
+  border-radius:16px;
+  background:rgba(255,184,107,.10);
+  border:1px solid rgba(255,184,107,.35);
+  color:#ffe08a;
+  font-weight:800;
+}
+
+.ai-chat-window{
+  height:520px;
+  overflow-y:auto;
+  box-sizing:border-box;
+  border:1px solid rgba(96,136,205,.35);
+  border-radius:20px;
+  background:rgba(2,8,23,.45);
+  padding:20px;
+}
+
+.msg{
+  box-sizing:border-box;
+  max-width:min(78%,860px);
+  margin:0 0 14px;
+  padding:14px 16px;
+  border-radius:16px;
+  line-height:1.45;
+  white-space:pre-wrap;
+  word-break:break-word;
+}
+
+.msg.user{
+  margin-left:0;
+  margin-right:auto;
+  background:rgba(80,140,255,.22);
+  border:1px solid rgba(80,140,255,.42);
+  color:#fff;
+}
+
+.msg.ai{
+  margin-left:100px;
+  margin-right:auto;
+  background:rgba(126,231,135,.10);
+  border:1px solid rgba(126,231,135,.22);
+  color:#dfffe5;
+}
+
+.msg.meta{
+  margin-left:18px;
+  margin-right:auto;
+  background:rgba(255,184,107,.10);
+  border:1px solid rgba(255,184,107,.32);
+  color:#ffe08a;
+  font-weight:800;
+}
+
+.ai-chat-input-row{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 150px;
+  gap:12px;
+  margin-top:16px;
+  width:100%;
+  box-sizing:border-box;
+}
+
+#chatInput{
+  width:100%;
+  min-height:96px;
+  box-sizing:border-box;
+  resize:vertical;
+  border-radius:16px;
+  border:1px solid rgba(96,136,205,.55);
+  background:rgba(2,8,23,.72);
+  color:#fff;
+  padding:14px 16px;
+  font-size:16px;
+  outline:none;
+}
+
+#chatInput:focus{
+  border-color:rgba(80,140,255,.9);
+  box-shadow:0 0 0 2px rgba(80,140,255,.22);
+}
+
+.ai-chat-actions{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+
+.ai-chat-actions .btn{
+  width:100%;
+}
+
+.ai-chat-actions a{
+  color:#dce8ff;
+  font-weight:800;
+}
+
+@media (max-width: 760px){
+  .ai-chat-page{
+    width:100%;
+  }
+
+  .ai-chat-shell{
+    padding:14px;
+  }
+
+  .ai-chat-window{
+    height:58vh;
+    padding:14px;
+  }
+
+  .msg{
+    max-width:92%;
+  }
+
+  .msg.ai{
+    margin-left:0;
+  }
+
+  .ai-chat-input-row{
+    grid-template-columns:1fr;
+  }
+
+  .ai-chat-head h1{
+    font-size:34px;
+  }
+
+  .ai-chat-head p{
+    font-size:17px;
+  }
+}
+</style>
 {% endblock %}
 
 {% block scripts %}
 <script>
+function esc(s){
+  return String(s || "")
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;");
+}
+
 function addMsg(role, text){
-  const box = document.getElementById("chatWindow");
+  const box = document.getElementById("chatMessages");
   const div = document.createElement("div");
   div.className = "msg " + role;
-  div.textContent = text || "—";
+  div.innerHTML = esc(text);
   box.appendChild(div);
   box.scrollTop = box.scrollHeight;
+  return div;
 }
+
 function renderHistory(history){
-  const box = document.getElementById("chatWindow");
-  box.innerHTML = '<div class="msg meta">AI Chat готов. История сохраняется. Enter — отправить, Shift+Enter — новая строка.</div>';
-  (history || []).forEach(m => addMsg(m.role === "user" ? "user" : "ai", m.content || ""));
+  const box = document.getElementById("chatMessages");
+  box.innerHTML = "";
+  (history || []).slice(-60).forEach(m => {
+    addMsg(m.role === "user" ? "user" : "ai", m.content || "");
+  });
 }
+
 async function loadHistory(){
-  const res = await fetch("/api/ai/chat-live/history");
-  const data = await res.json();
-  renderHistory(data.history || []);
-}
-async function sendAIChat(){
-  const input = document.getElementById("chatInput");
-  const message = input.value.trim();
-  if(!message) return;
-
-  addMsg("user", message);
-  input.value = "";
-  addMsg("meta", "Думаю...");
-
   try{
-    const res = await fetch("/api/ai/chat-live", {
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({message})
-    });
-    const data = await res.json();
-    const metas = document.querySelectorAll(".msg.meta");
-    if(metas.length) metas[metas.length-1].remove();
-    addMsg("ai", data.answer || JSON.stringify(data, null, 2));
+    const r = await fetch("/api/ai/chat-history?ts=" + Date.now(), {cache:"no-store"});
+    const data = await r.json();
+    renderHistory(data.history || []);
   }catch(e){
-    const metas = document.querySelectorAll(".msg.meta");
-    if(metas.length) metas[metas.length-1].remove();
-    addMsg("ai", "Ошибка: " + e);
+    addMsg("meta", "История пока не загрузилась.");
   }
 }
-async function clearChat(){
-  await fetch("/api/ai/chat-live/clear", {method:"POST"});
-  renderHistory([]);
+
+async function sendMsg(){
+  const input = document.getElementById("chatInput");
+  const text = input.value.trim();
+  if(!text) return;
+
+  input.value = "";
+  addMsg("user", text);
+  const thinking = addMsg("meta", "Думаю...");
+
+  try{
+    const r = await fetch("/api/ai/chat-ui", {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({message:text})
+    });
+
+    const data = await r.json();
+    thinking.remove();
+
+    if(data.history){
+      renderHistory(data.history);
+    }else{
+      addMsg("ai", data.answer || data.message || JSON.stringify(data, null, 2));
+    }
+  }catch(e){
+    thinking.remove();
+    addMsg("meta", "Ошибка отправки: " + e);
+  }
 }
+
+document.getElementById("sendBtn").addEventListener("click", sendMsg);
+
+document.getElementById("clearBtn").addEventListener("click", function(){
+  document.getElementById("chatMessages").innerHTML = "";
+});
+
 document.getElementById("chatInput").addEventListener("keydown", function(e){
   if(e.key === "Enter" && !e.shiftKey){
     e.preventDefault();
-    sendAIChat();
+    sendMsg();
   }
 });
-document.addEventListener("DOMContentLoaded", loadHistory);
+
+window.addEventListener("load", loadHistory);
 </script>
 {% endblock %}

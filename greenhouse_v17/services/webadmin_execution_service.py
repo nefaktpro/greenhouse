@@ -5,6 +5,19 @@ import json
 import os
 import time
 from dataclasses import asdict, dataclass, field
+
+
+import threading
+
+def _run_followup_timer(duration, action_key):
+    import time
+    time.sleep(duration)
+    try:
+        print(f"[TIMER] executing followup {action_key}")
+        execute_action(action_key=action_key, source="timer_followup")
+    except Exception as e:
+        print("[TIMER ERROR]", e)
+
 from functools import lru_cache
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -482,18 +495,36 @@ def clear_ask_state() -> None:
         ASK_STATE_PATH.unlink()
 
 
-def create_pending_ask(action_key: str, title: Optional[str] = None, source: str = "web_admin") -> Dict[str, Any]:
-    entity_id, operation, meta = resolve_action(action_key)
+def create_pending_ask(action_key: str, title: Optional[str] = None, source: str = "web_admin", meta: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    entity_id, operation, action_meta = resolve_action(action_key)
+    ask_meta = meta or {}
+    combined_meta = dict(action_meta or {})
+    if ask_meta:
+        combined_meta["ask_meta"] = ask_meta
     payload = {
         "has_pending": True,
         "created_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "kind": "single_action",
         "action_key": action_key,
-        "title": title or meta.get("title") or action_key,
+        "title": title or action_meta.get("title") or action_key,
         "entity_id": entity_id,
         "operation": operation,
         "source": source,
+        "meta": combined_meta,
     }
+
+    if ask_meta:
+        for k in [
+            "source_text",
+            "duration_seconds",
+            "duration_text",
+            "followup_action_key",
+            "ai_candidate",
+            "requires_timer",
+        ]:
+            if k in ask_meta:
+                payload[k] = ask_meta[k]
+
     save_ask_state(payload)
     return payload
 
@@ -508,6 +539,23 @@ def confirm_pending_ask() -> Dict[str, Any]:
         return {"ok": False, "error": "invalid_ask_state"}
 
     result = execute_action(action_key=action_key, dry_run=False, source="web_admin_ask_confirm")
+
+    # --- TIMER LOGIC ---
+    duration = state.get("duration_seconds")
+    followup = state.get("followup_action_key")
+
+    if duration and followup:
+        try:
+            t = threading.Thread(
+                target=_run_followup_timer,
+                args=(duration, followup),
+                daemon=True
+            )
+            t.start()
+            print(f"[TIMER] scheduled {followup} in {duration}s")
+        except Exception as e:
+            print("[TIMER START ERROR]", e)
+
     clear_ask_state()
     return {"ok": True, "result": result}
 

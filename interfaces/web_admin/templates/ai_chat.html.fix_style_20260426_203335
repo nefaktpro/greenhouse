@@ -1,0 +1,345 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<style>
+.chat-messages, #chatMessages {
+  height: 420px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* USER */
+.msg.user {
+  align-self: flex-end;
+  background: #243a63;
+  color: #fff;
+  padding: 10px 14px;
+  border-radius: 16px;
+  max-width: 70%;
+}
+
+/* AI — ФИКС ЖЁЛТЫЙ */
+.msg.ai {
+  align-self: flex-start;
+  background: rgba(255,184,107,0.15);
+  color: #ffd89b;
+  padding: 10px 14px;
+  border-radius: 16px;
+  max-width: 70%;
+  border: 1px solid rgba(255,184,107,0.35);
+}
+
+/* THINKING */
+.msg.thinking {
+  opacity: 0.6;
+  font-style: italic;
+}
+</style>
+
+.ai-chat-page{max-width:1100px;margin:0 auto}
+.ai-chat-head{margin-bottom:22px}
+.ai-chat-kicker{font-size:12px;font-weight:900;letter-spacing:.14em;text-transform:uppercase;color:#8fb3ff;margin-bottom:10px}
+.ai-chat-head h1{font-size:36px;margin:0 0 10px;color:#fff}
+.ai-chat-head p{margin:0;color:#b9c8e4;font-size:16px;line-height:1.5;max-width:920px}
+.chat-shell{background:rgba(7,16,34,.94);border:1px solid rgba(71,115,190,.42);border-radius:24px;padding:18px}
+.chat-window{height:520px;overflow:auto;border:1px solid rgba(120,160,220,.25);border-radius:18px;padding:16px;background:rgba(2,8,23,.55)}
+.msg{max-width:82%;margin:0 0 14px;padding:13px 15px;border-radius:16px;line-height:1.45;white-space:pre-wrap}
+.msg.user{margin-left:auto;background:rgba(80,140,255,.22);border:1px solid rgba(80,140,255,.35);color:#fff}
+.msg.ai{margin-right:auto;background:rgba(126,231,135,.10);border:1px solid rgba(126,231,135,.22);color:#dfffe5}
+.msg.meta{margin:0 auto 14px;background:rgba(255,216,102,.08);border:1px solid rgba(255,216,102,.20);color:#ffd866;font-size:13px}
+.chat-row{display:flex;gap:10px;margin-top:14px}
+.chat-row textarea{flex:1;min-height:72px;border-radius:16px;border:1px solid rgba(120,160,220,.35);background:rgba(2,8,23,.75);color:#fff;padding:13px 14px;font-size:15px;resize:vertical}
+.chat-actions{display:flex;flex-direction:column;gap:8px}
+</style>
+
+<section class="ai-chat-page">
+  <div class="ai-chat-head">
+    <div class="ai-chat-kicker">AI Chat / Context</div>
+    <h1>Чат с ИИ</h1>
+    <p>Отдельный разговорный чат. Команды управления оставляем в AI Lab, а здесь можно спрашивать, обсуждать систему, файлы, идеи и контекст.</p>
+  </div>
+
+  <article class="chat-shell">
+    <div id="chatWindow" class="chat-window">
+      <div class="msg meta">AI Chat готов. История сохраняется. Enter — отправить, Shift+Enter — новая строка.</div>
+    </div>
+
+    <div class="chat-row">
+      <textarea id="chatInput" placeholder="Например: что ты думаешь о текущем состоянии системы?"></textarea>
+      <div class="chat-actions">
+        <button class="primary-btn" onclick="sendAIChat()">Отправить</button>
+        <button class="ghost-btn" onclick="clearChat()">Очистить экран</button>
+        <a class="ghost-btn" href="/web/ai/memory">AI Log</a>
+        <a class="ghost-btn" href="/web/ai">AI Lab</a>
+      </div>
+    </div>
+  </article>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+
+function addMsg(role, text){
+  const box = document.querySelector("#chatMessages,#messages,.chat-messages");
+  if(!box) return;
+
+  const div = document.createElement("div");
+  div.className = "msg " + role;
+  div.textContent = text;
+
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+}
+
+function renderHistory(history){
+  const box = document.getElementById("chatWindow");
+  box.innerHTML = '<div class="msg meta">AI Chat готов. История сохраняется. Enter — отправить, Shift+Enter — новая строка.</div>';
+  (history || []).forEach(m => addMsg(m.role === "user" ? "user" : "ai", m.content || ""));
+}
+async function loadHistory(){
+  const res = await fetch("/api/ai/chat/history");
+  const data = await res.json();
+  renderHistory(data.history || []);
+}
+async function sendAIChat(){
+  const input = document.getElementById("chatInput");
+  const message = input.value.trim();
+  if(!message) return;
+
+  addMsg("user", message);
+  input.value = "";
+  addMsg("meta", "Думаю...");
+
+  try{
+    const res = await fetch("/api/ai/chat-ui", {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({message: message})
+    });
+    const data = await res.json();
+    const metas = document.querySelectorAll(".msg.meta");
+    if(metas.length) metas[metas.length-1].remove();
+    if (data.history) { renderHistory(data.history); } else { addMsg("ai", data.answer || data.message || (data.answer || data.message || data.answer || data.message || JSON.stringify(data, null, 2))); }
+  }catch(e){
+    const metas = document.querySelectorAll(".msg.meta");
+    if(metas.length) metas[metas.length-1].remove();
+    addMsg("ai", "Ошибка: " + e);
+  }
+}
+async function clearChat(){
+  await fetch("/api/ai/chat/clear", {method:"POST"});
+  renderHistory([]);
+}
+document.getElementById("chatInput").addEventListener("keydown", function(e){
+  if(e.key === "Enter" && !e.shiftKey){
+    e.preventDefault();
+    sendAIChat();
+  }
+});
+document.addEventListener("DOMContentLoaded", loadHistory);
+</script>
+{% endblock %}
+
+
+<script>
+document.addEventListener("DOMContentLoaded", async function(){
+  try {
+    const r = await fetch("/api/ai/chat-history");
+    const data = await r.json();
+    const history = data.history || [];
+    if (!history.length) return;
+
+    if (typeof renderHistory === "function") {
+      renderHistory(history);
+      return;
+    }
+
+    const box = document.querySelector("#chatBox,#messages,#chatMessages,.chat-messages,.messages");
+    if (box) box.innerHTML = "";
+
+    if (typeof addMsg === "function") {
+      history.slice(-40).forEach(m => {
+        addMsg(m.role === "user" ? "user" : "ai", m.content || "");
+      });
+    }
+  } catch(e) {
+    console.log("history load failed", e);
+  }
+});
+</script>
+
+<script>
+document.addEventListener("DOMContentLoaded", async function(){
+  try {
+    const r = await fetch("/api/ai/chat-history", {cache: "no-store"});
+    const data = await r.json();
+    const history = data.history || [];
+
+    if (!history.length) return;
+
+    if (typeof renderHistory === "function") {
+      renderHistory(history);
+      return;
+    }
+
+    const box = document.querySelector("#chatBox,#messages,#chatMessages,.chat-messages,.messages");
+    if (box) box.innerHTML = "";
+
+    if (typeof addMsg === "function") {
+      history.slice(-40).forEach(m => {
+        addMsg(m.role === "user" ? "user" : "ai", m.content || "");
+      });
+    }
+  } catch(e) {
+    console.log("AI chat history load failed", e);
+  }
+});
+</script>
+
+<script>
+(function(){
+  async function greenhouseForceLoadHistory(){
+    try {
+      const r = await fetch("/api/ai/chat-history", {cache: "no-store"});
+      const data = await r.json();
+      const history = data.history || [];
+      if (!history.length) return;
+
+      if (typeof renderHistory === "function") {
+        renderHistory(history);
+        return;
+      }
+
+      const box = document.querySelector("#chatBox,#messages,#chatMessages,.chat-messages,.messages");
+      if (box) box.innerHTML = "";
+
+      if (typeof addMsg === "function") {
+        history.slice(-40).forEach(m => {
+          addMsg(m.role === "user" ? "user" : "ai", m.content || "");
+        });
+      }
+    } catch(e) {
+      console.log("greenhouseForceLoadHistory failed", e);
+    }
+  }
+
+  window.addEventListener("load", function(){
+    setTimeout(greenhouseForceLoadHistory, 300);
+    setTimeout(greenhouseForceLoadHistory, 1200);
+  });
+})();
+</script>
+
+<script>
+(function(){
+  function esc(s){
+    return String(s || "")
+      .replaceAll("&","&amp;")
+      .replaceAll("<","&lt;")
+      .replaceAll(">","&gt;");
+  }
+
+  function findChatBox(){
+    const candidates = [
+      "#chatMessages",
+      "#messages",
+      "#chatBox",
+      ".chat-messages",
+      ".messages",
+      "[data-chat-messages]"
+    ];
+
+    for (const sel of candidates){
+      const el = document.querySelector(sel);
+      if (el) return el;
+    }
+
+    const all = Array.from(document.querySelectorAll("div"));
+    return all.find(el => {
+      const st = getComputedStyle(el);
+      return el.clientHeight > 250 && (st.overflowY === "auto" || st.overflowY === "scroll");
+    });
+  }
+
+  async function forceRenderAiHistory(){
+    const box = findChatBox();
+    if (!box) {
+      console.log("AI history: chat box not found");
+      return;
+    }
+
+    const r = await fetch("/api/ai/chat-history?ts=" + Date.now(), {cache:"no-store"});
+    const data = await r.json();
+    const history = data.history || [];
+
+    console.log("AI history loaded:", history.length, "box:", box);
+
+    box.innerHTML = "";
+
+    history.slice(-40).forEach(m => {
+      const role = m.role === "user" ? "user" : "ai";
+      const div = document.createElement("div");
+      div.className = "msg " + role;
+      div.style.whiteSpace = "pre-wrap";
+      div.style.margin = "10px 0";
+      div.style.padding = "12px 14px";
+      div.style.borderRadius = "14px";
+      div.style.background = role === "user" ? "rgba(143,179,255,.16)" : "rgba(255,184,107,.12)";
+      div.style.border = "1px solid rgba(255,255,255,.10)";
+      div.innerHTML = esc(m.content || "");
+      box.appendChild(div);
+    });
+
+    box.scrollTop = box.scrollHeight;
+  }
+
+  window.forceRenderAiHistory = forceRenderAiHistory;
+
+  document.addEventListener("DOMContentLoaded", () => {
+    setTimeout(forceRenderAiHistory, 500);
+    setTimeout(forceRenderAiHistory, 1500);
+    setTimeout(forceRenderAiHistory, 3000);
+  });
+
+  window.addEventListener("load", () => {
+    setTimeout(forceRenderAiHistory, 500);
+    setTimeout(forceRenderAiHistory, 1500);
+  });
+})();
+</script>
+
+
+<script>
+(function(){
+  async function loadAiChatHistoryOnOpen(){
+    try{
+      const r = await fetch("/api/ai/chat-history?ts=" + Date.now(), {cache:"no-store"});
+      const data = await r.json();
+      const history = data.history || [];
+      if(!history.length) return;
+
+      if(typeof renderHistory === "function"){
+        renderHistory(history);
+        return;
+      }
+
+      if(typeof addMsg === "function"){
+        const box = document.querySelector("#chatMessages,#messages,#chatBox,.chat-messages,.messages");
+        if(box) box.innerHTML = "";
+        history.slice(-60).forEach(m => addMsg(m.role === "user" ? "user" : "ai", m.content || ""));
+      }
+    }catch(e){
+      console.log("loadAiChatHistoryOnOpen failed", e);
+    }
+  }
+
+  window.addEventListener("load", function(){
+    setTimeout(loadAiChatHistoryOnOpen, 200);
+    setTimeout(loadAiChatHistoryOnOpen, 900);
+  });
+})();
+</script>

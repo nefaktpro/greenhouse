@@ -1,44 +1,40 @@
 import json
 from pathlib import Path
 
-BASE_DIR = Path(__file__).resolve().parents[2]
-STATE_FILE = BASE_DIR / "data" / "runtime" / "system_state.json"
+STATE_PATH = Path("/home/mi/greenhouse_v17/system_state.json")
 
-DEFAULTS = {
-    "MANUAL": {"name": "MANUAL", "execute": True, "log": True, "ask": False, "ai_control": False},
-    "TEST": {"name": "TEST", "execute": False, "log": True, "ask": False, "ai_control": False},
-    "ASK": {"name": "ASK", "execute": False, "log": True, "ask": True, "ai_control": False},
-    "AUTO": {"name": "AUTO", "execute": True, "log": True, "ask": False, "ai_control": False},
-    "AUTOPILOT": {"name": "AUTOPILOT", "execute": True, "log": True, "ask": False, "ai_control": True},
+MODE_PRESETS = {
+    "MANUAL": {"execute": True, "log": True, "ask": False, "ai_control": False},
+    "TEST": {"execute": False, "log": True, "ask": False, "ai_control": False},
+    "ASK": {"execute": False, "log": True, "ask": True, "ai_control": False},
+    "AUTO": {"execute": True, "log": True, "ask": False, "ai_control": False},
+    "AUTOPILOT": {"execute": True, "log": True, "ask": False, "ai_control": True},
 }
 
-def _ensure_file():
-    STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
-    if not STATE_FILE.exists():
-        STATE_FILE.write_text(json.dumps(DEFAULTS["MANUAL"], ensure_ascii=False, indent=2), encoding="utf-8")
+DEFAULT_STATE = {"mode": "MANUAL", **MODE_PRESETS["MANUAL"]}
 
-def get_mode():
-    _ensure_file()
+
+def _normalize_state(state: dict) -> dict:
+    mode = str(state.get("mode", "MANUAL")).upper()
+    if mode not in MODE_PRESETS:
+        mode = "MANUAL"
+    return {"mode": mode, "name": mode, **MODE_PRESETS[mode]}
+
+
+def get_mode_flags() -> dict:
+    if not STATE_PATH.exists():
+        set_mode("MANUAL")
     try:
-        data = json.loads(STATE_FILE.read_text(encoding="utf-8"))
-        return str(data.get("name", "MANUAL")).upper()
+        state = json.loads(STATE_PATH.read_text(encoding="utf-8"))
     except Exception:
-        return "MANUAL"
+        state = DEFAULT_STATE
+    return _normalize_state(state)
 
-def get_mode_flags():
-    _ensure_file()
-    try:
-        data = json.loads(STATE_FILE.read_text(encoding="utf-8"))
-        name = str(data.get("name", "MANUAL")).upper()
-        base = DEFAULTS.get(name, DEFAULTS["MANUAL"]).copy()
-        base.update(data)
-        base["name"] = name
-        return base
-    except Exception:
-        return DEFAULTS["MANUAL"].copy()
 
-def set_mode(name: str):
-    _ensure_file()
-    mode_name = str(name).upper()
-    data = DEFAULTS.get(mode_name, DEFAULTS["MANUAL"]).copy()
-    STATE_FILE.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+def set_mode(mode: str) -> dict:
+    mode = str(mode or "MANUAL").upper()
+    if mode not in MODE_PRESETS:
+        raise ValueError(f"unsupported_mode: {mode}")
+    state = {"mode": mode, **MODE_PRESETS[mode]}
+    STATE_PATH.write_text(json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8")
+    return _normalize_state(state)
