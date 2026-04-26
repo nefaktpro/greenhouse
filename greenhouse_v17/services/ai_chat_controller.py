@@ -256,8 +256,9 @@ def _create_web_ask(candidate: Dict[str, Any], source_text: str) -> Dict[str, An
     )
 
     return {
-        "ok": True,
-        "kind": "ask_created",
+            "ok": True,
+            "kind": "ask_created",
+            "source": "local_parser",
         "action_key": action_key,
         "pending": state,
         "message": candidate["message"],
@@ -286,8 +287,194 @@ def confirm_pending() -> Dict[str, Any]:
         return {"ok": False, "kind": "ask_confirm_error", "error": str(e)}
 
 
+
+def _load_ai_chat_history_tail(limit: int = 12) -> list[dict]:
+    try:
+        from pathlib import Path
+        import json
+        hp = Path("data/runtime/ai_chat_live_history.json")
+        if not hp.exists():
+            return []
+        data = json.loads(hp.read_text(encoding="utf-8") or "[]")
+        if isinstance(data, list):
+            return data[-limit:]
+    except Exception:
+        pass
+    return []
+
+
+def _parse_request_context(text: str) -> list[dict]:
+    """
+    Парсит REQUEST_CONTEXT из ответа AI.
+    Поддерживает формат:
+    REQUEST_CONTEXT:
+    - path: data/registry/devices.csv
+    - reason: ...
+    """
+    import re
+
+    if not text or "REQUEST_CONTEXT" not in text:
+        return []
+
+    items = []
+    current = {}
+
+    for raw in text.splitlines():
+        line = raw.strip()
+        if not line:
+            continue
+
+        m_path = re.match(r"^-?\s*path\s*:\s*(.+?)\s*$", line, re.I)
+        if m_path:
+            if current.get("path"):
+                items.append(current)
+                current = {}
+            current["path"] = m_path.group(1).strip().strip("`'\"")
+            continue
+
+        m_reason = re.match(r"^-?\s*reason\s*:\s*(.+?)\s*$", line, re.I)
+        if m_reason:
+            current["reason"] = m_reason.group(1).strip()
+            continue
+
+    if current.get("path"):
+        items.append(current)
+
+    return items
+
+
+def _allowed_context_paths() -> set[str]:
+    try:
+        from ai.context_resolver import get_context_catalog
+        catalog = get_context_catalog()
+        paths = set()
+        for ctx in catalog.get("contexts", []):
+            for f in ctx.get("files", []):
+                path = f.get("path")
+                if path and f.get("ai_requestable"):
+                    paths.add(path)
+        return paths
+    except Exception:
+        return set()
+
+
+def _read_requested_contexts(requests: list[dict]) -> list[dict]:
+    from ai.context_resolver import read_context_file
+
+    allowed = _allowed_context_paths()
+    results = []
+
+    for req in requests[:5]:
+        path = (req.get("path") or "").strip()
+        if not path:
+            continue
+
+        if allowed and path not in allowed:
+            results.append({
+                "path": path,
+                "ok": False,
+                "error": "file_not_allowed_by_context_catalog",
+                "reason": req.get("reason"),
+            })
+            continue
+
+        data = read_context_file(path)
+
+        # ограничиваем кусок, чтобы не разнести prompt огромным файлом
+        if data.get("ok") and isinstance(data.get("content"), str):
+            content = data["content"]
+            data["content"] = content[:60000]
+            data["truncated_for_ai"] = len(content) > 60000
+
+        data["reason"] = req.get("reason")
+        results.append(data)
+
+    return results
+
+
+def _answer_with_requested_context(user_text: str, first_answer: str, requests: list[dict]) -> dict:
+    import json
+    from pathlib import Path
+    from greenhouse_v17.services.ai_client import ask_ai_with_fallback
+    from ai.context_resolver import get_context_catalog
+
+    prompt_path = Path("data/memory/ai_chat_system_prompt.md")
+    system_prompt = prompt_path.read_text(encoding="utf-8") if prompt_path.exists() else ""
+
+    history_tail = _load_ai_chat_history_tail()
+    catalog = get_context_catalog()
+    context_results = _read_requested_contexts(requests)
+
+    prompt = f"""
+{system_prompt}
+
+Ты уже запросил дополнительный контекст через REQUEST_CONTEXT.
+Backend прочитал разрешённые файлы через Context Resolver.
+
+ВАЖНО:
+- Если данных хватает — дай финальный ответ пользователю.
+- НЕ повторяй REQUEST_CONTEXT.
+- Не говори, что не можешь читать файлы, если content ниже есть.
+- Если файл большой — используй первые строки/структуру и честно скажи, если данных мало.
+
+RECENT_DIALOG_HISTORY:
+{json.dumps(history_tail, ensure_ascii=False, indent=2)}
+
+USER_MESSAGE:
+{user_text}
+
+FIRST_AI_ANSWER:
+{first_answer}
+
+RESOLVED_CONTEXT:
+{json.dumps(context_results, ensure_ascii=False, indent=2)}
+
+AVAILABLE_CONTEXT_CATALOG:
+{json.dumps(catalog, ensure_ascii=False, indent=2)[:12000]}
+"""
+
+    ai = ask_ai_with_fallback(prompt)
+    return {
+        "ok": True,
+        "kind": "ai_answer_with_context",
+            "source": "llm+context",
+        "message": ai.get("answer") or "AI не вернул ответ после получения контекста.",
+        "ai": ai,
+        "requested_context": requests,
+        "resolved_context_meta": [
+            {
+                "path": x.get("meta", {}).get("path") or x.get("path"),
+                "ok": x.get("ok"),
+                "error": x.get("error"),
+                "truncated": x.get("truncated") or x.get("truncated_for_ai"),
+                "size_bytes": x.get("meta", {}).get("size_bytes"),
+            }
+            for x in context_results
+        ],
+    }
+
+
+def _find_last_request_context_from_history() -> tuple[str, list[dict]]:
+    history = _load_ai_chat_history_tail(20)
+    for item in reversed(history):
+        if item.get("role") == "assistant":
+            content = item.get("content") or ""
+            reqs = _parse_request_context(content)
+            if reqs:
+                return content, reqs
+    return "", []
+
+
+
 def handle_chat_message(text: str) -> Dict[str, Any]:
     t = text.strip().lower()
+
+    # Подтверждение последнего REQUEST_CONTEXT: "давай", "покажи", "запроси"
+    # Не трогаем "ок/да", потому что они используются для ASK confirm.
+    if t in ["давай", "покажи", "запроси", "можно", "получай", "загрузи"]:
+        prev_answer, reqs = _find_last_request_context_from_history()
+        if reqs:
+            return _answer_with_requested_context(text, prev_answer, reqs)
 
     if t in ["ок", "ok", "да", "yes", "подтверждаю"]:
         return confirm_pending()
@@ -318,24 +505,36 @@ def handle_chat_message(text: str) -> Dict[str, Any]:
 
         catalog = get_context_catalog()
 
+        history_tail = _load_ai_chat_history_tail()
+
         prompt = f"""
 {system_prompt}
 
 CURRENT_CONTEXT:
 {{}}
 
+RECENT_DIALOG_HISTORY:
+{json.dumps(history_tail, ensure_ascii=False, indent=2)}
+
 AVAILABLE_CONTEXT_CATALOG:
-{json.dumps(catalog, ensure_ascii=False, indent=2)[:12000]}
+{json.dumps(catalog, ensure_ascii=False, indent=2)[:30000]}
 
 USER_MESSAGE:
 {text}
 """
 
         ai = ask_ai_with_fallback(prompt)
+        first_answer = ai.get("answer") or "AI не вернул ответ."
+
+        reqs = _parse_request_context(first_answer)
+        if reqs:
+            return _answer_with_requested_context(text, first_answer, reqs)
+
         return {
             "ok": True,
             "kind": "ai_answer",
-            "message": ai.get("answer") or "AI не вернул ответ.",
+            "source": "llm",
+            "message": first_answer,
             "ai": ai,
         }
     except Exception as e:

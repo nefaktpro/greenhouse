@@ -217,11 +217,26 @@ function esc(s){
     .replaceAll(">","&gt;");
 }
 
-function addMsg(role, text){
+function inferSource(role, text, source){
+  const t = String(text || "");
+  if(role !== "ai" && role !== "meta") return "";
+
+  if(source === "local_parser") return "[LOCAL] ";
+  if(source === "llm") return "[AI] ";
+  if(source === "llm+context") return "[AI+CTX] ";
+
+  if(t.startsWith("[LOCAL]") || t.startsWith("[AI]") || t.startsWith("[AI+CTX]")) return "";
+  if(t.includes("AI понял команду так")) return "[AI] ";
+  if(t.includes("Я понял команду так")) return "[LOCAL] ";
+  if(t.includes("Вот список") || t.includes("RESOLVED_CONTEXT") || t.includes("Context Resolver")) return "[AI+CTX] ";
+  return "[AI] ";
+}
+
+function addMsg(role, text, source){
   const box = document.getElementById("chatMessages");
   const div = document.createElement("div");
   div.className = "msg " + role;
-  div.innerHTML = esc(text);
+  div.innerHTML = esc(inferSource(role, text, source) + (text || ""));
   box.appendChild(div);
   box.scrollTop = box.scrollHeight;
   return div;
@@ -231,7 +246,7 @@ function renderHistory(history){
   const box = document.getElementById("chatMessages");
   box.innerHTML = "";
   (history || []).slice(-60).forEach(m => {
-    addMsg(m.role === "user" ? "user" : "ai", m.content || "");
+    addMsg(m.role === "user" ? "user" : "ai", m.content || "", m.source || "");
   });
 }
 
@@ -267,7 +282,7 @@ async function sendMsg(){
     if(data.history){
       renderHistory(data.history);
     }else{
-      addMsg("ai", data.answer || data.message || JSON.stringify(data, null, 2));
+      addMsg("ai", data.answer || data.message || JSON.stringify(data, null, 2), data.source || (data.control && data.control.source) || "");
     }
   }catch(e){
     thinking.remove();

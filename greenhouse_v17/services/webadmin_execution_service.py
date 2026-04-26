@@ -9,14 +9,62 @@ from dataclasses import asdict, dataclass, field
 
 import threading
 
-def _run_followup_timer(duration, action_key):
+def _update_ai_timer(timer_id, **patch):
+    import json, time
+    try:
+        p = ai_timer_state_path()
+        items = json.loads(p.read_text(encoding="utf-8") or "[]")
+        for item in items:
+            if item.get("timer_id") == timer_id:
+                item.update(patch)
+                item["updated_at"] = time.time()
+                break
+        p.write_text(json.dumps(items[-300:], ensure_ascii=False, indent=2), encoding="utf-8")
+    except Exception as e:
+        print("[TIMER UPDATE ERROR]", e)
+
+
+def _register_ai_timer(action_key, followup_action_key, duration_seconds, source_text=None):
+    import json, time, uuid
+    timer = {
+        "timer_id": str(uuid.uuid4())[:12],
+        "status": "running",
+        "created_at": time.time(),
+        "due_at": time.time() + int(duration_seconds),
+        "duration_seconds": int(duration_seconds),
+        "action_key": action_key,
+        "followup_action_key": followup_action_key,
+        "source": "ai_chat_ask_timer",
+        "source_text": source_text,
+        "result": None,
+        "error": None,
+    }
+    try:
+        p = ai_timer_state_path()
+        items = json.loads(p.read_text(encoding="utf-8") or "[]")
+        items.append(timer)
+        p.write_text(json.dumps(items[-300:], ensure_ascii=False, indent=2), encoding="utf-8")
+    except Exception as e:
+        print("[TIMER REGISTER ERROR]", e)
+    return timer
+
+
+def _run_followup_timer(duration, action_key, timer_id=None):
     import time
-    time.sleep(duration)
+    time.sleep(int(duration))
     try:
         print(f"[TIMER] executing followup {action_key}")
-        execute_action(action_key=action_key, source="timer_followup")
+        if timer_id:
+            _update_ai_timer(timer_id, status="executing")
+
+        result = execute_action(action_key=action_key, source="timer_followup")
+
+        if timer_id:
+            _update_ai_timer(timer_id, status="done", result=result)
     except Exception as e:
         print("[TIMER ERROR]", e)
+        if timer_id:
+            _update_ai_timer(timer_id, status="error", error=str(e))
 
 from functools import lru_cache
 from pathlib import Path
@@ -546,13 +594,19 @@ def confirm_pending_ask() -> Dict[str, Any]:
 
     if duration and followup:
         try:
+            timer = _register_ai_timer(
+                action_key=action_key,
+                followup_action_key=followup,
+                duration_seconds=duration,
+                source_text=state.get("source_text"),
+            )
             t = threading.Thread(
                 target=_run_followup_timer,
-                args=(duration, followup),
+                args=(duration, followup, timer.get("timer_id")),
                 daemon=True
             )
             t.start()
-            print(f"[TIMER] scheduled {followup} in {duration}s")
+            print(f"[TIMER] scheduled {followup} in {duration}s timer_id={timer.get('timer_id')}")
         except Exception as e:
             print("[TIMER START ERROR]", e)
 
@@ -564,3 +618,24 @@ def cancel_pending_ask() -> Dict[str, Any]:
     state = load_ask_state()
     clear_ask_state()
     return {"ok": True, "had_pending": bool(state.get("has_pending")) if isinstance(state, dict) else False}
+
+# --- AI TIMER REGISTRY API v1 ---
+def ai_timer_state_path():
+    from pathlib import Path
+    p = Path("data/runtime/ai_timers.json")
+    p.parent.mkdir(parents=True, exist_ok=True)
+    if not p.exists():
+        p.write_text("[]", encoding="utf-8")
+    return p
+
+
+def list_ai_timers():
+    import json
+    try:
+        p = ai_timer_state_path()
+        data = json.loads(p.read_text(encoding="utf-8") or "[]")
+        if isinstance(data, list):
+            return list(reversed(data[-300:]))
+    except Exception as e:
+        return [{"status": "error", "error": str(e)}]
+    return []

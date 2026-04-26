@@ -86,3 +86,18 @@ async function clearLogs(){
 document.addEventListener("DOMContentLoaded", loadLogs);
 </script>
 {% endblock %}
+
+
+<style>
+/* AI Logs background normalization */
+.ai-memory-page,
+.ai-logs-page,
+.log-page {
+  background: transparent !important;
+}
+.ai-memory-page .card,
+.ai-logs-page .card,
+.log-page .card {
+  background: rgba(7,16,34,.72);
+}
+</style>
