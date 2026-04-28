@@ -42,8 +42,24 @@ def _register_ai_timer(action_key, followup_action_key, duration_seconds, source
     try:
         p = ai_timer_state_path()
         items = json.loads(p.read_text(encoding="utf-8") or "[]")
+
+        # idempotency guard: защита от двойного confirm/click
+        now = time.time()
+        for item in reversed(items):
+            if (
+                item.get("action_key") == action_key
+                and item.get("followup_action_key") == followup_action_key
+                and int(item.get("duration_seconds") or 0) == int(duration_seconds)
+                and (item.get("source_text") or "") == (source_text or "")
+                and item.get("status") in ["running", "executing", "done"]
+                and now - float(item.get("created_at") or 0) < 180
+            ):
+                print(f"[TIMER] duplicate ignored timer_id={item.get('timer_id')}")
+                return item
+
         items.append(timer)
         p.write_text(json.dumps(items[-300:], ensure_ascii=False, indent=2), encoding="utf-8")
+        append_timer_log("timer_created", timer)
     except Exception as e:
         print("[TIMER REGISTER ERROR]", e)
     return timer
@@ -53,6 +69,13 @@ def _run_followup_timer(duration, action_key, timer_id=None):
     import time
     time.sleep(int(duration))
     try:
+        if timer_id:
+            current = get_ai_timer(timer_id)
+            if current and current.get("status") == "canceled":
+                print(f"[TIMER] canceled, skip followup {action_key} timer_id={timer_id}")
+                append_timer_log("timer_skipped_canceled", current)
+                return
+
         print(f"[TIMER] executing followup {action_key}")
         if timer_id:
             _update_ai_timer(timer_id, status="executing")
@@ -61,10 +84,12 @@ def _run_followup_timer(duration, action_key, timer_id=None):
 
         if timer_id:
             _update_ai_timer(timer_id, status="done", result=result)
+            append_timer_log("timer_done", get_ai_timer(timer_id), {"result": result})
     except Exception as e:
         print("[TIMER ERROR]", e)
         if timer_id:
             _update_ai_timer(timer_id, status="error", error=str(e))
+            append_timer_log("timer_error", get_ai_timer(timer_id), {"error": str(e)})
 
 from functools import lru_cache
 from pathlib import Path
@@ -639,3 +664,88 @@ def list_ai_timers():
     except Exception as e:
         return [{"status": "error", "error": str(e)}]
     return []
+
+
+def ai_timer_log_path():
+    from pathlib import Path
+    p = Path("data/memory/logs/timer_log.json")
+    p.parent.mkdir(parents=True, exist_ok=True)
+    if not p.exists():
+        p.write_text("[]", encoding="utf-8")
+    return p
+
+
+def append_timer_log(event, timer=None, details=None):
+    import json, time
+    try:
+        p = ai_timer_log_path()
+        items = json.loads(p.read_text(encoding="utf-8") or "[]")
+        items.append({
+            "time": time.time(),
+            "event": event,
+            "timer_id": (timer or {}).get("timer_id"),
+            "status": (timer or {}).get("status"),
+            "action_key": (timer or {}).get("action_key"),
+            "followup_action_key": (timer or {}).get("followup_action_key"),
+            "duration_seconds": (timer or {}).get("duration_seconds"),
+            "source_text": (timer or {}).get("source_text"),
+            "details": details or {},
+        })
+        p.write_text(json.dumps(items[-500:], ensure_ascii=False, indent=2), encoding="utf-8")
+    except Exception as e:
+        print("[TIMER LOG ERROR]", e)
+
+
+def cancel_ai_timer(timer_id):
+    import json, time
+    p = ai_timer_state_path()
+    items = json.loads(p.read_text(encoding="utf-8") or "[]")
+    found = None
+
+    for item in items:
+        if item.get("timer_id") == timer_id:
+            found = item
+            if item.get("status") in ["done", "error", "canceled"]:
+                return {"ok": False, "error": "timer_not_running", "timer": item}
+
+            item["status"] = "canceled"
+            item["canceled_at"] = time.time()
+            item["updated_at"] = time.time()
+            item["error"] = "canceled_by_user"
+            
+            append_timer_log("timer_canceled", item)
+
+            # --- rollback on cancel ---
+            followup = item.get("followup_action_key")
+            if followup:
+                try:
+                    result = execute_action(action_key=followup, source="timer_cancel")
+                    item["rollback_result"] = result
+                    append_timer_log("timer_rollback_executed", item, {
+                        "rollback_action_key": followup,
+                        "rollback_result": result
+                    })
+                except Exception as e:
+                    item["rollback_error"] = str(e)
+                    append_timer_log("timer_rollback_error", item, {
+                        "rollback_action_key": followup,
+                        "error": str(e)
+                    })
+
+            break
+
+    if not found:
+        return {"ok": False, "error": "timer_not_found"}
+
+    p.write_text(json.dumps(items[-300:], ensure_ascii=False, indent=2), encoding="utf-8")
+    return {"ok": True, "timer": found}
+
+
+def get_ai_timer(timer_id):
+    import json
+    p = ai_timer_state_path()
+    items = json.loads(p.read_text(encoding="utf-8") or "[]")
+    for item in items:
+        if item.get("timer_id") == timer_id:
+            return item
+    return None

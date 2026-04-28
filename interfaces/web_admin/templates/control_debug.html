@@ -5,6 +5,28 @@
   <div style="opacity:.9;">Временная страница для проверки всех entity из registry по категориям.</div>
 </div>
 
+<div style="margin-bottom:16px;padding:14px 16px;border:1px solid #345;border-radius:12px;background:#101827;">
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+    <div>
+      <div style="font-weight:800;">HA / Tuya Recovery</div>
+      <div style="opacity:.82;font-size:14px;margin-top:4px;">
+        Безопасное обновление Tuya/LocalTuya после отключения электричества. Устройства не включаются и не выключаются.
+      </div>
+    </div>
+    <button id="refresh-tuya-ha-btn"
+            type="button"
+            style="cursor:pointer;padding:10px 14px;border-radius:10px;border:1px solid #4c6a92;background:#16233a;color:#fff;font-weight:800;">
+      🔄 Обновить Tuya / HA
+    </button>
+
+<div id="ha-diagnostics" style="margin-top:12px;font-size:14px;color:#cfd8e3;">
+  <div><b>Состояние Home Assistant:</b></div>
+  <div id="ha-status">Загрузка...</div>
+</div>
+
+  </div>
+</div>
+
 <div id="debug-flash"
      style="display:none;margin-bottom:16px;padding:12px 14px;border-radius:10px;border:1px solid #555;background:#1a1a1a;">
 </div>
@@ -114,9 +136,90 @@
     }
   }
 
+  async function refreshTuyaHa() {
+    const btn = document.getElementById("refresh-tuya-ha-btn");
+    if (!btn) return;
+
+    const oldText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = "Обновляю…";
+
+    showFlash("Запущено обновление Tuya/LocalTuya. Ждём HA...", "ok");
+
+    try {
+      const res = await fetch("/web/control-debug/refresh-tuya-ha", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"}
+      });
+      const data = await res.json();
+
+      if (data.ok) {
+        showFlash(
+          data.message +
+          " | unavailable было: " + data.before_unavailable_count +
+          " → стало: " + data.after_unavailable_count,
+          "ok"
+        );
+      } else {
+        showFlash((data.message || "ERROR") + " | " + (data.error || "unknown"), "error");
+      }
+
+      console.log("Tuya/HA refresh result", data);
+    } catch (e) {
+      showFlash("ERROR: refresh request failed: " + e, "error");
+    } finally {
+      btn.disabled = false;
+      btn.textContent = oldText;
+    }
+  }
+
+  const refreshBtn = document.getElementById("refresh-tuya-ha-btn");
+  if (refreshBtn) refreshBtn.addEventListener("click", refreshTuyaHa);
+
   document.querySelectorAll(".debug-action-btn").forEach((btn) => {
     btn.addEventListener("click", () => handleClick(btn));
   });
 })();
+
+async function loadHADiagnostics(){
+  const box = document.getElementById("ha-status");
+  try{
+    const res = await fetch("/api/live/states?ts=" + Date.now(), {cache:"no-store"});
+    const data = await res.json();
+
+    const items = data.items || [];
+    const now = Date.now()/1000;
+
+    let unavailableCount = 0;
+    let staleCount = 0;
+    let last = 0;
+
+    items.forEach(x=>{
+      if(x.state === "unavailable" || x.state === "unknown") unavailableCount++;
+
+      const ts = new Date(x.last_updated || x.last_changed || 0).getTime()/1000;
+      if(ts){
+        last = Math.max(last, ts);
+        if(now - ts > 300) staleCount++;
+      }
+    });
+
+    let haLink = res.ok && data.ok !== false ? "✅ есть" : "❌ нет ответа";
+    let time = last ? new Date(last*1000).toLocaleTimeString() : "—";
+
+    box.innerHTML = `
+      • Связь с HA: ${haLink}<br>
+      • Недоступные устройства: ${unavailableCount}<br>
+      • Устаревшие состояния &gt; 5 мин: ${staleCount}<br>
+      • Последнее обновление: ${time}
+    `;
+  }catch(e){
+    box.textContent = "❌ ошибка получения диагностических данных";
+  }
+}
+
+setInterval(loadHADiagnostics, 5000);
+document.addEventListener("DOMContentLoaded", loadHADiagnostics);
+
 </script>
 {% endblock %}

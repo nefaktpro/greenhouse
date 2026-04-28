@@ -297,3 +297,88 @@ def control_debug_execute(payload: dict):
             "state_payload": state,
         },
     )
+
+
+@router.post("/web/control-debug/refresh-tuya-ha")
+def refresh_tuya_ha_debug():
+    """
+    Safe HA/Tuya refresh:
+    - checks HA availability
+    - counts unavailable Tuya/LocalTuya entities
+    - tries to reload Tuya/LocalTuya config entries through HA
+    - does NOT switch any devices on/off
+    """
+    before_states = load_states()
+    before_unavailable = [
+        eid for eid, st in before_states.items()
+        if ("tuya" in eid.lower() or "humidifier" in eid.lower() or "uvlaz" in eid.lower() or "uviazh" in eid.lower())
+        and st.get("state") in {"unavailable", "unknown"}
+    ]
+
+    reload_results = []
+    try:
+        entries_resp = requests.get(
+            f"{ha_base_url()}/api/config/config_entries/entry",
+            headers=ha_headers(),
+            timeout=20,
+        )
+        entries_resp.raise_for_status()
+        entries = entries_resp.json()
+
+        for e in entries:
+            domain = str(e.get("domain", "")).lower()
+            title = str(e.get("title", ""))
+            entry_id = e.get("entry_id")
+
+            if domain in {"tuya", "localtuya"} and entry_id:
+                try:
+                    rr = requests.post(
+                        f"{ha_base_url()}/api/config/config_entries/entry/{entry_id}/reload",
+                        headers=ha_headers(),
+                        timeout=30,
+                    )
+                    reload_results.append({
+                        "domain": domain,
+                        "title": title,
+                        "entry_id": entry_id,
+                        "ok": rr.status_code in (200, 204),
+                        "status_code": rr.status_code,
+                        "text": rr.text[:300],
+                    })
+                except Exception as ex:
+                    reload_results.append({
+                        "domain": domain,
+                        "title": title,
+                        "entry_id": entry_id,
+                        "ok": False,
+                        "error": str(ex),
+                    })
+
+    except Exception as e:
+        return {
+            "ok": False,
+            "message": "HA доступен не полностью или config_entries API недоступен",
+            "error": str(e),
+            "before_unavailable_count": len(before_unavailable),
+            "before_unavailable_sample": before_unavailable[:30],
+        }
+
+    import time
+    time.sleep(8)
+
+    after_states = load_states()
+    after_unavailable = [
+        eid for eid, st in after_states.items()
+        if ("tuya" in eid.lower() or "humidifier" in eid.lower() or "uvlaz" in eid.lower() or "uviazh" in eid.lower())
+        and st.get("state") in {"unavailable", "unknown"}
+    ]
+
+    return {
+        "ok": True,
+        "message": "Reload Tuya/LocalTuya выполнен. Устройства не включались и не выключались.",
+        "before_unavailable_count": len(before_unavailable),
+        "after_unavailable_count": len(after_unavailable),
+        "before_unavailable_sample": before_unavailable[:30],
+        "after_unavailable_sample": after_unavailable[:30],
+        "reload_results": reload_results,
+    }

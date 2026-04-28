@@ -1,75 +1,150 @@
 {% extends "base.html" %}
 {% block content %}
+
 <div class="page-head">
   <div>
     <h1>AI Timers</h1>
-    <p class="muted">Активные и завершённые таймеры после AI/ASK-команд.</p>
+    <p class="muted">Активные задачи и архив таймеров</p>
   </div>
-  <button class="btn primary" onclick="loadTimers()">Обновить</button>
+  <button class="btn primary" onclick="syncTimers()">Обновить</button>
 </div>
 
+<!-- ACTIVE -->
 <div class="card">
-  <div id="timersBox" class="muted">Загрузка...</div>
+  <h3>Активные</h3>
+  <div id="activeTimers"></div>
+</div>
+
+<!-- DONE -->
+<div class="card">
+  <details>
+    <summary>Завершённые</summary>
+    <div id="doneTimers"></div>
+  </details>
 </div>
 
 <style>
-.timer-list{display:flex;flex-direction:column;gap:12px}
-.timer-card{border:1px solid rgba(120,160,220,.25);border-radius:16px;padding:14px;background:rgba(2,8,23,.35)}
-.timer-title{font-weight:900;color:#fff;margin-bottom:8px}
-.timer-grid{display:grid;grid-template-columns:160px 1fr;gap:6px 12px;font-size:14px}
-.timer-grid div{word-break:break-word}
-.badge{display:inline-block;padding:4px 8px;border-radius:999px;font-weight:900;font-size:12px}
-.badge.running{background:rgba(255,184,107,.16);color:#ffd89b;border:1px solid rgba(255,184,107,.35)}
-.badge.executing{background:rgba(143,179,255,.16);color:#dce8ff;border:1px solid rgba(143,179,255,.35)}
-.badge.done{background:rgba(126,231,135,.12);color:#dfffe5;border:1px solid rgba(126,231,135,.25)}
-.badge.error{background:rgba(255,90,90,.14);color:#ffb3b3;border:1px solid rgba(255,90,90,.35)}
-pre{white-space:pre-wrap;word-break:break-word}
+.timer-card{
+  border:1px solid rgba(120,160,220,.25);
+  border-radius:16px;
+  padding:14px;
+  background:rgba(2,8,23,.35);
+  margin-bottom:10px;
+}
+.timer-title{
+  font-weight:900;
+  color:#fff;
+  margin-bottom:6px;
+}
+.timer-meta{
+  font-size:13px;
+  color:#9fb3d1;
+}
+.timer-row{
+  display:flex;
+  justify-content:space-between;
+}
+.badge{
+  padding:3px 8px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:900;
+}
+.running{background:#ffb84822;color:#ffd89b}
+.done{background:#7ee78722;color:#dfffe5}
+.error{background:#ff5f7422;color:#ff9aa9}
+.canceled{background:#99999933;color:#ddd}
+.verified{background:#7ee78722;color:#dfffe5}
 </style>
 
 <script>
-function fmtTs(ts){
-  if(!ts) return "—";
-  return new Date(ts * 1000).toLocaleString();
+
+let timersCache = []
+
+function fmt(ts){
+  if(!ts) return "—"
+  return new Date(ts*1000).toLocaleTimeString()
 }
-function remaining(due){
-  if(!due) return "—";
-  const sec = Math.round(due - Date.now()/1000);
-  if(sec <= 0) return "срок наступил";
-  return sec + " сек";
+
+function remaining(t){
+  if(!t.due_at) return "—"
+  const sec = Math.round(t.due_at - Date.now()/1000)
+  if(sec <= 0) return "0"
+  return sec
 }
-async function loadTimers(){
-  const box = document.getElementById("timersBox");
-  box.textContent = "Загрузка...";
-  try{
-    const r = await fetch("/api/ai/timers?ts=" + Date.now(), {cache:"no-store"});
-    const data = await r.json();
-    const items = data.items || [];
-    if(!items.length){
-      box.innerHTML = "<div class='muted'>Таймеров пока нет.</div>";
-      return;
+
+function render(){
+  const active = []
+  const done = []
+
+  timersCache.forEach(t=>{
+    if(t.status === "done" || t.status === "error"){
+      done.push(t)
+    } else {
+      active.push(t)
     }
-    box.innerHTML = "<div class='timer-list'>" + items.map(t => `
-      <div class="timer-card">
-        <div class="timer-title">
-          <span class="badge ${t.status || 'running'}">${t.status || 'running'}</span>
-          ${t.action_key || '—'} → ${t.followup_action_key || '—'}
-        </div>
-        <div class="timer-grid">
-          <div class="muted">timer_id</div><div>${t.timer_id || '—'}</div>
-          <div class="muted">длительность</div><div>${t.duration_seconds || '—'} сек</div>
-          <div class="muted">создан</div><div>${fmtTs(t.created_at)}</div>
-          <div class="muted">сработает</div><div>${fmtTs(t.due_at)} (${remaining(t.due_at)})</div>
-          <div class="muted">команда</div><div>${t.source_text || '—'}</div>
-          <div class="muted">ошибка</div><div>${t.error || '—'}</div>
-        </div>
-        ${t.result ? `<details><summary>result</summary><pre>${JSON.stringify(t.result, null, 2)}</pre></details>` : ""}
-      </div>
-    `).join("") + "</div>";
-  }catch(e){
-    box.innerHTML = "<div class='muted'>Ошибка загрузки таймеров: " + e + "</div>";
-  }
+  })
+
+  document.getElementById("activeTimers").innerHTML =
+    active.length ? active.map(card).join("") : "<div class='muted'>нет активных</div>"
+
+  document.getElementById("doneTimers").innerHTML =
+    done.length ? done.map(card).join("") : "<div class='muted'>пусто</div>"
 }
-window.addEventListener("load", loadTimers);
-setInterval(loadTimers, 3000);
+
+function card(t){
+  const isActive = !(t.status === "done" || t.status === "error" || t.status === "canceled")
+  const verified = t.result && t.result.verified
+  const stopBtn = isActive ? `<button class="btn" onclick="cancelTimer('${t.timer_id}')">Остановить</button>` : ""
+  const verifyBadge = verified ? `<span class="badge verified">verified</span>` : ""
+
+  return `
+  <div class="timer-card">
+    <div class="timer-title">
+      <span class="badge ${t.status}">${t.status}</span>
+      ${verifyBadge}
+      ${t.action_key} → ${t.followup_action_key}
+    </div>
+
+    <div class="timer-meta">
+      ${t.source_text || ""}
+    </div>
+
+    <div class="timer-row">
+      <div>⏱ ${remaining(t)} сек</div>
+      <div>${fmt(t.due_at)}</div>
+    </div>
+
+    <div style="margin-top:10px">${stopBtn}</div>
+
+    ${t.result ? `<details><summary>result</summary><pre>${JSON.stringify(t.result, null, 2)}</pre></details>` : ""}
+  </div>
+  `
+}
+async function cancelTimer(timerId){
+  if(!confirm("Остановить таймер?")) return
+  await fetch("/api/ai/timers/cancel/" + encodeURIComponent(timerId), {method:"POST"})
+  await syncTimers()
+}
+
+// 🔁 sync с сервером (редко!)
+async function syncTimers(){
+  const r = await fetch("/api/ai/timers")
+  const d = await r.json()
+  timersCache = d.items || []
+  render()
+}
+
+// ⚡ realtime countdown (без API)
+setInterval(()=>{
+  render()
+}, 1000)
+
+// 📡 обновление с сервера раз в 15 сек
+setInterval(syncTimers, 15000)
+
+window.addEventListener("load", syncTimers)
+
 </script>
+
 {% endblock %}
