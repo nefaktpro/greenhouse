@@ -50,11 +50,14 @@
   font-size:12px;
   font-weight:900;
 }
+.scheduled{background:#58a6ff22;color:#a8c7ff}
+.executing{background:#d2992222;color:#ffd89b}
 .running{background:#ffb84822;color:#ffd89b}
 .done{background:#7ee78722;color:#dfffe5}
 .error{background:#ff5f7422;color:#ff9aa9}
-.canceled{background:#99999933;color:#ddd}
+.canceled{background:#99999933;color:#aaa}
 .verified{background:#7ee78722;color:#dfffe5}
+.phase{font-size:13px;color:#aab7d6;margin-top:6px}
 </style>
 
 <script>
@@ -73,54 +76,156 @@ function remaining(t){
   return sec
 }
 
+function statusGroup(t){
+  if(t.status === "done") return "done"
+  if(t.status === "canceled") return "canceled"
+  if(t.status === "error") return "error"
+  return "active"
+}
+
+function phaseText(t){
+  if(t.status === "scheduled"){
+    if(t.run_duration_seconds){
+      return `ожидает запуска → потом работа ${t.run_duration_seconds} сек`
+    }
+    return "ожидает запуска"
+  }
+  if(t.status === "executing") return "выполняет действие"
+  if(t.status === "running"){
+    if(t.followup_action_key) return `работает → потом ${t.followup_action_key}`
+    return "работает (идёт выполнение)"
+  }
+  if(t.status === "done") return "завершено"
+  if(t.status === "canceled") return "отменено"
+  if(t.status === "error") return "ошибка"
+  return ""
+}
+
 function render(){
   const active = []
   const done = []
+  const canceled = []
+  const errors = []
 
   timersCache.forEach(t=>{
-    if(t.status === "done" || t.status === "error"){
-      done.push(t)
-    } else {
-      active.push(t)
-    }
+    const g = statusGroup(t)
+    if(g === "active") active.push(t)
+    else if(g === "done") done.push(t)
+    else if(g === "canceled") canceled.push(t)
+    else if(g === "error") errors.push(t)
   })
 
   document.getElementById("activeTimers").innerHTML =
     active.length ? active.map(card).join("") : "<div class='muted'>нет активных</div>"
 
   document.getElementById("doneTimers").innerHTML =
-    done.length ? done.map(card).join("") : "<div class='muted'>пусто</div>"
+    `
+    ${done.length ? done.map(card).join("") : "<div class='muted'>завершённых нет</div>"}
+
+    <details style="margin-top:18px">
+      <summary>Отменённые (${canceled.length})</summary>
+      <div style="margin-top:12px">
+        ${canceled.length ? canceled.map(card).join("") : "<div class='muted'>отменённых нет</div>"}
+      </div>
+    </details>
+
+    <details style="margin-top:18px">
+      <summary>Ошибки (${errors.length})</summary>
+      <div style="margin-top:12px">
+        ${errors.length ? errors.map(card).join("") : "<div class='muted'>ошибок нет</div>"}
+      </div>
+    </details>
+    `
 }
 
 function card(t){
-  const isActive = !(t.status === "done" || t.status === "error" || t.status === "canceled")
+  const isActive = statusGroup(t) === "active"
   const verified = t.result && t.result.verified
   const stopBtn = isActive ? `<button class="btn" onclick="cancelTimer('${t.timer_id}')">Остановить</button>` : ""
   const verifyBadge = verified ? `<span class="badge verified">verified</span>` : ""
+  const followup = t.followup_action_key ? ` → ${t.followup_action_key}` : ""
+  const delay = t.delay_seconds ? `<div>⏳ задержка: ${t.delay_seconds} сек</div>` : ""
+  const runDuration = t.run_duration_seconds ? `<div>▶️ работа: ${t.run_duration_seconds} сек</div>` : ""
 
   return `
   <div class="timer-card">
     <div class="timer-title">
       <span class="badge ${t.status}">${t.status}</span>
       ${verifyBadge}
-      ${t.action_key} → ${t.followup_action_key}
+      ${t.action_key}${followup}
     </div>
 
     <div class="timer-meta">
       ${t.source_text || ""}
     </div>
 
+    <div class="phase">${phaseText(t)}</div>
+
     <div class="timer-row">
-      <div>⏱ ${remaining(t)} сек</div>
+      <div>
+${
+  t.status === "scheduled"
+    ? "⏳ до запуска: " + remaining(t) + " сек"
+    : t.status === "running"
+    ? "▶️ до выключения: " + remaining(t) + " сек"
+    : ""
+}
+</div>
       <div>${fmt(t.due_at)}</div>
+    </div>
+
+    <div class="timer-meta">
+
+      <div style="margin-top:8px">
+        <b>Сценарий:</b>
+      </div>
+
+      ${
+        t.status === "scheduled"
+          ? `<div>⏳ До включения: ${remaining(t)} сек</div>`
+          : ""
+      }
+
+      ${
+        t.status === "running"
+          ? `<div>▶️ До выключения: ${remaining(t)} сек</div>`
+          : ""
+      }
+
+      ${
+        t.run_duration_seconds && t.status !== "running"
+          ? `<div>▶️ Работа: ${t.run_duration_seconds} сек</div>`
+          : ""
+      }
+
+      ${
+        t.followup_action_key
+          ? `<div>⏹ Выключение: ${t.status === "done" ? "выполнено" : "ожидает"}</div>`
+          : ""
+      }
+
+      <div style="margin-top:10px">
+        <b>Проверка:</b>
+        ${
+          t.result && t.result.verified
+            ? " ✅ подтверждено"
+            : t.status === "done"
+            ? " ⚠️ без подтверждения"
+            : " ⏳ ещё не выполнено"
+        }
+      </div>
+
     </div>
 
     <div style="margin-top:10px">${stopBtn}</div>
 
     ${t.result ? `<details><summary>result</summary><pre>${JSON.stringify(t.result, null, 2)}</pre></details>` : ""}
+    ${t.rollback_result ? `<details><summary>rollback</summary><pre>${JSON.stringify(t.rollback_result, null, 2)}</pre></details>` : ""}
+    ${t.error ? `<details><summary>error</summary><pre>${JSON.stringify(t.error, null, 2)}</pre></details>` : ""}
   </div>
   `
 }
+
 async function cancelTimer(timerId){
   if(!confirm("Остановить таймер?")) return
   await fetch("/api/ai/timers/cancel/" + encodeURIComponent(timerId), {method:"POST"})
@@ -141,7 +246,7 @@ setInterval(()=>{
 }, 1000)
 
 // 📡 обновление с сервера раз в 15 сек
-setInterval(syncTimers, 15000)
+setInterval(syncTimers, 1000)
 
 window.addEventListener("load", syncTimers)
 

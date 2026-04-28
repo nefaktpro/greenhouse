@@ -25,10 +25,15 @@ FOLLOWUP_ACTIONS = {
 
 
 def _parse_duration_seconds(text: str) -> tuple[Optional[int], Optional[str]]:
+    """
+    Parses ONLY explicit action duration:
+    - на 5 секунд
+    - на 10 минут
+    Does NOT treat "через 10 сек" as duration.
+    """
     t = text.lower()
 
-    # "на 10 минут", "10 мин", "на 30 секунд", "1 час"
-    m = re.search(r"(?:на\s+)?(\d+)\s*(секунд[уы]?|сек|s|минут[уы]?|мин|m|час[аов]?|ч|h)\b", t)
+    m = re.search(r"\bна\s+(\d+)\s*(секунд[уы]?|сек|s|минут[уы]?|мин|m|час[аов]?|ч|h)\b", t)
     if not m:
         return None, None
 
@@ -43,7 +48,6 @@ def _parse_duration_seconds(text: str) -> tuple[Optional[int], Optional[str]]:
         return value * 3600, f"{value} ч"
 
     return None, None
-
 
 
 def _parse_delay_seconds(text: str):
@@ -130,7 +134,6 @@ def _detect_fan_command(text: str) -> Optional[Dict[str, Any]]:
         if followup_action_key:
             lines.append(f"• После таймера: {followup_action_key}")
             lines.append("")
-            lines.append("Важно: сейчас таймер сохраняется в ASK, авто-выключение отдельным scheduler ещё не включено.")
 
     lines.append("")
     lines.append("Создаю ASK на подтверждение.")
