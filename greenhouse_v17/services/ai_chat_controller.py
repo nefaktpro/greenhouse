@@ -45,6 +45,32 @@ def _parse_duration_seconds(text: str) -> tuple[Optional[int], Optional[str]]:
     return None, None
 
 
+
+def _parse_delay_seconds(text: str):
+    """
+    Parses delayed start phrases:
+    - через 10 минут
+    - через 30 сек
+    - через 1 час
+    """
+    t = text.lower()
+    m = re.search(r"(?:через|спустя)\s+(\d+)\s*(секунд|секунды|сек|s|минут|минуты|мин|m|часов|часа|час|ч|h)", t)
+    if not m:
+        return None, None
+
+    value = int(m.group(1))
+    unit = m.group(2)
+
+    if unit.startswith(("сек", "s")):
+        return value, f"через {value} сек"
+    if unit.startswith(("мин", "m")):
+        return value * 60, f"через {value} мин"
+    if unit.startswith(("час", "ч", "h")):
+        return value * 3600, f"через {value} ч"
+
+    return None, None
+
+
 def _detect_fan_command(text: str) -> Optional[Dict[str, Any]]:
     t = text.lower().strip()
 
@@ -74,6 +100,14 @@ def _detect_fan_command(text: str) -> Optional[Dict[str, Any]]:
         return None
 
     duration_seconds, duration_text = _parse_duration_seconds(text)
+    delay_seconds, delay_text = _parse_delay_seconds(text)
+
+    # If phrase is only delayed start ("через 10 сек"), do NOT treat it as duration.
+    # Duration should be explicit, usually "на 10 сек".
+    if delay_seconds and not re.search(r"\bна\s+\d+", text.lower()):
+        duration_seconds = None
+        duration_text = None
+
     followup_action_key = FOLLOWUP_ACTIONS.get(action_key) if duration_seconds and op == "on" else None
 
     zone_ru = "верх" if zone == "top" else "низ"
@@ -87,6 +121,9 @@ def _detect_fan_command(text: str) -> Optional[Dict[str, Any]]:
         f"• Действие: {op_ru}",
         f"• action_key: {action_key}",
     ]
+
+    if delay_seconds:
+        lines.append(f"• Запуск: {delay_text}")
 
     if duration_seconds:
         lines.append(f"• Таймер: {duration_text}")
@@ -106,6 +143,8 @@ def _detect_fan_command(text: str) -> Optional[Dict[str, Any]]:
         "action_key": action_key,
         "duration_seconds": duration_seconds,
         "duration_text": duration_text,
+        "delay_seconds": delay_seconds,
+        "delay_text": delay_text,
         "followup_action_key": followup_action_key,
         "confidence": 0.95,
         "requires_confirmation": True,
@@ -184,6 +223,14 @@ AI НЕ выполняет действие. AI только формирует 
             duration_seconds = None
 
         duration_text = data.get("duration_text")
+
+        delay_seconds = data.get("delay_seconds")
+        try:
+            delay_seconds = int(delay_seconds) if delay_seconds else None
+        except Exception:
+            delay_seconds = None
+
+        delay_text = data.get("delay_text") or (f"через {delay_seconds} сек" if delay_seconds else None)
         followup_action_key = allowed[action_key].get("followup") if duration_seconds and action_key.endswith("_on") else None
 
         zone = "top" if "top" in action_key else "bottom"
@@ -201,6 +248,9 @@ AI НЕ выполняет действие. AI только формирует 
             f"• action_key: {action_key}",
         ]
 
+        if delay_seconds:
+            lines.append(f"• Запуск: {delay_text}")
+
         if duration_seconds:
             lines.append(f"• Таймер: {duration_text or str(duration_seconds) + ' сек'}")
             if followup_action_key:
@@ -217,6 +267,8 @@ AI НЕ выполняет действие. AI только формирует 
             "action_key": action_key,
             "duration_seconds": duration_seconds,
             "duration_text": duration_text or (f"{duration_seconds} сек" if duration_seconds else None),
+            "delay_seconds": delay_seconds,
+            "delay_text": delay_text,
             "followup_action_key": followup_action_key,
             "confidence": data.get("confidence", 0.75),
             "requires_confirmation": True,
@@ -244,8 +296,13 @@ def _create_web_ask(candidate: Dict[str, Any], source_text: str) -> Dict[str, An
         "ai_candidate": candidate,
         "duration_seconds": candidate.get("duration_seconds"),
         "duration_text": candidate.get("duration_text"),
+        "delay_seconds": candidate.get("delay_seconds"),
+        "delay_text": candidate.get("delay_text"),
         "followup_action_key": candidate.get("followup_action_key"),
-        "requires_timer": bool(candidate.get("duration_seconds") and candidate.get("followup_action_key")),
+        "requires_timer": bool(
+            candidate.get("delay_seconds")
+            or (candidate.get("duration_seconds") and candidate.get("followup_action_key"))
+        ),
     }
 
     state = create_pending_ask(

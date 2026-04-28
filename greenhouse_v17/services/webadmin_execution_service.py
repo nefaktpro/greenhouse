@@ -91,6 +91,34 @@ def _run_followup_timer(duration, action_key, timer_id=None):
             _update_ai_timer(timer_id, status="error", error=str(e))
             append_timer_log("timer_error", get_ai_timer(timer_id), {"error": str(e)})
 
+
+def _run_delayed_action(delay, action_key, timer_id=None):
+    import time
+    time.sleep(int(delay))
+    try:
+        if timer_id:
+            current = get_ai_timer(timer_id)
+            if current and current.get("status") == "canceled":
+                print(f"[TIMER] canceled, skip delayed {action_key} timer_id={timer_id}")
+                append_timer_log("timer_skipped_canceled", current)
+                return
+
+        print(f"[TIMER] executing delayed {action_key}")
+        if timer_id:
+            _update_ai_timer(timer_id, status="executing")
+
+        result = execute_action(action_key=action_key, source="timer_delayed")
+
+        if timer_id:
+            _update_ai_timer(timer_id, status="done", result=result)
+            append_timer_log("timer_done", get_ai_timer(timer_id), {"result": result})
+
+    except Exception as e:
+        print("[DELAY TIMER ERROR]", e)
+        if timer_id:
+            _update_ai_timer(timer_id, status="error", error=str(e))
+            append_timer_log("timer_error", get_ai_timer(timer_id), {"error": str(e)})
+
 from functools import lru_cache
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -592,6 +620,8 @@ def create_pending_ask(action_key: str, title: Optional[str] = None, source: str
             "duration_seconds",
             "duration_text",
             "followup_action_key",
+            "delay_seconds",
+            "delay_text",
             "ai_candidate",
             "requires_timer",
         ]:
@@ -611,11 +641,37 @@ def confirm_pending_ask() -> Dict[str, Any]:
     if not action_key:
         return {"ok": False, "error": "invalid_ask_state"}
 
-    result = execute_action(action_key=action_key, dry_run=False, source="web_admin_ask_confirm")
-
     # --- TIMER LOGIC ---
     duration = state.get("duration_seconds")
     followup = state.get("followup_action_key")
+    delay = state.get("delay_seconds")
+
+    # Delayed action: confirm only schedules action, does NOT execute immediately.
+    if delay and not followup:
+        try:
+            timer = _register_ai_timer(
+                action_key=action_key,
+                followup_action_key=None,
+                duration_seconds=delay,
+                source_text=state.get("source_text"),
+            )
+            _update_ai_timer(timer.get("timer_id"), status="scheduled")
+            append_timer_log("timer_scheduled", get_ai_timer(timer.get("timer_id")), {"delay_seconds": delay})
+            t = threading.Thread(
+                target=_run_delayed_action,
+                args=(delay, action_key, timer.get("timer_id")),
+                daemon=True
+            )
+            t.start()
+            print(f"[TIMER] scheduled delayed {action_key} in {delay}s timer_id={timer.get('timer_id')}")
+            clear_ask_state()
+            return {"ok": True, "result": {"ok": True, "scheduled": True, "action_key": action_key, "delay_seconds": delay, "timer_id": timer.get("timer_id")}}
+        except Exception as e:
+            print("[DELAY TIMER START ERROR]", e)
+            clear_ask_state()
+            return {"ok": False, "error": str(e)}
+
+    result = execute_action(action_key=action_key, dry_run=False, source="web_admin_ask_confirm")
 
     if duration and followup:
         try:
