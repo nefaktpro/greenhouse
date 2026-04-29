@@ -699,6 +699,42 @@ def confirm_pending_ask() -> Dict[str, Any]:
     if not action_key:
         return {"ok": False, "error": "invalid_ask_state"}
 
+
+    # --- SCHEDULE ASK LOGIC ---
+    candidate = (
+        state.get("ai_candidate")
+        or state.get("meta", {}).get("ask_meta", {}).get("ai_candidate")
+        or state.get("meta", {}).get("ai_candidate")
+    )
+
+    if isinstance(candidate, dict) and candidate.get("kind") == "schedule_candidate":
+        try:
+            from greenhouse_v17.services.ai_schedule_service import create_ai_schedule
+
+            res = create_ai_schedule(
+                action_key=candidate["action_key"],
+                time_hhmm=candidate["time"],
+                days=candidate["days"],
+                source_text=candidate.get("source_text", ""),
+                enabled=True,
+            )
+
+            clear_ask_state()
+
+            return {
+                "ok": True,
+                "result": {
+                    "ok": True,
+                    "kind": "schedule_created",
+                    "source": "local_schedule_parser",
+                    "message": f"[LOCAL] Расписание создано: {candidate.get('title')} — {candidate.get('days_text')} в {candidate.get('time')}.",
+                    "schedule": res.get("item") or res,
+                },
+            }
+        except Exception as e:
+            clear_ask_state()
+            return {"ok": False, "error": "schedule_create_failed", "details": str(e)}
+
     # --- TIMER LOGIC ---
     duration = state.get("duration_seconds")
     followup = state.get("followup_action_key")

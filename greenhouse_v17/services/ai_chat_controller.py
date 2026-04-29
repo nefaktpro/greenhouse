@@ -283,6 +283,74 @@ AI НЕ выполняет действие. AI только формирует 
         return None
 
 
+
+
+def _detect_schedule_command(text: str) -> Optional[Dict[str, Any]]:
+    t = (text or "").lower()
+
+    if not any(w in t for w in ["каждый день", "по будням", "по выходным", "ежедневно", "включай", "выключай"]):
+        return None
+
+    op = "off" if "выключ" in t else "on"
+
+    zone = None
+    if any(w in t for w in ["верх", "верхний", "сверху"]):
+        zone = "top"
+    elif any(w in t for w in ["низ", "нижний", "снизу"]):
+        zone = "bottom"
+
+    if "вент" in t:
+        zone = zone or "top"
+        action_key = f"fan_{zone}_{op}"
+        title = "верхний вентилятор" if zone == "top" else "нижний вентилятор"
+    elif "свет" in t:
+        if not zone:
+            return {
+                "kind": "schedule_clarification",
+                "message": "[LOCAL] Понял расписание для света, но нужно уточнить: верхний или нижний свет?"
+            }
+        action_key = f"light_{zone}_{op}"
+        title = "верхний свет" if zone == "top" else "нижний свет"
+    else:
+        return None
+
+    m = re.search(r'(?:в\s*)?(\d{1,2})(?::(\d{2}))?', t)
+    if not m:
+        return {
+            "kind": "schedule_clarification",
+            "message": "[LOCAL] Понял, что это расписание, но не понял время. Пример: каждый день в 08:00 включай верхний вент."
+        }
+
+    h = int(m.group(1))
+    minute = int(m.group(2) or 0)
+    if h > 23 or minute > 59:
+        return {"kind": "schedule_error", "message": "[LOCAL] Некорректное время расписания."}
+
+    if "будн" in t:
+        days = ["mon", "tue", "wed", "thu", "fri"]
+        days_text = "по будням"
+    elif "выходн" in t:
+        days = ["sat", "sun"]
+        days_text = "по выходным"
+    else:
+        days = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
+        days_text = "каждый день"
+
+    time_hhmm = f"{h:02d}:{minute:02d}"
+    action_ru = "включать" if op == "on" else "выключать"
+
+    return {
+        "kind": "schedule_candidate",
+        "source": "local_schedule_parser",
+        "action_key": action_key,
+        "title": f"{action_ru} {title}",
+        "time": time_hhmm,
+        "days": days,
+        "days_text": days_text,
+        "source_text": text,
+        "message": f"[LOCAL] Я понял расписание так:\\n\\n• {action_ru} {title}\\n• {days_text}\\n• время: {time_hhmm}\\n\\nСоздаю ASK на подтверждение."
+    }
+
 def _create_web_ask(candidate: Dict[str, Any], source_text: str) -> Dict[str, Any]:
     current = load_ask_state()
     if current.get("has_pending"):
@@ -326,6 +394,32 @@ def _create_web_ask(candidate: Dict[str, Any], source_text: str) -> Dict[str, An
 
 
 def confirm_pending() -> Dict[str, Any]:
+
+    state = load_ask_state()
+    candidate = (state or {}).get("meta", {}).get("ai_candidate") or (state or {}).get("ai_candidate")
+    if candidate and candidate.get("kind") == "schedule_candidate":
+        res = create_ai_schedule(
+            action_key=candidate["action_key"],
+            time_hhmm=candidate["time"],
+            days=candidate["days"],
+            source_text=candidate.get("source_text", ""),
+            enabled=True,
+        )
+        cancel_pending_ask()
+        if not res.get("ok"):
+            return {
+                "ok": False,
+                "source": "local_schedule_parser",
+                "message": f"[LOCAL] Не смог создать расписание: {res}",
+                "result": res,
+            }
+        return {
+            "ok": True,
+            "source": "local_schedule_parser",
+            "message": f"[LOCAL] Расписание создано: {candidate['title']} — {candidate['days_text']} в {candidate['time']}.",
+            "result": res,
+        }
+
     current = load_ask_state()
     if not current.get("has_pending"):
         return {"ok": False, "kind": "no_pending", "message": "Нет pending ASK для подтверждения."}
@@ -526,7 +620,20 @@ def _find_last_request_context_from_history() -> tuple[str, list[dict]]:
 
 
 
+
+
+def _get_current_mode_safe() -> str:
+    try:
+        from greenhouse_v17.services.mode_service import get_mode_flags
+        state = get_mode_flags()
+        return str(state.get("mode") or state.get("name") or "MANUAL").upper()
+    except Exception:
+        return "MANUAL"
+
+
 def handle_chat_message(text: str) -> Dict[str, Any]:
+    schedule_candidate = _detect_schedule_command(text)
+
     t = text.strip().lower()
 
     # Подтверждение последнего REQUEST_CONTEXT: "давай", "покажи", "запроси"
@@ -542,6 +649,45 @@ def handle_chat_message(text: str) -> Dict[str, Any]:
     if t in ["нет", "no", "отмена", "cancel"]:
         result = cancel_pending_ask()
         return {"ok": True, "kind": "cancelled", "message": "Ок, отменил pending ASK.", "result": result}
+
+
+
+    # === SCHEDULE MODE-AWARE FLOW ===
+    if schedule_candidate:
+        mode = _get_current_mode_safe()
+
+        if mode == "ASK":
+            return _create_web_ask(schedule_candidate, text)
+
+        if mode == "MANUAL":
+            from greenhouse_v17.services.ai_schedule_service import create_ai_schedule
+
+            res = create_ai_schedule(
+                action_key=schedule_candidate["action_key"],
+                time_hhmm=schedule_candidate["time"],
+                days=schedule_candidate["days"],
+                source_text=schedule_candidate.get("source_text", ""),
+                enabled=True,
+            )
+
+            return {
+                "ok": True,
+                "source": "local_schedule_parser",
+                "kind": "schedule_created",
+                "message": f"[LOCAL] Создал расписание:\n• {schedule_candidate['title']} — {schedule_candidate['days_text']} в {schedule_candidate['time']}.",
+                "result": res,
+            }
+
+        if mode == "TEST":
+            return {
+                "ok": True,
+                "source": "local_schedule_parser",
+                "kind": "schedule_dry_run",
+                "message": f"[LOCAL][TEST] Было бы создано расписание:\n• {schedule_candidate['title']} — {schedule_candidate['days_text']} в {schedule_candidate['time']}.",
+            }
+
+        # AUTO / AUTOPILOT пока безопасно ведём через ASK
+        return _create_web_ask(schedule_candidate, text)
 
     candidate = _detect_fan_command(text)
     if candidate:

@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+.schedule-btn-on{background:#238636;color:white;border:0;border-radius:10px;padding:9px 12px;cursor:pointer}
+.schedule-btn-off{background:#8b949e;color:#0d1117;border:0;border-radius:10px;padding:9px 12px;cursor:pointer}
+.schedule-btn-delete{background:#da3633;color:white;border:0;border-radius:10px;padding:9px 12px;cursor:pointer}
+.schedule-pill-active{background:#23863633;color:#7ee787}
+.schedule-pill-inactive{background:#8b949e33;color:#c9d1d9}
+.schedule-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+</style>
+<section class="card">
+  <h2>📅 AI Schedules</h2>
+  <p class="muted">Повторяющиеся действия по дням недели и времени. Исполнение идёт через общий Execution → HA → Verify.</p>
+</section>
+
+<section class="card">
+  <h3>Добавить расписание</h3>
+  <div class="grid" style="grid-template-columns: 1fr 160px; gap: 12px;">
+    <label>
+      action_key
+      <input id="actionKey" placeholder="fan_top_on">
+    </label>
+    <label>
+      время HH:MM
+      <input id="timeHHMM" placeholder="10:00">
+    </label>
+  </div>
+
+  <div style="margin-top:12px">
+    <label><input type="checkbox" class="day" value="mon"> Пн</label>
+    <label><input type="checkbox" class="day" value="tue"> Вт</label>
+    <label><input type="checkbox" class="day" value="wed"> Ср</label>
+    <label><input type="checkbox" class="day" value="thu"> Чт</label>
+    <label><input type="checkbox" class="day" value="fri"> Пт</label>
+    <label><input type="checkbox" class="day" value="sat"> Сб</label>
+    <label><input type="checkbox" class="day" value="sun"> Вс</label>
+  </div>
+
+  <label style="display:block;margin-top:12px">
+    описание
+    <input id="sourceText" placeholder="каждый день в 10:00 включи верхний вент">
+  </label>
+
+  <button class="btn" style="margin-top:12px" onclick="createSchedule()">Добавить</button>
+  <button class="ghost-btn" style="margin-top:12px" onclick="runDue()">Проверить due сейчас</button>
+</section>
+
+<section class="card">
+  <h3>Активные расписания</h3>
+  <div id="activeSchedules" class="stack"></div>
+</section>
+
+<section class="card">
+  <details>
+    <summary>Неактивные расписания (<span id="inactiveCount">0</span>)</summary>
+    <div id="inactiveSchedules" class="stack" style="margin-top:12px"></div>
+  </details>
+</section>
+
+<section class="card">
+  <details>
+    <summary>История событий</summary>
+    <div id="scheduleLog" style="margin-top:12px"></div>
+  </details>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const dayNames = {mon:"Пн",tue:"Вт",wed:"Ср",thu:"Чт",fri:"Пт",sat:"Сб",sun:"Вс"}
+
+function fmtTime(ts){
+  if(!ts) return "—"
+  return new Date(ts * 1000).toLocaleString()
+}
+
+async function loadSchedules(){
+  const r = await fetch("/api/ai/schedules")
+  const data = await r.json()
+  const items = data.items || []
+  const active = items.filter(x => x.enabled)
+  const inactive = items.filter(x => !x.enabled)
+
+  document.getElementById("activeSchedules").innerHTML = active.length ? active.map(card).join("") : "<div class='muted'>активных расписаний нет</div>"
+  document.getElementById("inactiveSchedules").innerHTML = inactive.length ? inactive.map(card).join("") : "<div class='muted'>неактивных расписаний нет</div>"
+  document.getElementById("inactiveCount").textContent = inactive.length
+}
+
+function card(s){
+  const days = (s.days || []).map(d => dayNames[d] || d).join(" ")
+  const verified = s.last_result && s.last_result.verified
+  const ok = s.last_result && s.last_result.ok !== false
+  const check = s.last_result ? (verified ? "✅ verified" : ok ? "✅ executed" : "⚠️ error") : "ещё не выполнялось"
+  return `
+    <div class="timer-card">
+      <div class="timer-title">
+        <span class="badge ${s.enabled ? 'schedule-pill-active' : 'schedule-pill-inactive'}">${s.enabled ? 'активно' : 'неактивно'}</span>
+        ${s.action_key}
+      </div>
+      <div class="timer-meta">${s.source_text || ""}</div>
+      <div style="margin-top:8px"><b>Когда:</b> ${days || "каждый день"} в ${s.time}</div>
+      <div><b>Проверка:</b> ${check}</div>
+      <div class="timer-meta">Последний запуск: ${fmtTime(s.last_run_at)}</div>
+      <div style="margin-top:10px">
+        <button class="${s.enabled ? 'schedule-btn-off' : 'schedule-btn-on'}" onclick="toggleSchedule('${s.schedule_id}', ${s.enabled ? 'false' : 'true'})">
+          ${s.enabled ? '⏸ Сделать неактивным' : '▶️ Сделать активным'}
+        </button>
+        <button class="schedule-btn-delete" onclick="deleteSchedule('${s.schedule_id}')">🗑 Удалить</button>
+      </div>
+      ${s.last_result ? `<details><summary>last_result</summary><pre>${JSON.stringify(s.last_result,null,2)}</pre></details>` : ""}
+    </div>
+  `
+}
+
+async function createSchedule(){
+  const days = Array.from(document.querySelectorAll(".day:checked")).map(x => x.value)
+  const payload = {
+    action_key: document.getElementById("actionKey").value.trim(),
+    time: document.getElementById("timeHHMM").value.trim(),
+    days,
+    source_text: document.getElementById("sourceText").value.trim(),
+    enabled: true
+  }
+  const r = await fetch("/api/ai/schedules/create", {
+    method:"POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify(payload)
+  })
+  const data = await r.json()
+  if(!data.ok) alert("Ошибка: " + JSON.stringify(data))
+  await loadSchedules()
+  await loadLog()
+}
+
+async function toggleSchedule(id, enabled){
+  await fetch(`/api/ai/schedules/${id}/enabled`, {
+    method:"POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({enabled})
+  })
+  await loadSchedules()
+  await loadLog()
+}
+
+async function deleteSchedule(id){
+  if(!confirm("Удалить расписание? Это действие уберёт его со страницы.")) return
+  await fetch(`/api/ai/schedules/${id}/delete`, {method:"POST"})
+  await loadSchedules()
+  await loadLog()
+}
+
+async function runDue(){
+  const r = await fetch("/api/ai/schedules/run-due", {method:"POST"})
+  const data = await r.json()
+  alert(JSON.stringify(data, null, 2))
+  await loadSchedules()
+  await loadLog()
+}
+
+async function loadLog(){
+  const r = await fetch("/api/ai/schedules/log")
+  const data = await r.json()
+  const rows = (data.items || []).slice().reverse()
+  document.getElementById("scheduleLog").innerHTML = rows.length ? rows.map(x => `
+    <div class="timer-card">
+      <div><b>${x.event}</b> — ${fmtTime(x.time)}</div>
+      <div class="timer-meta">${x.schedule?.action_key || ""} ${x.schedule?.time || ""}</div>
+      <details><summary>details</summary><pre>${JSON.stringify(x, null, 2)}</pre></details>
+    </div>
+  `).join("") : "<div class='muted'>истории нет</div>"
+}
+
+loadSchedules()
+loadLog()
+setInterval(loadSchedules, 5000)
+</script>
+{% endblock %}

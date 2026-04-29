@@ -72,3 +72,6 @@ app.include_router(control_debug_router, tags=["control_debug"])
 
 from interfaces.web_admin.routes import ai_timers
 app.include_router(ai_timers.router)
+
+from interfaces.web_admin.routes import ai_schedules
+app.include_router(ai_schedules.router)

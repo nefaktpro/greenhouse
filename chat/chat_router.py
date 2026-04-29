@@ -6,8 +6,11 @@ from typing import Any, Dict, Optional
 from chat.intent_parser import ParsedIntent, parse_intent
 from ai.router import route_ai_message
 from chat.observation_store import add_observation
+from greenhouse_v17.services.ai_schedule_service import create_ai_schedule
 from greenhouse_v17.services.mode_service import get_mode_flags
+from greenhouse_v17.services.ai_schedule_service import create_ai_schedule
 from greenhouse_v17.services.webadmin_execution_service import create_pending_ask, execute_action, load_ask_state
+from greenhouse_v17.services.ai_schedule_service import create_ai_schedule
 from greenhouse_v17.services.decision_logger import log_decision
 
 
@@ -266,3 +269,36 @@ def handle_chat_message(text: str) -> ChatResponse:
         parsed_intent=parsed,
         response_type="generic_message",
     )
+
+
+def handle_schedule_command(text: str):
+    text = text.lower()
+
+    if "вентилятор" in text:
+        action_key = "fan_top_on"
+    elif "свет" in text:
+        action_key = "light_on"
+    else:
+        return None
+
+    # time parse (MVP)
+    import re
+    m = re.search(r'(\d{1,2})[: ]?(\d{2})?', text)
+    if not m:
+        return {"text": "Не понял время. Напиши например: в 08:00"}
+
+    h = int(m.group(1))
+    mnt = int(m.group(2) or 0)
+    time_str = f"{h:02d}:{mnt:02d}"
+
+    schedule = create_ai_schedule(
+        title=f"AI: {action_key} {time_str}",
+        action_key=action_key,
+        schedule_type="daily",
+        time=time_str
+    )
+
+    return {
+        "text": f"Создал расписание: {action_key} в {time_str}",
+        "schedule": schedule
+    }

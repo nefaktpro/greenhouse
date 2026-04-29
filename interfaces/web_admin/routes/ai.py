@@ -415,3 +415,97 @@ except NameError:
     @router.get("/web/ai/logs")
     def web_ai_logs_alias():
         return RedirectResponse(url="/web/ai/memory", status_code=302)
+
+
+def try_schedule_from_text(text: str):
+    t = (text or "").lower()
+
+    if not any(w in t for w in ["каждый день", "по будням", "по выходным", "включай", "выключай"]):
+        return None
+
+    # action
+    if "вент" in t:
+        action_key = "fan_top_on"
+    elif "свет" in t:
+        action_key = "light_on"
+    else:
+        return None
+
+    # time
+    m = re.search(r'(\d{1,2})(?::(\d{2}))?', t)
+    if not m:
+        return {"text": "Не понял время. Пример: каждый день в 08:00"}
+
+    h = int(m.group(1))
+    minute = int(m.group(2) or 0)
+
+    if h > 23 or minute > 59:
+        return {"text": "Некорректное время"}
+
+    time_hhmm = f"{h:02d}:{minute:02d}"
+
+    # days
+    if "будн" in t:
+        days = ["mon","tue","wed","thu","fri"]
+    elif "выходн" in t:
+        days = ["sat","sun"]
+    else:
+        days = ["mon","tue","wed","thu","fri","sat","sun"]
+
+    from greenhouse_v17.services.ai_schedule_service import create_ai_schedule
+
+    res = create_ai_schedule(
+        action_key=action_key,
+        time_hhmm=time_hhmm,
+        days=days,
+        source_text=text
+    )
+
+    return {
+        "ok": True,
+        "answer": f"Создал расписание: {action_key} в {time_hhmm}",
+        "control_result": {"kind": "schedule_created"}
+    }
+
+
+from fastapi import Body
+import re
+
+@router.post("/api/ai/schedule-from-text")
+def schedule_from_text(payload: dict = Body(...)):
+    text = payload.get("message", "").lower()
+
+    if "вент" in text:
+        action_key = "fan_top_on"
+    elif "свет" in text:
+        action_key = "light_on"
+    else:
+        return {"ok": False, "error": "unknown device"}
+
+    m = re.search(r'(\d{1,2})(?::(\d{2}))?', text)
+    if not m:
+        return {"ok": False, "error": "no time"}
+
+    h = int(m.group(1))
+    minute = int(m.group(2) or 0)
+
+    time_hhmm = f"{h:02d}:{minute:02d}"
+
+    if "будн" in text:
+        days = ["mon","tue","wed","thu","fri"]
+    else:
+        days = ["mon","tue","wed","thu","fri","sat","sun"]
+
+    from greenhouse_v17.services.ai_schedule_service import create_ai_schedule
+
+    res = create_ai_schedule(
+        action_key=action_key,
+        time_hhmm=time_hhmm,
+        days=days,
+        source_text=text
+    )
+
+    return {
+        "ok": True,
+        "created": res
+    }
