@@ -617,7 +617,6 @@ def execute_action(
 
     if expected_state is not None:
         for attempt in range(1, 4):
-            verify_attempts = []
             actual_state = None
             verified = False
 
