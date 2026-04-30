@@ -308,6 +308,16 @@ def _run_action_plan(plan: Dict[str, Any]) -> Dict[str, Any]:
     return {"ok": False, "error": "unsupported_action_plan", "plan": plan}
 
 
+
+
+def _can_run_recipe(recipe: Dict[str, Any], min_interval_sec: int = 15) -> bool:
+    runtime = recipe.get("runtime") or {}
+    last = runtime.get("last_run_ts")
+    if not last:
+        return True
+    return (time.time() - float(last)) >= min_interval_sec
+
+
 def run_due_recipes_v2_once() -> Dict[str, Any]:
     items = list_recipes_v2()
     now_ts = time.time()
@@ -325,8 +335,12 @@ def run_due_recipes_v2_once() -> Dict[str, Any]:
         if not condition.get("result"):
             result = {"ok": True, "status": "conditions_false_skipped", "condition": condition}
         else:
-            action_result = _run_action_plan(recipe.get("action_plan") or {})
-            result = {"ok": True, "status": "executed", "condition": condition, "action_result": action_result}
+            if not _can_run_recipe(recipe):
+                result = {"ok": True, "status": "skipped_recent", "reason": "recent_execution"}
+            else:
+                action_result = _run_action_plan(recipe.get("action_plan") or {})
+                result = {"ok": True, "status": "executed", "condition": condition, "action_result": action_result}
+                recipe.setdefault("runtime", {})["last_run_ts"] = time.time()
 
         recipe["last_result"] = result
         recipe["updated_at"] = _now()
