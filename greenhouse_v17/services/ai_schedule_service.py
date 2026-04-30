@@ -79,17 +79,21 @@ def list_ai_schedules() -> List[Dict[str, Any]]:
 
 
 def create_ai_schedule(
-    action_key: str,
+    action_key: str | None,
     time_hhmm: str,
     days: List[str],
     source_text: str | None = None,
     enabled: bool = True,
+    action_keys: List[str] | None = None,
 ) -> Dict[str, Any]:
-    action_key = (action_key or "").strip()
+    action_key = (action_key or "").strip() if action_key else ""
+    action_keys = [x.strip() for x in (action_keys or []) if x and x.strip()]
     time_hhmm = (time_hhmm or "").strip()
 
-    if not action_key:
+    if not action_key and not action_keys:
         return {"ok": False, "error": "action_key_required"}
+    if action_keys and not action_key:
+        action_key = action_keys[0]
     if not time_hhmm or ":" not in time_hhmm:
         return {"ok": False, "error": "time_hhmm_required"}
 
@@ -102,6 +106,7 @@ def create_ai_schedule(
         "schedule_id": "sch_" + uuid.uuid4().hex[:12],
         "enabled": bool(enabled),
         "action_key": action_key,
+        "action_keys": action_keys or [action_key],
         "time": time_hhmm,
         "days": days,
         "source_text": source_text or "",
@@ -152,16 +157,28 @@ def run_due_schedules_once() -> Dict[str, Any]:
         if item.get("last_run_key") == run_key:
             continue
 
-        action_key = item.get("action_key")
+        action_keys = item.get("action_keys") or [item.get("action_key")]
         try:
             append_schedule_log("schedule_due", item, {"run_key": run_key})
-            result = execute_action(action_key=action_key, source="ai_schedule")
+            results = []
+            for action_key in action_keys:
+                if not action_key:
+                    continue
+                results.append({
+                    "action_key": action_key,
+                    "result": execute_action(action_key=action_key, source="ai_schedule")
+                })
+
+            result = {
+                "ok": all((r.get("result") or {}).get("ok", True) for r in results),
+                "results": results,
+            }
             item["last_run_key"] = run_key
             item["last_run_at"] = time.time()
             item["last_result"] = result
             item["updated_at"] = time.time()
             append_schedule_log("schedule_executed", item, {"result": result})
-            executed.append({"schedule_id": item.get("schedule_id"), "action_key": action_key, "result": result})
+            executed.append({"schedule_id": item.get("schedule_id"), "action_keys": action_keys, "result": result})
         except Exception as e:
             item["last_run_key"] = run_key
             item["last_run_at"] = time.time()

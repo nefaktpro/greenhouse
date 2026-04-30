@@ -124,6 +124,8 @@
       }
 
       if (data.ok) {
+        setTimeout(() => refreshAfterAction(entityId, stateId), 800);
+
         showFlash(data.message + " | state: " + (data.state || "unknown"), "ok");
       } else {
         showFlash((data.message || "ERROR") + " | " + (data.error || "unknown"), "error");
@@ -154,6 +156,8 @@
       const data = await res.json();
 
       if (data.ok) {
+        setTimeout(() => refreshAfterAction(entityId, stateId), 800);
+
         showFlash(
           data.message +
           " | unavailable было: " + data.before_unavailable_count +

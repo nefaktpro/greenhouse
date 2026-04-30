@@ -299,20 +299,21 @@ def _detect_schedule_command(text: str) -> Optional[Dict[str, Any]]:
     elif any(w in t for w in ["низ", "нижний", "снизу"]):
         zone = "bottom"
 
-    if "вент" in t:
-        zone = zone or "top"
-        action_key = f"fan_{zone}_{op}"
-        title = "верхний вентилятор" if zone == "top" else "нижний вентилятор"
-    elif "свет" in t:
-        if not zone:
-            return {
-                "kind": "schedule_clarification",
-                "message": "[LOCAL] Понял расписание для света, но нужно уточнить: верхний или нижний свет?"
-            }
-        action_key = f"light_{zone}_{op}"
-        title = "верхний свет" if zone == "top" else "нижний свет"
-    else:
+    from greenhouse_v17.services.nl_action_resolver import resolve_action_from_text
+
+    resolved = resolve_action_from_text(text, op=op, zone=zone)
+    if not resolved:
         return None
+
+    if resolved.get("kind") == "clarification":
+        return {
+            "kind": "schedule_clarification",
+            "message": resolved.get("message", "[LOCAL] Нужно уточнить устройство или зону.")
+        }
+
+    action_key = resolved.get("action_key")
+    action_keys = resolved.get("action_keys") or ([action_key] if action_key else [])
+    title = resolved["title"]
 
     m = re.search(r'(?:в\s*)?(\d{1,2})(?::(\d{2}))?', t)
     if not m:
@@ -343,12 +344,13 @@ def _detect_schedule_command(text: str) -> Optional[Dict[str, Any]]:
         "kind": "schedule_candidate",
         "source": "local_schedule_parser",
         "action_key": action_key,
-        "title": f"{action_ru} {title}",
+        "action_keys": action_keys,
+        "title": title,
         "time": time_hhmm,
         "days": days,
         "days_text": days_text,
         "source_text": text,
-        "message": f"[LOCAL] Я понял расписание так:\\n\\n• {action_ru} {title}\\n• {days_text}\\n• время: {time_hhmm}\\n\\nСоздаю ASK на подтверждение."
+        "message": f"[LOCAL] Я понял расписание так:\n\n• {action_ru} {title}\n• {days_text}\n• время: {time_hhmm}\n\nСоздаю ASK на подтверждение."
     }
 
 def _create_web_ask(candidate: Dict[str, Any], source_text: str) -> Dict[str, Any]:
@@ -622,16 +624,171 @@ def _find_last_request_context_from_history() -> tuple[str, list[dict]]:
 
 
 
+
 def _get_current_mode_safe() -> str:
     try:
         from greenhouse_v17.services.mode_service import get_mode_flags
-        state = get_mode_flags()
-        return str(state.get("mode") or state.get("name") or "MANUAL").upper()
+        flags = get_mode_flags()
+        mode = flags.get("mode") or flags.get("current_mode") or flags.get("name")
+        return str(mode or "MANUAL").upper()
     except Exception:
         return "MANUAL"
 
 
+
+
+def _create_logical_schedule_management_ask(candidate: Dict[str, Any], text: str) -> Dict[str, Any]:
+    """
+    Logical ASK: not an execution action.
+    Used for schedule enable/disable/delete.
+    Must be handled by confirm before execute_action().
+    """
+    import json
+    import time
+    from pathlib import Path
+
+    op = candidate.get("op")
+    idx = candidate.get("index")
+
+    if op == "delete":
+        title = f"Удалить расписание {idx}?"
+    elif op == "disable":
+        title = f"Выключить расписание {idx}?"
+    elif op == "enable":
+        title = f"Включить расписание {idx}?"
+    else:
+        title = f"Изменить расписание {idx}?"
+
+    state = {
+        "has_pending": True,
+        "kind": "schedule_management_candidate",
+        "title": title,
+        "source": "local_schedule_parser",
+        "created_at": time.time(),
+        "source_text": text,
+        "ai_candidate": candidate,
+        "ask_meta": {
+            "logical_type": "schedule_management",
+            "ai_candidate": candidate,
+        },
+        # action_key intentionally absent from logical ASK
+    }
+
+    from greenhouse_v17.services.webadmin_execution_service import save_ask_state
+    save_ask_state(state)
+
+    return {
+        "ok": True,
+        "source": "local_schedule_parser",
+        "kind": "ask_created",
+        "message": f"[LOCAL] {title}\\n\\nСоздаю ASK на подтверждение.",
+        "ask": state,
+    }
+
+
+def _apply_schedule_management_candidate(candidate: Dict[str, Any]) -> Dict[str, Any]:
+    from greenhouse_v17.services.ai_schedule_service import (
+        delete_ai_schedule,
+        set_ai_schedule_enabled,
+    )
+
+    op = candidate.get("op")
+    schedule_id = candidate.get("schedule_id")
+    idx = candidate.get("index")
+
+    if op == "delete":
+        res = delete_ai_schedule(schedule_id)
+        return {"ok": True, "source": "local_schedule_parser", "message": f"[LOCAL] Удалил расписание {idx}.", "result": res}
+
+    if op == "disable":
+        res = set_ai_schedule_enabled(schedule_id, False)
+        return {"ok": True, "source": "local_schedule_parser", "message": f"[LOCAL] Сделал расписание {idx} неактивным.", "result": res}
+
+    if op == "enable":
+        res = set_ai_schedule_enabled(schedule_id, True)
+        return {"ok": True, "source": "local_schedule_parser", "message": f"[LOCAL] Сделал расписание {idx} активным.", "result": res}
+
+    return {"ok": False, "source": "local_schedule_parser", "message": "[LOCAL] Не понял операцию с расписанием."}
+
+
+def _handle_schedule_management_command(text: str) -> Optional[Dict[str, Any]]:
+    t = (text or "").lower().strip()
+
+    from greenhouse_v17.services.ai_schedule_service import (
+        list_ai_schedules,
+        delete_ai_schedule,
+        set_ai_schedule_enabled,
+    )
+
+    if "расписан" in t and any(w in t for w in ["покажи", "список", "какие", "что есть"]):
+        items = list_ai_schedules()
+        if not items:
+            return {"ok": True, "source": "local_schedule_parser", "message": "[LOCAL] Расписаний пока нет."}
+
+        lines = ["[LOCAL] Расписания:"]
+        for i, item in enumerate(items, 1):
+            status = "активно" if item.get("enabled", True) else "неактивно"
+            actions = item.get("action_keys") or [item.get("action_key")]
+            lines.append(
+                f"{i}. {status} — {', '.join([a for a in actions if a])} — {item.get('time')} — {', '.join(item.get('days', []))}"
+            )
+        return {"ok": True, "source": "local_schedule_parser", "message": "\n".join(lines), "items": items}
+
+    if "расписан" not in t:
+        return None
+
+    import re
+    m = re.search(r'(\d+)', t)
+    if not m:
+        return {"ok": True, "source": "local_schedule_parser", "message": "[LOCAL] Укажи номер расписания. Например: удали расписание 2."}
+
+    idx = int(m.group(1)) - 1
+    items = list_ai_schedules()
+    if idx < 0 or idx >= len(items):
+        return {"ok": False, "source": "local_schedule_parser", "message": "[LOCAL] Не нашёл расписание с таким номером."}
+
+    schedule_id = items[idx].get("schedule_id")
+
+    op = None
+    if any(w in t for w in ["удали", "удалить", "сотри"]):
+        op = "delete"
+    elif any(w in t for w in ["выключи", "отключи", "пауза", "неактив"]):
+        op = "disable"
+    elif any(w in t for w in ["включи", "актив"]):
+        op = "enable"
+
+    if op:
+        candidate = {
+            "kind": "schedule_management_candidate",
+            "op": op,
+            "schedule_id": schedule_id,
+            "index": idx + 1,
+            "source_text": text,
+        }
+
+        mode = _get_current_mode_safe()
+
+        if mode == "ASK":
+            return _create_logical_schedule_management_ask(candidate, text)
+
+        if mode == "TEST":
+            return {
+                "ok": True,
+                "source": "local_schedule_parser",
+                "message": f"[LOCAL][TEST] Было бы выполнено: {op} расписание {idx+1}.",
+                "candidate": candidate,
+            }
+
+        return _apply_schedule_management_candidate(candidate)
+
+    return None
+
+
 def handle_chat_message(text: str) -> Dict[str, Any]:
+    schedule_manage = _handle_schedule_management_command(text)
+    if schedule_manage:
+        return schedule_manage
+
     schedule_candidate = _detect_schedule_command(text)
 
     t = text.strip().lower()
@@ -663,7 +820,8 @@ def handle_chat_message(text: str) -> Dict[str, Any]:
             from greenhouse_v17.services.ai_schedule_service import create_ai_schedule
 
             res = create_ai_schedule(
-                action_key=schedule_candidate["action_key"],
+                action_key=schedule_candidate.get("action_key"),
+                action_keys=schedule_candidate.get("action_keys"),
                 time_hhmm=schedule_candidate["time"],
                 days=schedule_candidate["days"],
                 source_text=schedule_candidate.get("source_text", ""),

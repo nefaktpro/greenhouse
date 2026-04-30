@@ -87,3 +87,8 @@ def test_humidifier_page(request: Request):
 @router.get("/lab/sensor24", response_class=HTMLResponse)
 def test_sensor24_page(request: Request):
     return render(request, "lab_sensor24.html", "Greenhouse v17 — Lab Sensor24")
+
+
+@router.get("/rules", response_class=HTMLResponse)
+def web_rules(request: Request):
+    return render(request, "rules.html", "Greenhouse v17 — Rules")

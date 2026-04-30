@@ -4,7 +4,7 @@ import json
 from typing import Any, Dict, Optional
 
 from greenhouse_v17.registry.loader import resolve_action_to_entity
-from greenhouse_v17.services.mode_service import get_mode
+from greenhouse_v17.services.mode_service import get_mode_flags
 from greenhouse_v17.services.ha_client import call_switch
 from greenhouse_v17.services.ask_service import save_ask_state
 from greenhouse_v17.services.runtime_paths import REGISTRY_DIR, ensure_runtime_dirs
@@ -62,7 +62,7 @@ def _human_title(action_key: str) -> str:
     return titles.get(action_key, action_key)
 
 def execute_action(action_key: str, force_execute: bool = False) -> Dict[str, Any]:
-    mode = get_mode()
+    mode = get_mode_flags()
     cap_error = _check_caps(action_key, mode)
     if cap_error:
         return {

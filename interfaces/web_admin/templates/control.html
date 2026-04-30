@@ -216,6 +216,38 @@ function renderActions(){
   }</div>`;
 }
 
+
+
+async function refreshStates(){
+  try {
+    const res = await fetch("/api/live/states?ts=" + Date.now(), {cache:"no-store"});
+    const data = await res.json();
+    const items = data.items || [];
+
+    const map = {};
+    for(const i of items){
+      map[i.entity_id] = i.state;
+    }
+
+    // обновляем состояния внутри ACTION_GROUPS
+    for(const g of ACTION_GROUPS){
+      if(g.sample?.entity_id && map[g.sample.entity_id] !== undefined){
+        const newState = map[g.sample.entity_id];
+
+        if(g.on) g.on.state = newState;
+        if(g.off) g.off.state = newState;
+        if(g.single) g.single.state = newState;
+      }
+    }
+
+    renderActions();
+
+  } catch(e){
+    console.log("refreshStates error", e);
+  }
+}
+
+
 async function loadActions(){
   if(!requireAuth()) return;
 
@@ -231,18 +263,55 @@ async function loadActions(){
   renderActions();
 }
 
+
+
 async function runAction(actionKey){
   if(!requireAuth()) return;
 
   document.getElementById("action-result-box").textContent = "Выполняю: " + actionKey;
 
-  const result = await ghTryPostVariants([
-    {url:"/api/actions/execute", body:{action_key:actionKey}}
-  ]);
+  try {
+    const result = await ghTryPostVariants([
+      {url:"/api/actions/execute", body:{action_key:actionKey}}
+    ]);
 
-  pretty("action-result-box", result);
-  setTimeout(loadActions, 1200);
+    pretty("action-result-box", result);
+
+    setTimeout(async () => {
+      try {
+        const res = await fetch("/api/live/states?ts=" + Date.now(), {cache:"no-store"});
+        const data = await res.json();
+        const items = data.items || [];
+
+        const map = {};
+        for(const i of items){
+          map[i.entity_id] = i.state;
+        }
+
+        for(const g of ACTION_GROUPS){
+          const eid = g.sample?.entity_id;
+          if(eid && map[eid] !== undefined){
+            const st = map[eid];
+            if(g.on) g.on.state = st;
+            if(g.off) g.off.state = st;
+            if(g.single) g.single.state = st;
+          }
+        }
+
+        renderActions();
+
+      } catch(e){
+        console.log("refresh error", e);
+      }
+    }, 1000);
+
+  } catch(err){
+    console.error(err);
+    document.getElementById("action-result-box").textContent = "Ошибка выполнения";
+  }
 }
+
+
 
 loadActions();
 </script>

@@ -3,7 +3,7 @@ from __future__ import annotations
 from telebot.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
 
 from greenhouse_v17.core.intent.intent_router import route_text
-from greenhouse_v17.services.mode_service import get_mode, set_mode
+from greenhouse_v17.services.mode_service import get_mode_flags, set_mode
 from greenhouse_v17.services.action_service import execute_action
 from greenhouse_v17.services.ask_service import load_ask_state, clear_ask_state
 
@@ -61,7 +61,7 @@ def register_v3_handlers(bot):
     def cmd_mode(message):
         bot.send_message(
             message.chat.id,
-            f"Текущий режим: {get_mode()}\n\n"
+            f"Текущий режим: {get_mode_flags()}\n\n"
             "/mode_manual\n/mode_test\n/mode_ask\n/mode_auto\n/mode_autopilot",
             reply_markup=build_main_menu(),
         )

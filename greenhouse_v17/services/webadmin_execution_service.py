@@ -611,9 +611,43 @@ def execute_action(
 
     r.raise_for_status()
 
-    time.sleep(VERIFY_SLEEP_SEC)
-    actual_state = _read_state_value(entity_id)
-    verified = expected_state is not None and actual_state == expected_state
+    verify_attempts = []
+    actual_state = None
+    verified = False
+
+    if expected_state is not None:
+        for attempt in range(1, 4):
+            verify_attempts = []
+            actual_state = None
+            verified = False
+
+            if expected_state is not None:
+                for attempt in range(1, 4):
+                    time.sleep(VERIFY_SLEEP_SEC)
+                    actual_state = _read_state_value(entity_id)
+                    verified = actual_state == expected_state
+                    verify_attempts.append({
+                        'attempt': attempt,
+                        'expected': expected_state,
+                        'actual': actual_state,
+                        'verified': verified
+                    })
+                    if verified:
+                        break
+            else:
+                actual_state = _read_state_value(entity_id)
+                verified = True
+            verify_attempts.append({
+                "attempt": attempt,
+                "expected": expected_state,
+                "actual": actual_state,
+                "verified": verified,
+            })
+            if verified:
+                break
+    else:
+        actual_state = _read_state_value(entity_id)
+        verified = True
 
     result = ExecutionResult(
         ok=verified if expected_state is not None else True,
@@ -692,6 +726,62 @@ def create_pending_ask(action_key: str, title: Optional[str] = None, source: str
 
 def confirm_pending_ask() -> Dict[str, Any]:
     state = load_ask_state()
+
+    # --- LOGICAL ASK: SCHEDULE MANAGEMENT ---
+    candidate = (
+        state.get("ai_candidate")
+        or state.get("ask_meta", {}).get("ai_candidate")
+        or state.get("meta", {}).get("ai_candidate")
+        or state.get("meta", {}).get("ask_meta", {}).get("ai_candidate")
+    )
+    logical_type = (
+        state.get("kind")
+        or state.get("ask_meta", {}).get("logical_type")
+        or state.get("meta", {}).get("logical_type")
+    )
+
+    if logical_type == "schedule_management_candidate" or logical_type == "schedule_management" or (
+        isinstance(candidate, dict) and candidate.get("kind") == "schedule_management_candidate"
+    ):
+        try:
+            from greenhouse_v17.services.ai_schedule_service import delete_ai_schedule, set_ai_schedule_enabled
+
+            if not isinstance(candidate, dict):
+                clear_ask_state()
+                return {"ok": False, "error": "schedule_management_candidate_missing", "state": state}
+
+            op = candidate.get("op")
+            schedule_id = candidate.get("schedule_id")
+            idx = candidate.get("index")
+
+            if op == "delete":
+                res = delete_ai_schedule(schedule_id)
+                msg = f"[LOCAL] Удалил расписание {idx}."
+            elif op == "disable":
+                res = set_ai_schedule_enabled(schedule_id, False)
+                msg = f"[LOCAL] Сделал расписание {idx} неактивным."
+            elif op == "enable":
+                res = set_ai_schedule_enabled(schedule_id, True)
+                msg = f"[LOCAL] Сделал расписание {idx} активным."
+            else:
+                clear_ask_state()
+                return {"ok": False, "error": "unknown_schedule_management_op", "candidate": candidate}
+
+            clear_ask_state()
+            return {
+                "ok": True,
+                "result": {
+                    "ok": True,
+                    "kind": "schedule_management_done",
+                    "source": "local_schedule_parser",
+                    "message": msg,
+                    "result": res,
+                },
+            }
+        except Exception as e:
+            clear_ask_state()
+            return {"ok": False, "error": "schedule_management_failed", "details": str(e)}
+
     if not state or not state.get("has_pending"):
         return {"ok": False, "error": "no_pending_ask"}
 
@@ -707,12 +797,51 @@ def confirm_pending_ask() -> Dict[str, Any]:
         or state.get("meta", {}).get("ai_candidate")
     )
 
+
+    if isinstance(candidate, dict) and candidate.get("kind") == "schedule_management_candidate":
+        try:
+            from greenhouse_v17.services.ai_schedule_service import delete_ai_schedule, set_ai_schedule_enabled
+
+            op = candidate.get("op")
+            schedule_id = candidate.get("schedule_id")
+            idx = candidate.get("index")
+
+            if op == "delete":
+                res = delete_ai_schedule(schedule_id)
+                msg = f"[LOCAL] Удалил расписание {idx}."
+            elif op == "disable":
+                res = set_ai_schedule_enabled(schedule_id, False)
+                msg = f"[LOCAL] Сделал расписание {idx} неактивным."
+            elif op == "enable":
+                res = set_ai_schedule_enabled(schedule_id, True)
+                msg = f"[LOCAL] Сделал расписание {idx} активным."
+            else:
+                clear_ask_state()
+                return {"ok": False, "error": "unknown_schedule_management_op", "details": str(candidate)}
+
+            clear_ask_state()
+            return {
+                "ok": True,
+                "result": {
+                    "ok": True,
+                    "kind": "schedule_management_done",
+                    "source": "local_schedule_parser",
+                    "message": msg,
+                    "result": res,
+                },
+            }
+        except Exception as e:
+            clear_ask_state()
+            return {"ok": False, "error": "schedule_management_failed", "details": str(e)}
+
+
     if isinstance(candidate, dict) and candidate.get("kind") == "schedule_candidate":
         try:
             from greenhouse_v17.services.ai_schedule_service import create_ai_schedule
 
             res = create_ai_schedule(
-                action_key=candidate["action_key"],
+                action_key=candidate.get("action_key"),
+                action_keys=candidate.get("action_keys"),
                 time_hhmm=candidate["time"],
                 days=candidate["days"],
                 source_text=candidate.get("source_text", ""),

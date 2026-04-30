@@ -141,3 +141,9 @@ device_id,parent_id,name,type,entity_id,unit,zone,location,logical_role,is_enabl
 38.102,38,Питание датчика 24,socket,switch.setevoi_filtr_Novyi_socket_2,on/off,utility_power,Нижний ярус,low_general_sensor_power,true,false,normal,devices_source_full,Питание T/H датчика
 38.103,38,Питание датчика 4,socket,switch.setevoi_filtr_novyi_socket_3,on/off,utility_power,Верхний ярус,top_air_quality_sensor_power,true,false,normal,devices_source_full,Питание CO₂ датчика
 38.104,38,Свет нижний,light,switch.setevoi_filtr_novyi_socket_4,on/off,utility_power,Нижний ярус,light_bottom_main,true,false,normal,devices_source_full,300 ватт
+
+100,0,Вентиляторы верх,device,,,top_rack,Верхний ярус,device_100,true,true,low,manual_patch,Верхние вентиляторы
+100.1,100,Реле верх,switch,switch.setevoi_filtr_novyi_socket_1,on/off,top_rack,Верхний ярус,top_air_circulation,true,false,normal,manual_patch,Управление верхними вентиляторами
+
+101,0,Вентиляторы низ,device,,,low_rack,Нижний ярус,device_101,true,true,low,manual_patch,Нижние вентиляторы
+101.1,101,Реле низ,switch,switch.setevoi_filtr_novyi_socket_2,on/off,low_rack,Нижний ярус,bottom_air_circulation,true,false,normal,manual_patch,Управление нижними вентиляторами
