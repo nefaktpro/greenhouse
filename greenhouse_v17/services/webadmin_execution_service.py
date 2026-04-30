@@ -731,7 +731,38 @@ def create_pending_ask(action_key: str, title: Optional[str] = None, source: str
 def confirm_pending_ask() -> Dict[str, Any]:
     state = load_ask_state()
 
-    # --- LOGICAL ASK: SCHEDULE MANAGEMENT ---
+    
+
+    # --- LOGICAL ASK: RECIPE V2 ---
+    if logical_type == "recipe_v2_candidate" or (
+        isinstance(candidate, dict) and candidate.get("kind") == "recipe_v2_candidate"
+    ):
+        try:
+            from greenhouse_v17.services.automation_recipe_v2_service import create_recipe_v2
+
+            payload = candidate.get("payload")
+            if not payload:
+                clear_ask_state()
+                return {"ok": False, "error": "recipe_v2_payload_missing"}
+
+            res = create_recipe_v2(**payload)
+
+            clear_ask_state()
+            return {
+                "ok": True,
+                "result": {
+                    "ok": True,
+                    "kind": "recipe_v2_created",
+                    "message": "[LOCAL] Automation создана",
+                    "result": res,
+                },
+            }
+        except Exception as e:
+            clear_ask_state()
+            return {"ok": False, "error": "recipe_v2_create_failed", "details": str(e)}
+
+
+# --- LOGICAL ASK: SCHEDULE MANAGEMENT ---
     candidate = (
         state.get("ai_candidate")
         or state.get("ask_meta", {}).get("ai_candidate")

@@ -789,6 +789,35 @@ def handle_chat_message(text: str) -> Dict[str, Any]:
     if schedule_manage:
         return schedule_manage
 
+
+    # === RECIPE V2 FLOW (before schedule parser) ===
+    recipe_v2_candidate = _detect_recipe_v2(text)
+    if recipe_v2_candidate:
+        mode = _get_current_mode_safe()
+
+        if mode == "ASK":
+            return _create_web_ask(recipe_v2_candidate, text)
+
+        if mode == "TEST":
+            return {
+                "ok": True,
+                "source": "local_recipe_v2_parser",
+                "kind": "recipe_v2_dry_run",
+                "message": f"[LOCAL][TEST] Было бы создано automation:\n• {recipe_v2_candidate['title']}",
+                "candidate": recipe_v2_candidate,
+            }
+
+        from greenhouse_v17.services.automation_recipe_v2_service import create_recipe_v2
+        res = create_recipe_v2(**recipe_v2_candidate["payload"])
+
+        return {
+            "ok": True,
+            "source": "local_recipe_v2_parser",
+            "kind": "recipe_v2_created",
+            "message": f"[LOCAL] Создал automation:\n• {recipe_v2_candidate['title']}",
+            "result": res,
+        }
+
     schedule_candidate = _detect_schedule_command(text)
 
     t = text.strip().lower()
@@ -903,3 +932,56 @@ USER_MESSAGE:
         }
     except Exception as e:
         return {"ok": False, "kind": "error", "error": str(e)}
+
+
+def _detect_recipe_v2(text: str):
+    import re
+
+    t = text.lower()
+
+    if "каждый час" in t and "вент" in t:
+        duration_sec = 10
+        m = re.search(r"на\s+(\d+)\s*(сек|секунд|секунды|s)", t)
+        if m:
+            duration_sec = int(m.group(1))
+
+        conditions = None
+        if "влаж" in t and ("ниже" in t or "меньше" in t or "<" in t):
+            value = "55"
+            m2 = re.search(r"(?:ниже|меньше|<)\s*(\d+)", t)
+            if m2:
+                value = m2.group(1)
+
+            conditions = {
+                "entity_id": "sensor.nobito_humidity",
+                "operator": "<",
+                "value": value,
+            }
+
+        title = "Каждый час: вент"
+        if conditions:
+            title += f" если влажность < {conditions['value']}"
+        title += f" на {duration_sec} сек"
+
+        return {
+            "kind": "recipe_v2_candidate",
+            "title": title,
+            "payload": {
+                "title": title,
+                "trigger": {
+                    "type": "interval",
+                    "every_sec": 3600
+                },
+                "conditions": conditions,
+                "action_plan": {
+                    "type": "duration",
+                    "action_key": "fan_top_on",
+                    "off_action_key": "fan_top_off",
+                    "duration_sec": duration_sec
+                },
+                "source_text": text
+            }
+        }
+
+    return None
+

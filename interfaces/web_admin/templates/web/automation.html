@@ -173,8 +173,11 @@ function getDecisionMatched(last) {
 }
 
 function renderConditions(r) {
-  if (!r.conditions) return "без общего условия";
-  return JSON.stringify(r.conditions);
+  const c = r.conditions;
+  if (!c) return "без условий";
+  if (c.logic) return `${c.logic}: ${(c.items || []).length} условий`;
+  if (c.entity_id && c.operator) return `${c.entity_id} ${c.operator} ${c.value}`;
+  return JSON.stringify(c);
 }
 
 function renderRecipeV2(r) {
@@ -276,7 +279,11 @@ async function loadAll() {
     metricCard("Follow-ups", layers.followups || {}, "🔁")
   ].join("");
 
-  const recipes = v2.items || [];
+  const recipes = (v2.items || []).slice().sort((a, b) => {
+    const ta = Date.parse(a.created_at || a.updated_at || 0) || 0;
+    const tb = Date.parse(b.created_at || b.updated_at || 0) || 0;
+    return tb - ta;
+  });
   document.getElementById("recipesV2").innerHTML =
     recipes.length ? recipes.map(renderRecipeV2).join("") : `<div class="empty">Recipes v2 пока пусто. Создай automation recipe через API или чат/NL позже.</div>`;
 
