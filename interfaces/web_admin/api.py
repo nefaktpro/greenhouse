@@ -75,8 +75,11 @@ app.include_router(ai_timers.router)
 
 from interfaces.web_admin.routes import rules, ai_schedules
 from interfaces.web_admin.routes import rules, rules as rules_routes
+from interfaces.web_admin.routes import followups as followups_router
 app.include_router(ai_schedules.router)
 app.include_router(rules_routes.router)
 
 
 app.include_router(rules.router)
+
+app.include_router(followups_router.router)

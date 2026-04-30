@@ -617,25 +617,9 @@ def execute_action(
 
     if expected_state is not None:
         for attempt in range(1, 4):
-            actual_state = None
-            verified = False
-
-            if expected_state is not None:
-                for attempt in range(1, 4):
-                    time.sleep(VERIFY_SLEEP_SEC)
-                    actual_state = _read_state_value(entity_id)
-                    verified = actual_state == expected_state
-                    verify_attempts.append({
-                        'attempt': attempt,
-                        'expected': expected_state,
-                        'actual': actual_state,
-                        'verified': verified
-                    })
-                    if verified:
-                        break
-            else:
-                actual_state = _read_state_value(entity_id)
-                verified = True
+            time.sleep(VERIFY_SLEEP_SEC)
+            actual_state = _read_state_value(entity_id)
+            verified = actual_state == expected_state
             verify_attempts.append({
                 "attempt": attempt,
                 "expected": expected_state,
@@ -669,6 +653,27 @@ def execute_action(
             "duration_ms": int((time.time() - call_started) * 1000),
         },
     )
+    if expected_state is not None and not verified:
+        try:
+            from greenhouse_v17.services.followup_service import create_followup
+            fu = create_followup(
+                action_key=action_key,
+                entity_id=entity_id,
+                expected_state=expected_state,
+                check_after_sec=30,
+                source="execution_verify_failed",
+                meta={
+                    "source": source,
+                    "operation": operation,
+                    "requested_mode": requested_mode,
+                    "verify_attempts": verify_attempts,
+                    "actual_state": actual_state,
+                },
+            )
+            result.details["followup"] = fu
+        except Exception as exc:
+            result.details["followup_error"] = str(exc)
+
     _append_log(result.to_dict())
     return result.to_dict()
 
