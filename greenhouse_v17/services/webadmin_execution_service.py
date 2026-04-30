@@ -733,6 +733,19 @@ def confirm_pending_ask() -> Dict[str, Any]:
 
     
 
+    # --- LOGICAL ASK: SCHEDULE MANAGEMENT ---
+    candidate = (
+        state.get("ai_candidate")
+        or state.get("ask_meta", {}).get("ai_candidate")
+        or state.get("meta", {}).get("ai_candidate")
+        or state.get("meta", {}).get("ask_meta", {}).get("ai_candidate")
+    )
+    logical_type = (
+        state.get("kind")
+        or state.get("ask_meta", {}).get("logical_type")
+        or state.get("meta", {}).get("logical_type")
+    )
+
     # --- LOGICAL ASK: RECIPE V2 ---
     if logical_type == "recipe_v2_candidate" or (
         isinstance(candidate, dict) and candidate.get("kind") == "recipe_v2_candidate"
@@ -746,8 +759,8 @@ def confirm_pending_ask() -> Dict[str, Any]:
                 return {"ok": False, "error": "recipe_v2_payload_missing"}
 
             res = create_recipe_v2(**payload)
-
             clear_ask_state()
+
             return {
                 "ok": True,
                 "result": {
@@ -762,63 +775,6 @@ def confirm_pending_ask() -> Dict[str, Any]:
             return {"ok": False, "error": "recipe_v2_create_failed", "details": str(e)}
 
 
-# --- LOGICAL ASK: SCHEDULE MANAGEMENT ---
-    candidate = (
-        state.get("ai_candidate")
-        or state.get("ask_meta", {}).get("ai_candidate")
-        or state.get("meta", {}).get("ai_candidate")
-        or state.get("meta", {}).get("ask_meta", {}).get("ai_candidate")
-    )
-    logical_type = (
-        state.get("kind")
-        or state.get("ask_meta", {}).get("logical_type")
-        or state.get("meta", {}).get("logical_type")
-    )
-
-    if logical_type == "schedule_management_candidate" or logical_type == "schedule_management" or (
-        isinstance(candidate, dict) and candidate.get("kind") == "schedule_management_candidate"
-    ):
-        try:
-            from greenhouse_v17.services.ai_schedule_service import delete_ai_schedule, set_ai_schedule_enabled
-
-            if not isinstance(candidate, dict):
-                clear_ask_state()
-                return {"ok": False, "error": "schedule_management_candidate_missing", "state": state}
-
-            op = candidate.get("op")
-            schedule_id = candidate.get("schedule_id")
-            idx = candidate.get("index")
-
-            if op == "delete":
-                res = delete_ai_schedule(schedule_id)
-                msg = f"[LOCAL] Удалил расписание {idx}."
-            elif op == "disable":
-                res = set_ai_schedule_enabled(schedule_id, False)
-                msg = f"[LOCAL] Сделал расписание {idx} неактивным."
-            elif op == "enable":
-                res = set_ai_schedule_enabled(schedule_id, True)
-                msg = f"[LOCAL] Сделал расписание {idx} активным."
-            else:
-                clear_ask_state()
-                return {"ok": False, "error": "unknown_schedule_management_op", "candidate": candidate}
-
-            clear_ask_state()
-            return {
-                "ok": True,
-                "result": {
-                    "ok": True,
-                    "kind": "schedule_management_done",
-                    "source": "local_schedule_parser",
-                    "message": msg,
-                    "result": res,
-                },
-            }
-        except Exception as e:
-            clear_ask_state()
-            return {"ok": False, "error": "schedule_management_failed", "details": str(e)}
-
-    if not state or not state.get("has_pending"):
-        return {"ok": False, "error": "no_pending_ask"}
 
     action_key = state.get("action_key")
     if not action_key:

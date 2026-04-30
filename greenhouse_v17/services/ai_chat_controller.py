@@ -664,7 +664,7 @@ def _create_logical_schedule_management_ask(candidate: Dict[str, Any], text: str
         "kind": "schedule_management_candidate",
         "title": title,
         "source": "local_schedule_parser",
-        "created_at": time.time(),
+        "created_at": __import__("time").time(),
         "source_text": text,
         "ai_candidate": candidate,
         "ask_meta": {
@@ -796,7 +796,7 @@ def handle_chat_message(text: str) -> Dict[str, Any]:
         mode = _get_current_mode_safe()
 
         if mode == "ASK":
-            return _create_web_ask(recipe_v2_candidate, text)
+            return _create_recipe_v2_ask(recipe_v2_candidate, text)
 
         if mode == "TEST":
             return {
@@ -934,54 +934,35 @@ USER_MESSAGE:
         return {"ok": False, "kind": "error", "error": str(e)}
 
 
+
+
 def _detect_recipe_v2(text: str):
-    import re
+    from greenhouse_v17.services.nl_recipe_v2_resolver import detect_recipe_v2
+    return detect_recipe_v2(text)
 
-    t = text.lower()
+def _create_recipe_v2_ask(candidate: Dict[str, Any], source_text: str) -> Dict[str, Any]:
+    from greenhouse_v17.services.webadmin_execution_service import save_ask_state
 
-    if "каждый час" in t and "вент" in t:
-        duration_sec = 10
-        m = re.search(r"на\s+(\d+)\s*(сек|секунд|секунды|s)", t)
-        if m:
-            duration_sec = int(m.group(1))
+    state = {
+        "has_pending": True,
+        "kind": "recipe_v2_candidate",
+        "title": candidate.get("title"),
+        "ai_candidate": candidate,
+        "created_at": __import__("time").time(),
+        "ask_meta": {
+            "logical_type": "recipe_v2_candidate",
+            "source": "chat",
+            "source_text": source_text,
+            "ai_candidate": candidate,
+        },
+    }
 
-        conditions = None
-        if "влаж" in t and ("ниже" in t or "меньше" in t or "<" in t):
-            value = "55"
-            m2 = re.search(r"(?:ниже|меньше|<)\s*(\d+)", t)
-            if m2:
-                value = m2.group(1)
+    save_ask_state(state)
 
-            conditions = {
-                "entity_id": "sensor.nobito_humidity",
-                "operator": "<",
-                "value": value,
-            }
-
-        title = "Каждый час: вент"
-        if conditions:
-            title += f" если влажность < {conditions['value']}"
-        title += f" на {duration_sec} сек"
-
-        return {
-            "kind": "recipe_v2_candidate",
-            "title": title,
-            "payload": {
-                "title": title,
-                "trigger": {
-                    "type": "interval",
-                    "every_sec": 3600
-                },
-                "conditions": conditions,
-                "action_plan": {
-                    "type": "duration",
-                    "action_key": "fan_top_on",
-                    "off_action_key": "fan_top_off",
-                    "duration_sec": duration_sec
-                },
-                "source_text": text
-            }
-        }
-
-    return None
-
+    return {
+        "ok": True,
+        "kind": "ask_created",
+        "source": "local_recipe_v2_parser",
+        "message": f"[ASK] Создать automation?\n• {candidate.get('title')}",
+        "candidate": candidate,
+    }

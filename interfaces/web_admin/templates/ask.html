@@ -112,6 +112,53 @@ function humanAction(item){
   return `${op}: ${item.title || item.action_key || "действие"}`;
 }
 
+function recipePayload(item){
+  const candidate = item.ai_candidate || item.ask_meta?.ai_candidate || {};
+  return candidate.payload || item.payload || {};
+}
+
+function describeTrigger(t){
+  if(!t) return "—";
+  if(t.type === "interval"){
+    const sec = Number(t.every_sec || 0);
+    if(sec === 3600) return "каждый час";
+    if(sec % 60 === 0) return `каждые ${sec/60} мин`;
+    return `каждые ${sec} сек`;
+  }
+  if(t.type === "delay"){
+    const sec = Number(t.delay_sec || 0);
+    if(sec >= 60 && sec % 60 === 0) return `через ${sec/60} мин`;
+    return `через ${sec} сек`;
+  }
+  if(t.type === "weekly") return `${(t.days || []).join(", ")} в ${t.time || "?"}`;
+  return t.type || "—";
+}
+
+function describeCondition(c){
+  if(!c) return "без условий";
+  if(c.logic) return `${c.logic}: ${(c.items || []).length} условий`;
+  if(c.entity_id && c.operator) return `${c.entity_id} ${c.operator} ${c.value}`;
+  return JSON.stringify(c);
+}
+
+function describeActionPlan(p){
+  if(!p) return "—";
+  if(p.type === "duration") return `${p.action_key} на ${p.duration_sec || "?"} сек`;
+  if(p.type === "action") return p.action_key || "action";
+  if(p.type === "sequence") return `sequence: ${(p.items || []).length} шагов`;
+  if(p.type === "decision") return `decision: ${(p.cases || []).length} вариантов`;
+  return p.type || "—";
+}
+
+function isRecipeAsk(item){
+  return item.kind === "recipe_v2_candidate" || item.ask_meta?.logical_type === "recipe_v2_candidate";
+}
+
+function humanRecipe(item){
+  const p = recipePayload(item);
+  return `Создать automation: ${p.title || item.title || "recipe v2"}`;
+}
+
 function setLive(state, action, result){
   document.getElementById("live-state").textContent = state || "—";
   document.getElementById("live-action").textContent = action || "—";
@@ -133,21 +180,36 @@ function renderEmpty(data){
 function renderPending(item,data){
   document.getElementById("ask-badge").className="ask-badge pending";
   document.getElementById("ask-badge").textContent="Ожидает подтверждения";
-  document.getElementById("ask-title").textContent=item.title || item.action_key || "Ожидает подтверждения";
-  document.getElementById("ask-human-text").textContent=humanAction(item);
 
-  document.getElementById("ask-info").innerHTML=[
-    field("Action key", item.action_key),
-    field("Устройство", item.entity_id),
-    field("Операция", item.operation),
-    field("Источник", item.source),
-    field("Тип", item.kind),
-    field("Создано", item.created_at)
-  ].join("");
+  if(isRecipeAsk(item)){
+    const p = recipePayload(item);
+    document.getElementById("ask-title").textContent = item.title || p.title || "Создать automation";
+    document.getElementById("ask-human-text").textContent = humanRecipe(item);
+    document.getElementById("ask-info").innerHTML=[
+      field("Тип", "Automation Recipe v2"),
+      field("Когда", describeTrigger(p.trigger)),
+      field("Условия", describeCondition(p.conditions)),
+      field("Действие", describeActionPlan(p.action_plan)),
+      field("Источник", item.ask_meta?.source_text || p.source_text || item.source || "chat"),
+      field("Создано", item.created_at)
+    ].join("");
+    setLive("Ждёт решения", humanRecipe(item), "Подтвердить создание automation");
+  } else {
+    document.getElementById("ask-title").textContent=item.title || item.action_key || "Ожидает подтверждения";
+    document.getElementById("ask-human-text").textContent=humanAction(item);
+    document.getElementById("ask-info").innerHTML=[
+      field("Action key", item.action_key),
+      field("Устройство", item.entity_id),
+      field("Операция", item.operation),
+      field("Источник", item.source),
+      field("Тип", item.kind),
+      field("Создано", item.created_at)
+    ].join("");
+    setLive("Ждёт решения", humanAction(item), "Нужно подтвердить или отменить");
+  }
 
   document.getElementById("ask-confirm-btn").disabled=false;
   document.getElementById("ask-cancel-btn").disabled=false;
-  setLive("Ждёт решения", humanAction(item), "Нужно подтвердить или отменить");
   pretty("ask-result-box", data);
 }
 
