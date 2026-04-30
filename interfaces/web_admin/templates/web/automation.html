@@ -1,0 +1,317 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="auto-page">
+  <div class="auto-hero">
+    <div>
+      <div class="eyebrow">GREENHOUSE v17</div>
+      <h1>🤖 Automation Center</h1>
+      <p>Единый пульт автоматизаций: сложные Recipes v2, правила, расписания, таймеры и follow-ups.</p>
+    </div>
+    <div class="hero-actions">
+      <button onclick="loadAll()">↻ Обновить</button>
+      <button class="primary" onclick="runAll()">▶ Run due all</button>
+    </div>
+  </div>
+
+  <div id="cards" class="metric-grid"></div>
+
+  <section class="panel main-panel">
+    <div class="section-head">
+      <div>
+        <h2>🧠 Recipes v2</h2>
+        <p>Сложные автоматизации: interval / weekly / delay + conditions + decision / sequence / duration.</p>
+      </div>
+      <span class="tag hot">главный слой</span>
+    </div>
+    <div id="recipesV2" class="recipe-list"></div>
+  </section>
+
+  <section class="panel">
+    <div class="section-head">
+      <div>
+        <h2>⚙️ Старые automation слои</h2>
+        <p>Rules, schedules, timers, follow-ups и recipes v1. Оставляем видимыми, но не смешиваем с v2.</p>
+      </div>
+      <span class="tag">legacy / active</span>
+    </div>
+    <div id="legacy" class="legacy-grid"></div>
+  </section>
+
+  <section class="panel">
+    <h2>🧾 Последний запуск</h2>
+    <pre id="result">Пока запусков с этой страницы не было.</pre>
+  </section>
+</div>
+
+<style>
+.auto-page { max-width: 1280px; margin: 0 auto; }
+.auto-hero {
+  display:flex; justify-content:space-between; gap:22px; align-items:center;
+  padding:24px; border-radius:24px;
+  background:linear-gradient(135deg, rgba(71,120,255,.18), rgba(90,255,190,.08));
+  border:1px solid rgba(255,255,255,.14);
+  margin-bottom:18px;
+}
+.eyebrow { font-size:12px; letter-spacing:.14em; text-transform:uppercase; opacity:.65; }
+.auto-hero h1 { margin:6px 0 8px; font-size:34px; }
+.auto-hero p { margin:0; opacity:.75; max-width:760px; }
+.hero-actions { display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end; }
+button, .btn {
+  border:1px solid rgba(255,255,255,.18);
+  background:rgba(255,255,255,.07);
+  color:inherit; padding:10px 14px; border-radius:14px;
+  cursor:pointer; text-decoration:none;
+}
+button.primary { background:rgba(85,140,255,.38); border-color:rgba(120,170,255,.5); }
+.metric-grid {
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr));
+  gap:14px; margin:18px 0;
+}
+.metric {
+  padding:18px; border-radius:20px;
+  background:rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.12);
+}
+.metric .label { opacity:.68; font-size:14px; }
+.metric .value { font-size:34px; font-weight:800; margin-top:8px; }
+.metric .sub { opacity:.6; font-size:13px; margin-top:4px; }
+.panel {
+  padding:20px; margin:18px 0; border-radius:22px;
+  background:rgba(255,255,255,.035);
+  border:1px solid rgba(255,255,255,.12);
+}
+.main-panel { border-color:rgba(116,167,255,.35); }
+.section-head { display:flex; justify-content:space-between; gap:16px; align-items:flex-start; margin-bottom:14px; }
+.section-head h2 { margin:0 0 6px; }
+.section-head p { margin:0; opacity:.65; }
+.tag {
+  display:inline-flex; padding:6px 10px; border-radius:999px;
+  background:rgba(255,255,255,.08); font-size:13px; white-space:nowrap;
+}
+.tag.hot { background:rgba(95,160,255,.22); }
+.recipe-list { display:grid; gap:14px; }
+.recipe-card {
+  padding:16px; border-radius:18px;
+  background:rgba(0,0,0,.16);
+  border:1px solid rgba(255,255,255,.12);
+}
+.recipe-top { display:flex; justify-content:space-between; gap:12px; align-items:flex-start; }
+.recipe-title { font-size:18px; font-weight:800; margin-bottom:8px; }
+.badges { display:flex; gap:7px; flex-wrap:wrap; margin:8px 0 12px; }
+.badge {
+  display:inline-flex; padding:4px 9px; border-radius:999px;
+  background:rgba(255,255,255,.08); font-size:12px; opacity:.9;
+}
+.badge.ok { background:rgba(75,220,130,.16); color:#9cffbb; }
+.badge.off { background:rgba(255,110,110,.15); color:#ffb1b1; }
+.recipe-summary {
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+  gap:10px; margin-top:10px;
+}
+.recipe-actions { display:flex; gap:8px; flex-wrap:wrap; margin-top:14px; }
+button.small { padding:8px 11px; border-radius:11px; font-size:13px; }
+button.okbtn { background:rgba(60,210,120,.22); border-color:rgba(80,230,140,.45); }
+button.warn { background:rgba(255,180,60,.18); border-color:rgba(255,190,80,.4); }
+button.danger { background:rgba(255,70,70,.22); border-color:rgba(255,90,90,.45); }
+.mini {
+  padding:10px; border-radius:12px;
+  background:rgba(255,255,255,.045);
+}
+.mini b { display:block; opacity:.72; font-size:12px; margin-bottom:4px; }
+details { margin-top:12px; }
+summary { cursor:pointer; opacity:.78; }
+pre {
+  white-space:pre-wrap; max-height:460px; overflow:auto;
+  background:rgba(0,0,0,.18); padding:14px; border-radius:14px;
+}
+.legacy-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:14px; }
+.empty {
+  padding:18px; border-radius:16px; border:1px dashed rgba(255,255,255,.18);
+  opacity:.7;
+}
+@media (max-width: 780px) {
+  .auto-hero, .section-head, .recipe-top { flex-direction:column; }
+  .hero-actions { justify-content:flex-start; }
+}
+</style>
+
+<script>
+async function api(url, opts={}) {
+  const sep = url.includes("?") ? "&" : "?";
+  const res = await fetch(url + sep + "ts=" + Date.now(), {cache:"no-store", ...opts});
+  return await res.json();
+}
+
+function metricCard(title, layer, icon) {
+  const total = layer?.total ?? 0;
+  const enabled = layer?.enabled;
+  const active = layer?.active;
+  const pending = layer?.pending;
+
+  let sub = "—";
+  if (enabled !== undefined) sub = "enabled: " + enabled;
+  else if (active !== undefined) sub = "active: " + active;
+  else if (pending !== undefined) sub = "pending: " + pending;
+
+  return `
+    <div class="metric">
+      <div class="label">${icon} ${title}</div>
+      <div class="value">${total}</div>
+      <div class="sub">${sub}</div>
+    </div>
+  `;
+}
+
+function getDecisionMatched(last) {
+  const ar = last?.action_result || {};
+  const matched = ar.matched;
+  if (!matched) return "не сработало";
+  if (matched === "default") return "default";
+  if (typeof matched === "object") return matched.title || ("priority " + matched.priority);
+  return String(matched);
+}
+
+function renderConditions(r) {
+  if (!r.conditions) return "без общего условия";
+  return JSON.stringify(r.conditions);
+}
+
+function renderRecipeV2(r) {
+  const trigger = r.trigger || {};
+  const plan = r.action_plan || {};
+  const rt = r.runtime || {};
+  const last = r.last_result || {};
+  const enabled = r.enabled ? "enabled" : "disabled";
+
+  return `
+    <div class="recipe-card">
+      <div class="recipe-top">
+        <div>
+          <div class="recipe-title">${r.title || r.recipe_id}</div>
+          <div class="badges">
+            <span class="badge ${r.enabled ? "ok" : "off"}">${enabled}</span>
+            <span class="badge">status: ${r.status || "?"}</span>
+            <span class="badge">trigger: ${trigger.type || "?"}</span>
+            <span class="badge">plan: ${plan.type || "?"}</span>
+          </div>
+        </div>
+        <div class="badge">ID: ${r.recipe_id}</div>
+      </div>
+
+      <div class="recipe-summary">
+        <div class="mini"><b>Когда</b>${describeTrigger(trigger, rt)}</div>
+        <div class="mini"><b>Условия</b>${renderConditions(r)}</div>
+        <div class="mini"><b>Что делает</b>${describePlan(plan)}</div>
+        <div class="mini"><b>Последний результат</b>${last.status || "ещё не запускалось"}</div>
+        <div class="mini"><b>Decision matched</b>${getDecisionMatched(last)}</div>
+        <div class="mini"><b>Исходная фраза</b>${r.source_text || "—"}</div>
+      </div>
+
+      <div class="recipe-actions">
+        ${r.enabled
+          ? `<button class="small warn" onclick="disableRecipeV2('${r.recipe_id}')">⏸ Выключить</button>`
+          : `<button class="small okbtn" onclick="enableRecipeV2('${r.recipe_id}')">▶ Включить</button>`
+        }
+        <button class="small danger" onclick="deleteRecipeV2('${r.recipe_id}', '${(r.title || r.recipe_id).replace(/'/g, "\\'")}')">🗑 Удалить</button>
+      </div>
+
+      <details>
+        <summary>JSON / диагностика</summary>
+        <pre>${JSON.stringify(r, null, 2)}</pre>
+      </details>
+    </div>
+  `;
+}
+
+function describeTrigger(t, rt) {
+  if (!t) return "—";
+  if (t.type === "now") return "сейчас";
+  if (t.type === "delay") return "через " + (t.delay_sec ?? "?") + " сек";
+  if (t.type === "interval") return "каждые " + (t.every_sec ?? "?") + " сек";
+  if (t.type === "weekly") return "дни: " + (t.days || []).join(", ") + " в " + (t.time || "?");
+  return t.type || "—";
+}
+
+function describePlan(p) {
+  if (!p) return "—";
+  if (p.type === "action") return "action: " + p.action_key;
+  if (p.type === "duration") return `${p.action_key} на ${p.duration_sec || "?"} сек`;
+  if (p.type === "sequence") return "sequence: " + ((p.items || []).length) + " шагов";
+  if (p.type === "decision") return "decision cases: " + ((p.cases || []).length);
+  return p.type || "—";
+}
+
+function renderLegacyLayer(name, layer) {
+  const items = layer?.items || [];
+  return `
+    <div class="recipe-card">
+      <div class="recipe-title">${name}</div>
+      <div class="badges">
+        <span class="badge">total: ${layer?.total ?? 0}</span>
+        ${layer?.enabled !== undefined ? `<span class="badge">enabled: ${layer.enabled}</span>` : ""}
+        ${layer?.active !== undefined ? `<span class="badge">active: ${layer.active}</span>` : ""}
+        ${layer?.pending !== undefined ? `<span class="badge">pending: ${layer.pending}</span>` : ""}
+      </div>
+      <details>
+        <summary>Показать первые элементы</summary>
+        <pre>${JSON.stringify(items.slice(0, 12), null, 2)}</pre>
+      </details>
+    </div>
+  `;
+}
+
+async function loadAll() {
+  const summary = await api("/api/automation");
+  const layers = summary.layers || {};
+
+  let v2 = {items: []};
+  try { v2 = await api("/api/automation/recipes-v2"); } catch(e) {}
+
+  document.getElementById("cards").innerHTML = [
+    metricCard("Recipes v2", {total: (v2.items || []).length, enabled: (v2.items || []).filter(x => x.enabled).length}, "🧠"),
+    metricCard("Rules", layers.rules || {}, "📐"),
+    metricCard("Schedules", layers.schedules || {}, "🗓"),
+    metricCard("Timers", layers.timers || {}, "⏱"),
+    metricCard("Follow-ups", layers.followups || {}, "🔁")
+  ].join("");
+
+  const recipes = v2.items || [];
+  document.getElementById("recipesV2").innerHTML =
+    recipes.length ? recipes.map(renderRecipeV2).join("") : `<div class="empty">Recipes v2 пока пусто. Создай automation recipe через API или чат/NL позже.</div>`;
+
+  document.getElementById("legacy").innerHTML = Object.entries(layers)
+    .map(([name, layer]) => renderLegacyLayer(name, layer))
+    .join("");
+}
+
+
+async function enableRecipeV2(id) {
+  const data = await api(`/api/automation/recipes-v2/${id}/enable`, {method:"POST"});
+  document.getElementById("result").textContent = JSON.stringify(data, null, 2);
+  await loadAll();
+}
+
+async function disableRecipeV2(id) {
+  const data = await api(`/api/automation/recipes-v2/${id}/disable`, {method:"POST"});
+  document.getElementById("result").textContent = JSON.stringify(data, null, 2);
+  await loadAll();
+}
+
+async function deleteRecipeV2(id, title) {
+  if (!confirm(`Удалить recipe v2?\n\n${title}`)) return;
+  const data = await api(`/api/automation/recipes-v2/${id}`, {method:"DELETE"});
+  document.getElementById("result").textContent = JSON.stringify(data, null, 2);
+  await loadAll();
+}
+
+async function runAll() {
+  const data = await api("/api/automation/run-due-all?dry_run_rules=true", {method:"POST"});
+  document.getElementById("result").textContent = JSON.stringify(data, null, 2);
+  await loadAll();
+}
+
+loadAll();
+</script>
+
+{% endblock %}

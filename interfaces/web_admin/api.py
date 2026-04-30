@@ -76,6 +76,7 @@ app.include_router(ai_timers.router)
 from interfaces.web_admin.routes import rules, ai_schedules
 from interfaces.web_admin.routes import rules, rules as rules_routes
 from interfaces.web_admin.routes import followups as followups_router
+from interfaces.web_admin.routes import automation as automation_router
 app.include_router(ai_schedules.router)
 app.include_router(rules_routes.router)
 
@@ -83,3 +84,17 @@ app.include_router(rules_routes.router)
 app.include_router(rules.router)
 
 app.include_router(followups_router.router)
+
+app.include_router(automation_router.router)
+
+from interfaces.web_admin.routes import web_automation
+
+app.include_router(web_automation.router)
+
+from interfaces.web_admin.routes import automation_recipes as automation_recipes_router
+
+app.include_router(automation_recipes_router.router)
+
+from interfaces.web_admin.routes import automation_recipes_v2 as automation_recipes_v2_router
+
+app.include_router(automation_recipes_v2_router.router)
