@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page">
+  <div class="page-header">
+    <div>
+      <h1>Device Passports</h1>
+      <p>Паспорта устройств: effect_model, related_sensors, reliability, safety.</p>
+    </div>
+    <button class="btn" onclick="loadPassports()">Обновить</button>
+  </div>
+
+  <div class="card">
+    <h2>Passports</h2>
+    <div id="passportsStatus" class="muted">Загрузка...</div>
+    <div id="passportsList" class="stack"></div>
+  </div>
+
+  <div class="card">
+    <h2>Редактор паспорта</h2>
+    <p class="muted">JSON сохраняется в registry.db / device_passports. CSV/ActionMap не меняются.</p>
+    <textarea id="passportEditor" style="width:100%; min-height:420px; font-family:monospace;"></textarea>
+    <div class="actions">
+      <button class="btn" onclick="savePassport()">💾 Сохранить паспорт</button>
+      <button class="btn" onclick="newTopFanTemplate()">Шаблон top fan</button>
+    </div>
+    <pre id="saveResult"></pre>
+  </div>
+</section>
+
+<script>
+async function loadPassports() {
+  const data = await (await fetch("/api/registry-db/passports")).json();
+  document.getElementById("passportsStatus").textContent = `Всего: ${data.count}`;
+
+  document.getElementById("passportsList").innerHTML = data.items.map(p => `
+    <div class="mini-card">
+      <b>${escapeHtml(p.logical_role)}</b>
+      <div class="muted">${escapeHtml(p.entity_id || "")} · reliability: ${escapeHtml(p.reliability || "")}</div>
+      <button class="btn" onclick='editPassport(${escapeAttr(JSON.stringify(p))})'>Редактировать</button>
+    </div>
+  `).join("");
+
+  const role = new URLSearchParams(location.search).get("role");
+  if (role) {
+    const res = await fetch(`/api/registry-db/passports/${encodeURIComponent(role)}`);
+    const one = await res.json();
+    if (one.ok) editPassport(JSON.stringify(one.item));
+    else document.getElementById("passportEditor").value = JSON.stringify({logical_role: role}, null, 2);
+  }
+}
+
+function editPassport(payload) {
+  const obj = typeof payload === "string" ? JSON.parse(payload) : payload;
+  document.getElementById("passportEditor").value = JSON.stringify(obj, null, 2);
+}
+
+async function savePassport() {
+  const out = document.getElementById("saveResult");
+  try {
+    const payload = JSON.parse(document.getElementById("passportEditor").value);
+    const res = await fetch("/api/registry-db/passports", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    out.textContent = JSON.stringify(data, null, 2);
+    await loadPassports();
+  } catch (e) {
+    out.textContent = "Ошибка: " + e;
+  }
+}
+
+function newTopFanTemplate() {
+  editPassport({
+    logical_role: "top_air_circulation",
+    device_id: "100",
+    entity_id: "switch.setevoi_filtr_novyi_socket_1",
+    verify_strategy: "state",
+    reliability: "unknown",
+    effect_model: {
+      type: "environmental",
+      target: "humidity",
+      direction: "decrease",
+      sensor: "sensor.temperature_and_humidity_sensor_2_humidity",
+      expected_delta: -2,
+      typical_delay_sec: 60
+    },
+    related_sensors: [
+      "sensor.temperature_and_humidity_sensor_2_humidity",
+      "sensor.temperature_and_humidity_sensor_2_temperature"
+    ],
+    related_cameras: [],
+    safety: {
+      allowed_modes: ["MANUAL", "ASK", "AUTO"],
+      blocked_in: [],
+      cooldown_sec: 10
+    }
+  });
+}
+
+function escapeHtml(s) {
+  return String(s ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function escapeAttr(s) {
+  return "'" + String(s ?? "")
+    .replaceAll("\\", "\\\\")
+    .replaceAll("'", "\\'")
+    .replaceAll("</", "<\\/") + "'";
+}
+
+loadPassports();
+</script>
+{% endblock %}

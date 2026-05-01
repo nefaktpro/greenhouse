@@ -331,3 +331,39 @@ def get_device_passport(logical_role: str) -> Optional[Dict[str, Any]]:
     if not row:
         return None
     return json.loads(row["payload_json"])
+
+
+def list_device_passports(limit: int = 200) -> List[Dict[str, Any]]:
+    init_registry_db()
+    with _conn() as con:
+        rows = con.execute(
+            "SELECT payload_json FROM device_passports ORDER BY logical_role LIMIT ?",
+            (max(1, min(int(limit), 1000)),),
+        ).fetchall()
+    out = []
+    for r in rows:
+        try:
+            out.append(json.loads(r["payload_json"]))
+        except Exception:
+            pass
+    return out
+
+
+def save_device_passport_from_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
+    return upsert_device_passport(payload)
+
+
+def get_registry_device_view(limit: int = 500) -> List[Dict[str, Any]]:
+    init_registry_db()
+    limit = max(1, min(int(limit), 1000))
+    with _conn() as con:
+        rows = con.execute("""
+        SELECT
+            d.*,
+            CASE WHEN p.logical_role IS NULL THEN 0 ELSE 1 END AS has_passport
+        FROM devices d
+        LEFT JOIN device_passports p ON p.logical_role = d.logical_role
+        ORDER BY d.id
+        LIMIT ?
+        """, (limit,)).fetchall()
+    return [dict(r) for r in rows]

@@ -108,3 +108,13 @@ def observations_page(request: Request):
 @router.get("/cases", response_class=HTMLResponse)
 def cases_page(request: Request):
     return render(request, "cases.html", "Greenhouse v17 — Cases")
+
+
+@router.get("/devices", response_class=HTMLResponse)
+def devices_page(request: Request):
+    return render(request, "devices.html", "Greenhouse v17 — Devices")
+
+
+@router.get("/passports", response_class=HTMLResponse)
+def passports_page(request: Request):
+    return render(request, "passports.html", "Greenhouse v17 — Device Passports")

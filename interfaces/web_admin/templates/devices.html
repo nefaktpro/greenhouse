@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page">
+  <div class="page-header">
+    <div>
+      <h1>Devices</h1>
+      <p>Registry DB: устройства из devices.csv/action_map/capabilities через SQLite index.</p>
+    </div>
+    <div class="actions">
+      <button class="btn" onclick="syncRegistry()">Sync registry.db</button>
+      <button class="btn" onclick="loadDevices()">Обновить</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Registry stats</h2>
+    <pre id="statsBox">Загрузка...</pre>
+  </div>
+
+  <div class="card">
+    <h2>Devices</h2>
+    <div id="devicesStatus" class="muted">Загрузка...</div>
+    <div style="overflow:auto;">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Entity</th>
+            <th>Role</th>
+            <th>Zone</th>
+            <th>Passport</th>
+          </tr>
+        </thead>
+        <tbody id="devicesRows"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<script>
+async function syncRegistry() {
+  const res = await fetch("/api/registry-db/sync", {method: "POST"});
+  const data = await res.json();
+  alert(JSON.stringify(data, null, 2));
+  await loadDevices();
+}
+
+async function loadDevices() {
+  const stats = await (await fetch("/api/registry-db/stats")).json();
+  document.getElementById("statsBox").textContent = JSON.stringify(stats, null, 2);
+
+  const data = await (await fetch("/api/registry-db/devices?limit=1000")).json();
+  document.getElementById("devicesStatus").textContent = `Всего показано: ${data.count}`;
+
+  document.getElementById("devicesRows").innerHTML = data.items.map(d => `
+    <tr>
+      <td>${escapeHtml(d.id)}</td>
+      <td>${escapeHtml(d.name)}</td>
+      <td>${escapeHtml(d.type)}</td>
+      <td><code>${escapeHtml(d.entity_id || "")}</code></td>
+      <td><code>${escapeHtml(d.logical_role || "")}</code></td>
+      <td>${escapeHtml(d.zone || "")}</td>
+      <td>
+        ${d.logical_role ? `<a href="/web/passports?role=${encodeURIComponent(d.logical_role)}">${d.has_passport ? "✅" : "➕"}</a>` : ""}
+      </td>
+    </tr>
+  `).join("");
+}
+
+function escapeHtml(s) {
+  return String(s ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+loadDevices();
+</script>
+{% endblock %}
