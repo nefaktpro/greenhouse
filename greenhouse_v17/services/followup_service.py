@@ -62,6 +62,16 @@ def _append_observation(item: Dict[str, Any]) -> Dict[str, Any]:
     observations.append(item)
     _json_dump(OBSERVATIONS_PATH, observations[-2000:])
 
+    try:
+        from greenhouse_v17.services.memory_db_service import upsert_observation
+        upsert_observation(item)
+    except Exception as exc:
+        _append_log({
+            "type": "memory_db_write_failed",
+            "target": "observation",
+            "error": str(exc),
+        })
+
     _append_log({
         "type": "observation_created",
         "observation_id": item.get("observation_id"),
@@ -91,6 +101,16 @@ def _append_case_candidate(item: Dict[str, Any]) -> Dict[str, Any]:
 
     candidates.append(item)
     _json_dump(CASE_CANDIDATES_PATH, candidates[-2000:])
+
+    try:
+        from greenhouse_v17.services.memory_db_service import upsert_case_candidate
+        upsert_case_candidate(item)
+    except Exception as exc:
+        _append_log({
+            "type": "memory_db_write_failed",
+            "target": "case_candidate",
+            "error": str(exc),
+        })
 
     _append_log({
         "type": "case_candidate_created",
@@ -670,6 +690,16 @@ def _append_case(item: Dict[str, Any]) -> Dict[str, Any]:
 
     cases.append(item)
     _json_dump(CASES_PATH, cases[-2000:])
+
+    try:
+        from greenhouse_v17.services.memory_db_service import upsert_case
+        upsert_case(item)
+    except Exception as exc:
+        _append_log({
+            "type": "memory_db_write_failed",
+            "target": "case",
+            "error": str(exc),
+        })
 
     _append_log({
         "type": "case_created",
