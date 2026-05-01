@@ -31,3 +31,5 @@ backups/
 __pycache__/
 *.pyc
 data/runtime/*.tmp
+data/registry/registry.db
+data/registry/registry.db

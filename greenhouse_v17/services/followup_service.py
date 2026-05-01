@@ -769,3 +769,74 @@ def reject_case_candidate(candidate_id: str) -> Dict[str, Any]:
 
 
 
+
+
+def create_effect_followup_from_passport(
+    action_key: str,
+    check_after_sec: Optional[int] = None,
+    source: str = "passport_effect",
+    meta: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    from greenhouse_v17.services.registry_db_service import list_actions, get_device_passport
+
+    actions = list_actions(1000)
+    action = next((a for a in actions if a.get("action_key") == action_key), None)
+    if not action:
+        return {"ok": False, "error": "action_not_found", "action_key": action_key}
+
+    logical_role = action.get("logical_role") or action.get("target_role")
+    if not logical_role:
+        return {"ok": False, "error": "logical_role_not_found", "action_key": action_key}
+
+    passport = get_device_passport(logical_role)
+    if not passport:
+        return {
+            "ok": False,
+            "error": "passport_not_found",
+            "action_key": action_key,
+            "logical_role": logical_role,
+        }
+
+    effect = passport.get("effect_model") or {}
+    target_entity = effect.get("sensor")
+    if not target_entity:
+        return {
+            "ok": False,
+            "error": "effect_sensor_not_found",
+            "action_key": action_key,
+            "logical_role": logical_role,
+        }
+
+    expected_delta = effect.get("expected_delta")
+    direction = effect.get("direction")
+    delay = check_after_sec or effect.get("typical_delay_sec") or 900
+
+    expected_delta_min = None
+    expected_delta_max = None
+
+    if expected_delta is not None:
+        try:
+            val = float(expected_delta)
+            if val < 0:
+                expected_delta_max = val
+            else:
+                expected_delta_min = val
+        except Exception:
+            pass
+
+    return create_effect_followup(
+        action_key=action_key,
+        target_entity=target_entity,
+        expected_delta_min=expected_delta_min,
+        expected_delta_max=expected_delta_max,
+        check_after_sec=int(delay),
+        source=source,
+        meta={
+            **(meta or {}),
+            "logical_role": logical_role,
+            "passport": passport,
+            "effect_model": effect,
+            "created_from": "device_passport",
+        },
+        direction=direction,
+    )
