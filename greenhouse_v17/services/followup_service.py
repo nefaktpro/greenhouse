@@ -15,6 +15,7 @@ FOLLOWUPS_PATH = ROOT / "data/runtime/followups.json"
 FOLLOWUP_LOG_PATH = ROOT / "data/memory/logs/followup_log.json"
 OBSERVATIONS_PATH = ROOT / "data/runtime/observations.json"
 CASE_CANDIDATES_PATH = ROOT / "data/runtime/case_candidates.json"
+CASES_PATH = ROOT / "data/runtime/cases.json"
 
 
 def _now_iso() -> str:
@@ -114,6 +115,16 @@ def create_case_candidate_from_observation(obs: Dict[str, Any]) -> Optional[Dict
     category = obs.get("category")
     action_key = obs.get("action_key")
 
+    if obs.get("valid_for_case") is False:
+        _append_log({
+            "type": "case_candidate_skipped",
+            "reason": "low_quality_observation",
+            "observation_id": obs.get("observation_id"),
+            "quality_reasons": obs.get("quality_reasons"),
+            "action_key": action_key,
+        })
+        return None
+
     if category not in ("effect_failure", "effect_success", "verify_failure"):
         return None
 
@@ -184,12 +195,17 @@ def _observation_from_followup(fu: Dict[str, Any], result: Dict[str, Any]) -> Op
             summary = f"Ожидаемый эффект не достигнут: reason={reason}, delta={delta}"
             importance = "medium"
 
+        quality_info = _effect_result_quality(result)
+
         return {
             "type": "observation",
             "category": category,
             "title": title,
             "summary": summary,
-            "importance": importance,
+            "importance": importance if quality_info.get("valid_for_case") else "low",
+            "quality": quality_info.get("quality"),
+            "valid_for_case": quality_info.get("valid_for_case"),
+            "quality_reasons": quality_info.get("quality_reasons"),
             "action_key": action_key,
             "followup_id": fu.get("followup_id"),
             "target_entity": fu.get("target_entity"),
@@ -232,6 +248,34 @@ def _as_float(value: Any) -> Optional[float]:
         return float(str(value).replace(",", "."))
     except Exception:
         return None
+
+
+def _effect_result_quality(result: Dict[str, Any]) -> Dict[str, Any]:
+    baseline = result.get("baseline_value")
+    actual = result.get("actual_value")
+    error = result.get("error")
+    expected_min = result.get("expected_delta_min")
+    expected_max = result.get("expected_delta_max")
+
+    reasons = []
+
+    if error:
+        reasons.append("ha_or_sensor_error")
+    if baseline is None or actual is None:
+        reasons.append("missing_numeric_values")
+    if baseline == 0 and actual == 0:
+        reasons.append("zero_baseline_and_actual")
+    if expected_min is not None and float(expected_min) >= 999999:
+        reasons.append("impossible_test_threshold")
+    if expected_max is not None and float(expected_max) >= 999999:
+        reasons.append("impossible_test_threshold")
+
+    ok = len(reasons) == 0
+    return {
+        "quality": "normal" if ok else "low",
+        "valid_for_case": ok,
+        "quality_reasons": reasons,
+    }
 
 
 def _get_ha_state(entity_id: str) -> Dict[str, Any]:
@@ -613,3 +657,85 @@ def complete_followup(
             })
             return True
     return False
+
+
+
+def _append_case(item: Dict[str, Any]) -> Dict[str, Any]:
+    cases = _json_load(CASES_PATH, [])
+    if not isinstance(cases, list):
+        cases = []
+
+    item.setdefault("case_id", f"case_{uuid.uuid4().hex[:10]}")
+    item.setdefault("created_at", _now_iso())
+
+    cases.append(item)
+    _json_dump(CASES_PATH, cases[-2000:])
+
+    _append_log({
+        "type": "case_created",
+        "case_id": item.get("case_id"),
+        "source_candidate": item.get("source_candidate_id"),
+    })
+
+    return item
+
+
+def approve_case_candidate(candidate_id: str, mode: str = "MANUAL") -> Dict[str, Any]:
+    candidates = list_case_candidates(limit=1000)
+
+    for c in candidates:
+        if c.get("case_candidate_id") == candidate_id:
+
+            if mode == "ASK":
+                return {
+                    "ok": True,
+                    "mode": "ASK",
+                    "ask_required": True,
+                    "message": "Требуется подтверждение"
+                }
+
+            case = _append_case({
+                "type": "case",
+                "source": "manual_approval",
+                "source_candidate_id": candidate_id,
+                "action_key": c.get("action_key"),
+                "case_type": c.get("case_type"),
+                "context": c.get("context"),
+                "result": c.get("result"),
+                "conclusion": c.get("conclusion"),
+                "confidence": min((c.get("confidence") or 0.5) + 0.2, 0.95),
+                "tags": c.get("tags"),
+            })
+
+            c["status"] = "approved"
+
+            items = _json_load(CASE_CANDIDATES_PATH, [])
+            for x in items:
+                if x.get("case_candidate_id") == candidate_id:
+                    x["status"] = "approved"
+            _json_dump(CASE_CANDIDATES_PATH, items)
+
+            return {
+                "ok": True,
+                "mode": mode,
+                "case": case
+            }
+
+    return {"ok": False, "error": "candidate_not_found"}
+
+
+def reject_case_candidate(candidate_id: str) -> Dict[str, Any]:
+    items = _json_load(CASE_CANDIDATES_PATH, [])
+    found = False
+
+    for x in items:
+        if x.get("case_candidate_id") == candidate_id:
+            x["status"] = "rejected"
+            found = True
+
+    _json_dump(CASE_CANDIDATES_PATH, items)
+
+    return {"ok": found}
+
+
+

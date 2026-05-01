@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Query
-from greenhouse_v17.services.followup_service import list_case_candidates
+from greenhouse_v17.services.followup_service import list_case_candidates, approve_case_candidate, reject_case_candidate
 
 router = APIRouter(prefix="/api/case-candidates", tags=["case-candidates"])
 
@@ -15,3 +15,13 @@ def api_list_case_candidates(
         "count": len(items),
         "items": items,
     }
+
+
+@router.post("/{candidate_id}/approve")
+def api_approve(candidate_id: str):
+    return approve_case_candidate(candidate_id)
+
+
+@router.post("/{candidate_id}/reject")
+def api_reject(candidate_id: str):
+    return reject_case_candidate(candidate_id)
