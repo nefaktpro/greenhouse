@@ -103,3 +103,8 @@ def observations_page(request: Request):
 def observations_page(request: Request):
     return render(request, "observations.html", "Greenhouse v17 — Observations")
 
+
+
+@router.get("/cases", response_class=HTMLResponse)
+def cases_page(request: Request):
+    return render(request, "cases.html", "Greenhouse v17 — Cases")

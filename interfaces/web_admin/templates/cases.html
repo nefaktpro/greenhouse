@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page">
+  <div class="page-header">
+    <div>
+      <h1>Cases</h1>
+      <p>Кандидаты в кейсы из follow-up / observations. Пока это draft, не истина.</p>
+    </div>
+    <button class="btn" onclick="loadCases()">Обновить</button>
+  </div>
+
+  <div class="card">
+    <h2>Case candidates</h2>
+    <div id="caseStatus" class="muted">Загрузка...</div>
+    <div id="caseList" class="stack"></div>
+  </div>
+</section>
+
+<script>
+async function loadCases() {
+  const status = document.getElementById("caseStatus");
+  const list = document.getElementById("caseList");
+  status.textContent = "Загрузка...";
+  list.innerHTML = "";
+
+  try {
+    const res = await fetch("/api/case-candidates?limit=100");
+    const data = await res.json();
+
+    if (!data.ok) {
+      status.textContent = "Ошибка загрузки";
+      return;
+    }
+
+    status.textContent = `Всего показано: ${data.count}`;
+
+    if (!data.items.length) {
+      list.innerHTML = `<div class="muted">Кандидатов пока нет.</div>`;
+      return;
+    }
+
+    list.innerHTML = data.items.slice().reverse().map(c => `
+      <div class="mini-card">
+        <div><b>${escapeHtml(c.title || c.case_type || "case_candidate")}</b></div>
+        <div class="muted">${escapeHtml(c.created_at || "")} · ${escapeHtml(c.case_type || "")} · status: ${escapeHtml(c.status || "")} · confidence: ${escapeHtml(c.confidence ?? "")}</div>
+        <div>${escapeHtml(c.conclusion || "")}</div>
+        <pre>${escapeHtml(JSON.stringify(c, null, 2))}</pre>
+      </div>
+    `).join("");
+
+  } catch (e) {
+    status.textContent = "Ошибка: " + e;
+  }
+}
+
+function escapeHtml(s) {
+  return String(s ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+loadCases();
+</script>
+{% endblock %}

@@ -14,6 +14,7 @@ ROOT = Path(__file__).resolve().parents[2]
 FOLLOWUPS_PATH = ROOT / "data/runtime/followups.json"
 FOLLOWUP_LOG_PATH = ROOT / "data/memory/logs/followup_log.json"
 OBSERVATIONS_PATH = ROOT / "data/runtime/observations.json"
+CASE_CANDIDATES_PATH = ROOT / "data/runtime/case_candidates.json"
 
 
 def _now_iso() -> str:
@@ -75,6 +76,92 @@ def list_observations(limit: int = 100) -> List[Dict[str, Any]]:
     if not isinstance(observations, list):
         return []
     return observations[-int(limit):]
+
+
+def _append_case_candidate(item: Dict[str, Any]) -> Dict[str, Any]:
+    candidates = _json_load(CASE_CANDIDATES_PATH, [])
+    if not isinstance(candidates, list):
+        candidates = []
+
+    item.setdefault("case_candidate_id", f"cc_{uuid.uuid4().hex[:10]}")
+    item.setdefault("created_at", _now_iso())
+    item.setdefault("source", "observation")
+    item.setdefault("status", "draft")
+
+    candidates.append(item)
+    _json_dump(CASE_CANDIDATES_PATH, candidates[-2000:])
+
+    _append_log({
+        "type": "case_candidate_created",
+        "case_candidate_id": item.get("case_candidate_id"),
+        "observation_id": item.get("observation_id"),
+        "action_key": item.get("action_key"),
+        "category": item.get("category"),
+    })
+    return item
+
+
+def list_case_candidates(limit: int = 100, status: Optional[str] = None) -> List[Dict[str, Any]]:
+    candidates = _json_load(CASE_CANDIDATES_PATH, [])
+    if not isinstance(candidates, list):
+        return []
+    if status:
+        candidates = [x for x in candidates if x.get("status") == status]
+    return candidates[-int(limit):]
+
+
+def create_case_candidate_from_observation(obs: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    category = obs.get("category")
+    action_key = obs.get("action_key")
+
+    if category not in ("effect_failure", "effect_success", "verify_failure"):
+        return None
+
+    if category == "effect_failure":
+        title = f"Кейс-кандидат: действие {action_key} не дало ожидаемый эффект"
+        case_type = "failed_case"
+        conclusion = obs.get("summary") or "Ожидаемый эффект не достигнут."
+        recommendation = "review_or_repeat_test"
+        confidence = 0.45
+    elif category == "effect_success":
+        title = f"Кейс-кандидат: действие {action_key} дало ожидаемый эффект"
+        case_type = "successful_case"
+        conclusion = obs.get("summary") or "Ожидаемый эффект достигнут."
+        recommendation = "save_if_repeated"
+        confidence = 0.55
+    else:
+        title = f"Кейс-кандидат: verify failed для {action_key}"
+        case_type = "device_issue_case"
+        conclusion = obs.get("summary") or "Verify не подтвердил состояние устройства."
+        recommendation = "check_device_reliability"
+        confidence = 0.50
+
+    return _append_case_candidate({
+        "type": "case_candidate",
+        "case_type": case_type,
+        "title": title,
+        "problem": obs.get("reason") or category,
+        "action_key": action_key,
+        "context": {
+            "target_entity": obs.get("target_entity"),
+            "entity_id": obs.get("entity_id"),
+            "baseline_value": obs.get("baseline_value"),
+            "actual_value": obs.get("actual_value"),
+            "delta": obs.get("delta"),
+        },
+        "result": {
+            "category": category,
+            "summary": obs.get("summary"),
+            "raw_result": obs.get("raw_result"),
+        },
+        "conclusion": conclusion,
+        "confidence": confidence,
+        "recommendation": recommendation,
+        "observation_id": obs.get("observation_id"),
+        "followup_id": obs.get("followup_id"),
+        "links": [x for x in [obs.get("observation_id"), obs.get("followup_id")] if x],
+        "tags": ["followup", category],
+    })
 
 
 def _observation_from_followup(fu: Dict[str, Any], result: Dict[str, Any]) -> Optional[Dict[str, Any]]:
@@ -417,6 +504,10 @@ def run_due_followups_once() -> Dict[str, Any]:
         if observation:
             created_obs = _append_observation(observation)
             fu.setdefault("observations", []).append(created_obs.get("observation_id"))
+
+            case_candidate = create_case_candidate_from_observation(created_obs)
+            if case_candidate:
+                fu.setdefault("case_candidates", []).append(case_candidate.get("case_candidate_id"))
 
         changed = True
 
