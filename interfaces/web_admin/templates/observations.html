@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page">
+  <div class="page-header">
+    <div>
+      <h1>Observations</h1>
+      <p>Наблюдения, созданные из follow-up / effect-check.</p>
+    </div>
+    <button class="btn" onclick="loadObservations()">Обновить</button>
+  </div>
+
+  <div class="card">
+    <h2>Последние observations</h2>
+    <div id="obsStatus" class="muted">Загрузка...</div>
+    <div id="obsList" class="stack"></div>
+  </div>
+</section>
+
+<script>
+async function loadObservations() {
+  const status = document.getElementById("obsStatus");
+  const list = document.getElementById("obsList");
+  status.textContent = "Загрузка...";
+  list.innerHTML = "";
+
+  try {
+    const res = await fetch("/api/observations?limit=100");
+    const data = await res.json();
+
+    if (!data.ok) {
+      status.textContent = "Ошибка загрузки";
+      return;
+    }
+
+    status.textContent = `Всего показано: ${data.count}`;
+
+    if (!data.items.length) {
+      list.innerHTML = `<div class="muted">Наблюдений пока нет.</div>`;
+      return;
+    }
+
+    list.innerHTML = data.items.slice().reverse().map(o => `
+      <div class="mini-card">
+        <div><b>${escapeHtml(o.title || o.category || "observation")}</b></div>
+        <div class="muted">${escapeHtml(o.created_at || "")} · ${escapeHtml(o.category || "")} · importance: ${escapeHtml(o.importance || "")}</div>
+        <div>${escapeHtml(o.summary || "")}</div>
+        <pre>${escapeHtml(JSON.stringify(o, null, 2))}</pre>
+      </div>
+    `).join("");
+
+  } catch (e) {
+    status.textContent = "Ошибка: " + e;
+  }
+}
+
+function escapeHtml(s) {
+  return String(s ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+loadObservations();
+</script>
+{% endblock %}

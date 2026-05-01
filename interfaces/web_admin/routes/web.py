@@ -92,3 +92,14 @@ def test_sensor24_page(request: Request):
 @router.get("/rules", response_class=HTMLResponse)
 def web_rules(request: Request):
     return render(request, "rules.html", "Greenhouse v17 — Rules")
+
+
+@router.get("/web/observations")
+def observations_page(request: Request):
+    return templates.TemplateResponse("observations.html", {"request": request})
+
+
+@router.get("/observations", response_class=HTMLResponse)
+def observations_page(request: Request):
+    return render(request, "observations.html", "Greenhouse v17 — Observations")
+

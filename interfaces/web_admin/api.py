@@ -70,7 +70,7 @@ app.include_router(live_states_router)
 app.include_router(lab_router)
 app.include_router(control_debug_router, tags=["control_debug"])
 
-from interfaces.web_admin.routes import rules, ai_timers
+from interfaces.web_admin.routes import rules, ai_timers, observations
 app.include_router(ai_timers.router)
 
 from interfaces.web_admin.routes import rules, ai_schedules
@@ -98,3 +98,4 @@ app.include_router(automation_recipes_router.router)
 from interfaces.web_admin.routes import automation_recipes_v2 as automation_recipes_v2_router
 
 app.include_router(automation_recipes_v2_router.router)
+app.include_router(observations.router)
