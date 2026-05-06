@@ -1,0 +1,249 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+.workbench {
+  display: grid;
+  grid-template-columns: 360px minmax(360px, 1fr) minmax(420px, 1.1fr);
+  gap: 16px;
+}
+.wb-card {
+  border: 1px solid rgba(85, 125, 255, .28);
+  border-radius: 18px;
+  padding: 16px;
+  background: rgba(3, 10, 25, .76);
+}
+.wb-hero {
+  border: 1px solid rgba(120, 110, 255, .42);
+  border-radius: 22px;
+  padding: 22px;
+  margin-bottom: 16px;
+  background:
+    radial-gradient(circle at 90% 20%, rgba(115, 72, 255, .24), transparent 32%),
+    radial-gradient(circle at 10% 0%, rgba(30, 135, 255, .20), transparent 30%),
+    rgba(4, 12, 28, .80);
+}
+.wb-list {
+  display: grid;
+  gap: 8px;
+  max-height: 72vh;
+  overflow: auto;
+}
+.wb-item {
+  border: 1px solid rgba(95, 135, 255, .18);
+  border-radius: 14px;
+  padding: 12px;
+  background: rgba(12, 22, 44, .72);
+  cursor: pointer;
+}
+.wb-item:hover { border-color: rgba(140, 170, 255, .5); }
+.wb-item.active {
+  border-color: rgba(120, 92, 255, .9);
+  background: rgba(44, 34, 88, .72);
+}
+.wb-muted { color: rgba(230,238,255,.65); }
+.wb-code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+.wb-actions { display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; }
+.wb-btn {
+  border: 1px solid rgba(120,150,255,.35);
+  background: rgba(25, 39, 72, .9);
+  color: #edf4ff;
+  padding: 10px 12px;
+  border-radius: 12px;
+  cursor:pointer;
+  text-decoration:none;
+}
+.wb-btn.primary { background: linear-gradient(135deg, #7240ff, #226dff); }
+.wb-statgrid { display:grid; grid-template-columns: repeat(2, 1fr); gap:10px; margin-top:12px; }
+.wb-stat { border:1px solid rgba(80,130,255,.22); border-radius:14px; padding:12px; }
+.wb-editor {
+  width: 100%;
+  min-height: 68vh;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  background: rgba(0,0,0,.25);
+  color: #eaf1ff;
+  border: 1px solid rgba(120,150,255,.26);
+  border-radius: 14px;
+  padding: 12px;
+}
+.wb-table { width:100%; border-collapse:collapse; }
+.wb-table th,.wb-table td { border-bottom:1px solid rgba(120,150,255,.15); padding:8px; text-align:left; }
+@media (max-width: 1200px) {
+  .workbench { grid-template-columns: 1fr; }
+  .wb-list { max-height: 360px; }
+}
+</style>
+
+<section>
+  <div class="wb-hero">
+    <div class="wb-muted">GREENHOUSE v17</div>
+    <h1>Passport Workbench</h1>
+    <p>Рабочее место для добавления описаний, зависимостей, effect model, sensors, safety и reliability. Source of truth CSV/ActionMap не меняем; паспорта пишем в registry.db.</p>
+    <div class="wb-actions">
+      <button class="wb-btn" onclick="syncRegistry()">Sync registry.db</button>
+      <button class="wb-btn" onclick="loadDevices()">Обновить</button>
+      <a class="wb-btn" href="/web/devices">Devices</a>
+      <a class="wb-btn" href="/web/passports">Raw passports</a>
+    </div>
+  </div>
+
+  <div class="workbench">
+    <div class="wb-card">
+      <h2>Очередь устройств</h2>
+      <input id="q" placeholder="поиск role/entity/name/type/zone" style="width:100%; margin-bottom:8px;" onkeydown="if(event.key==='Enter') loadDevices()">
+      <div class="wb-actions">
+        <label><input type="checkbox" id="noPassport" checked> без passport</label>
+        <label><input type="checkbox" id="onlyEntity" checked> только entity</label>
+        <button class="wb-btn" onclick="loadDevices()">Фильтр</button>
+      </div>
+      <div id="queueStatus" class="wb-muted" style="margin:10px 0;">Загрузка...</div>
+      <div id="deviceQueue" class="wb-list"></div>
+    </div>
+
+    <div class="wb-card">
+      <h2>Карточка</h2>
+      <div id="deviceCard" class="wb-muted">Выбери устройство слева.</div>
+    </div>
+
+    <div class="wb-card">
+      <h2>Passport editor</h2>
+      <div class="wb-actions">
+        <button class="wb-btn primary" onclick="savePassport()">💾 Сохранить</button>
+        <button class="wb-btn" onclick="loadSuggestion()">Сгенерировать шаблон</button>
+        <a id="deviceCenterLink" class="wb-btn" href="#">Device Center</a>
+      </div>
+      <textarea id="passportEditor" class="wb-editor"></textarea>
+      <pre id="saveResult"></pre>
+    </div>
+  </div>
+</section>
+
+<script>
+let selectedRole = null;
+let currentCenter = null;
+
+async function syncRegistry() {
+  const data = await (await fetch("/api/registry-db/sync", {method:"POST"})).json();
+  alert(JSON.stringify(data, null, 2));
+  await loadDevices();
+}
+
+async function loadDevices() {
+  const params = new URLSearchParams();
+  params.set("limit", "1000");
+
+  const q = document.getElementById("q").value.trim();
+  if (q) params.set("q", q);
+  if (document.getElementById("noPassport").checked) params.set("has_passport", "false");
+  if (document.getElementById("onlyEntity").checked) params.set("has_entity", "true");
+
+  const data = await (await fetch("/api/registry-db/devices?" + params.toString())).json();
+  document.getElementById("queueStatus").textContent = `Найдено: ${data.count}`;
+
+  const items = data.items.filter(x => x.logical_role);
+  document.getElementById("deviceQueue").innerHTML = items.map(d => `
+    <div class="wb-item ${d.logical_role===selectedRole ? "active":""}" onclick="selectDevice('${escapeAttr(d.logical_role)}')">
+      <b>${escapeHtml(d.name || d.logical_role)}</b>
+      <div class="wb-muted"><span class="wb-code">${escapeHtml(d.logical_role)}</span></div>
+      <div class="wb-muted"><span class="wb-code">${escapeHtml(d.entity_id || "")}</span></div>
+      <div class="wb-muted">${escapeHtml(d.type || "")} · ${escapeHtml(d.zone || "")}</div>
+    </div>
+  `).join("");
+}
+
+async function selectDevice(role) {
+  selectedRole = role;
+  await loadDevices();
+
+  const data = await (await fetch(`/api/registry-db/device-center/${encodeURIComponent(role)}`)).json();
+  currentCenter = data;
+  document.getElementById("deviceCenterLink").href = `/web/device/${encodeURIComponent(role)}`;
+
+  renderDeviceCard(data);
+
+  if (data.passport) {
+    document.getElementById("passportEditor").value = JSON.stringify(data.passport, null, 2);
+  } else {
+    await loadSuggestion();
+  }
+}
+
+function renderDeviceCard(data) {
+  const d = data.device || {};
+  const s = data.summary || {};
+  const p = data.passport || null;
+
+  document.getElementById("deviceCard").innerHTML = `
+    <h2>${escapeHtml(d.name || data.logical_role)}</h2>
+    <div class="wb-muted"><span class="wb-code">${escapeHtml(data.logical_role)}</span></div>
+    <div class="wb-muted"><span class="wb-code">${escapeHtml(data.entity_id || "")}</span></div>
+
+    <div class="wb-statgrid">
+      <div class="wb-stat"><b>Passport</b><br>${data.has_passport ? "✅ ready" : "— missing"}</div>
+      <div class="wb-stat"><b>Reliability</b><br>${escapeHtml(s.reliability || "unknown")}</div>
+      <div class="wb-stat"><b>Actions</b><br>${escapeHtml(s.actions_count ?? 0)}</div>
+      <div class="wb-stat"><b>Entities</b><br>${escapeHtml(s.entities_count ?? 0)}</div>
+    </div>
+
+    <h3>Actions</h3>
+    ${
+      (data.actions || []).length
+      ? `<table class="wb-table">${data.actions.map(a => `<tr><td class="wb-code">${escapeHtml(a.action_key)}</td><td>${escapeHtml(a.expected_state || "")}</td></tr>`).join("")}</table>`
+      : `<div class="wb-muted">Actions не найдены.</div>`
+    }
+
+    <h3>Dependencies / Related</h3>
+    <pre>${escapeHtml(JSON.stringify((p || {}).dependencies || {}, null, 2))}</pre>
+
+    <h3>Related sensors</h3>
+    ${
+      (data.related_sensors || []).length
+      ? `<ul>${data.related_sensors.map(x => `<li class="wb-code">${escapeHtml(x)}</li>`).join("")}</ul>`
+      : `<div class="wb-muted">Нет related_sensors.</div>`
+    }
+
+    <details>
+      <summary>Raw device center bundle</summary>
+      <pre>${escapeHtml(JSON.stringify(data, null, 2))}</pre>
+    </details>
+  `;
+}
+
+async function loadSuggestion() {
+  if (!selectedRole) return;
+  const data = await (await fetch(`/api/registry-db/passport-suggestion/${encodeURIComponent(selectedRole)}`)).json();
+  document.getElementById("passportEditor").value = JSON.stringify(data.item || {logical_role:selectedRole}, null, 2);
+}
+
+async function savePassport() {
+  const out = document.getElementById("saveResult");
+  try {
+    const payload = JSON.parse(document.getElementById("passportEditor").value);
+    const data = await (await fetch("/api/registry-db/passports", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify(payload)
+    })).json();
+
+    out.textContent = JSON.stringify(data, null, 2);
+    if (payload.logical_role) await selectDevice(payload.logical_role);
+  } catch (e) {
+    out.textContent = "Ошибка: " + e;
+  }
+}
+
+function escapeHtml(s) {
+  return String(s ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+function escapeAttr(s) {
+  return String(s ?? "").replaceAll("\\", "\\\\").replaceAll("'", "\\'");
+}
+
+loadDevices();
+</script>
+{% endblock %}

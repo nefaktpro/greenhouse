@@ -123,3 +123,8 @@ def passports_page(request: Request):
 @router.get("/device/{logical_role}", response_class=HTMLResponse)
 def device_center_page(request: Request, logical_role: str):
     return render(request, "device_center.html", "Greenhouse v17 — Device Center")
+
+
+@router.get("/passport-workbench", response_class=HTMLResponse)
+def passport_workbench_page(request: Request):
+    return render(request, "passport_workbench.html", "Greenhouse v17 — Passport Workbench")

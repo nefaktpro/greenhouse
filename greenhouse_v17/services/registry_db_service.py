@@ -458,3 +458,145 @@ def get_device_center(logical_role: str) -> Dict[str, Any]:
             "verify_strategy": (passport or {}).get("verify_strategy") or "unknown",
         },
     }
+
+
+def suggest_device_passport(logical_role: str) -> Dict[str, Any]:
+    center = get_device_center(logical_role)
+    device = center.get("device") or {}
+    actions = center.get("actions") or []
+
+    typ = (device.get("type") or "").lower()
+    entity_id = center.get("entity_id") or device.get("entity_id")
+    zone = device.get("zone") or device.get("location") or ""
+
+    effect_model: Dict[str, Any] = {
+        "type": "unknown",
+        "target": "",
+        "direction": "",
+        "sensor": "",
+        "expected_delta": None,
+        "typical_delay_sec": 300,
+    }
+
+    if "fan" in typ or "circulation" in logical_role:
+        effect_model = {
+            "type": "environmental",
+            "target": "humidity",
+            "direction": "decrease",
+            "sensor": "",
+            "expected_delta": -2,
+            "typical_delay_sec": 60,
+        }
+    elif "humid" in typ or "humidity" in logical_role:
+        effect_model = {
+            "type": "environmental",
+            "target": "humidity",
+            "direction": "increase",
+            "sensor": "",
+            "expected_delta": 5,
+            "typical_delay_sec": 900,
+        }
+    elif "light" in typ or "light" in logical_role:
+        effect_model = {
+            "type": "visual_or_lux",
+            "target": "light",
+            "direction": "increase",
+            "sensor": "",
+            "expected_delta": None,
+            "typical_delay_sec": 10,
+        }
+    elif "water" in typ or "watering" in logical_role:
+        effect_model = {
+            "type": "soil_moisture",
+            "target": "soil_moisture",
+            "direction": "increase",
+            "sensor": "",
+            "expected_delta": 5,
+            "typical_delay_sec": 1200,
+        }
+    elif "cover" in typ or "curtain" in logical_role:
+        effect_model = {
+            "type": "position_or_photo",
+            "target": "cover_position",
+            "direction": "state_change",
+            "sensor": "",
+            "expected_delta": None,
+            "typical_delay_sec": 30,
+        }
+
+    return {
+        "logical_role": logical_role,
+        "device_id": device.get("id") or "",
+        "entity_id": entity_id or "",
+        "name": device.get("name") or logical_role,
+        "description": device.get("description") or "",
+        "zone": zone,
+        "verify_strategy": "state",
+        "reliability": "unknown",
+        "effect_model": effect_model,
+        "related_sensors": [],
+        "related_cameras": [],
+        "dependencies": {
+            "power": [],
+            "requires": [],
+            "blocks": [],
+            "conflicts": [],
+            "notes": ""
+        },
+        "safety": {
+            "allowed_modes": ["MANUAL", "ASK", "AUTO"],
+            "blocked_in": [],
+            "cooldown_sec": 10,
+            "notes": ""
+        },
+        "actions": [a.get("action_key") for a in actions if a.get("action_key")],
+        "ui": {
+            "show_in_device_center": True,
+            "group": typ or "device"
+        }
+    }
+
+
+
+def delete_device_passport(logical_role: str) -> Dict[str, Any]:
+    init_registry_db()
+    with _conn() as con:
+        cur = con.execute(
+            "DELETE FROM device_passports WHERE logical_role = ?",
+            (logical_role,),
+        )
+    return {
+        "ok": True,
+        "logical_role": logical_role,
+        "deleted": cur.rowcount,
+    }
+
+
+
+def device_hub_stats() -> Dict[str, Any]:
+    init_registry_db()
+    base = registry_stats()
+    with _conn() as con:
+        missing_passports = con.execute("""
+            SELECT COUNT(*)
+            FROM devices d
+            LEFT JOIN device_passports p ON p.logical_role = d.logical_role
+            WHERE d.entity_id IS NOT NULL
+              AND d.entity_id != ''
+              AND d.logical_role IS NOT NULL
+              AND d.logical_role != ''
+              AND p.logical_role IS NULL
+        """).fetchone()[0]
+
+        controllable = con.execute("""
+            SELECT COUNT(*)
+            FROM devices
+            WHERE controllable = 1
+        """).fetchone()[0]
+
+    base.update({
+        "missing_passports": missing_passports,
+        "with_passports": base.get("passports", 0),
+        "controllable": controllable,
+    })
+    return base

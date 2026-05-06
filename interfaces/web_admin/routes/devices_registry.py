@@ -6,6 +6,9 @@ from greenhouse_v17.services.registry_db_service import (
     registry_stats,
     save_device_passport_from_payload,
     sync_registry_to_db,
+    delete_device_passport,
+    device_hub_stats,
+    suggest_device_passport,
     get_device_center,
 )
 
@@ -63,3 +66,21 @@ def api_registry_db_save_passport(payload: dict = Body(...)):
 @router.get("/device-center/{logical_role}")
 def api_device_center(logical_role: str):
     return get_device_center(logical_role)
+
+
+@router.get("/passport-suggestion/{logical_role}")
+def api_passport_suggestion(logical_role: str):
+    from greenhouse_v17.services.registry_db_service import suggest_device_passport
+    return {"ok": True, "item": suggest_device_passport(logical_role)}
+
+
+
+@router.delete("/passports/{logical_role}")
+def api_registry_db_delete_passport(logical_role: str):
+    return delete_device_passport(logical_role)
+
+
+
+@router.get("/hub-stats")
+def api_registry_db_hub_stats():
+    return device_hub_stats()
