@@ -353,17 +353,52 @@ def save_device_passport_from_payload(payload: Dict[str, Any]) -> Dict[str, Any]
     return upsert_device_passport(payload)
 
 
-def get_registry_device_view(limit: int = 500) -> List[Dict[str, Any]]:
+def get_registry_device_view(
+    limit: int = 500,
+    q: Optional[str] = None,
+    controllable: Optional[bool] = None,
+    has_entity: Optional[bool] = None,
+    has_passport: Optional[bool] = None,
+) -> List[Dict[str, Any]]:
     init_registry_db()
     limit = max(1, min(int(limit), 1000))
+
+    where = []
+    params: List[Any] = []
+
+    if q:
+        like = f"%{q}%"
+        where.append("(d.id LIKE ? OR d.name LIKE ? OR d.entity_id LIKE ? OR d.logical_role LIKE ? OR d.zone LIKE ? OR d.type LIKE ?)")
+        params.extend([like, like, like, like, like, like])
+
+    if controllable is not None:
+        where.append("d.controllable = ?")
+        params.append(1 if controllable else 0)
+
+    if has_entity is not None:
+        if has_entity:
+            where.append("d.entity_id IS NOT NULL AND d.entity_id != ''")
+        else:
+            where.append("(d.entity_id IS NULL OR d.entity_id = '')")
+
+    if has_passport is not None:
+        if has_passport:
+            where.append("p.logical_role IS NOT NULL")
+        else:
+            where.append("(p.logical_role IS NULL AND d.logical_role IS NOT NULL AND d.logical_role != '')")
+
+    where_sql = ("WHERE " + " AND ".join(where)) if where else ""
+
     with _conn() as con:
-        rows = con.execute("""
+        rows = con.execute(f"""
         SELECT
             d.*,
             CASE WHEN p.logical_role IS NULL THEN 0 ELSE 1 END AS has_passport
         FROM devices d
         LEFT JOIN device_passports p ON p.logical_role = d.logical_role
+        {where_sql}
         ORDER BY d.id
         LIMIT ?
-        """, (limit,)).fetchall()
+        """, (*params, limit)).fetchall()
+
     return [dict(r) for r in rows]

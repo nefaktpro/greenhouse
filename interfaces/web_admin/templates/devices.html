@@ -19,6 +19,19 @@
   </div>
 
   <div class="card">
+    <h2>Фильтры</h2>
+    <div class="actions" style="gap: 10px; flex-wrap: wrap;">
+      <input id="q" placeholder="поиск: role/entity/name/id/zone" style="min-width: 320px;" onkeydown="if(event.key==='Enter') loadDevices()">
+      <label><input type="checkbox" id="onlyEntities"> только entity</label>
+      <label><input type="checkbox" id="onlyControllable"> только controllable</label>
+      <label><input type="checkbox" id="noPassport"> без passport</label>
+      <label><input type="checkbox" id="withPassport"> с passport</label>
+      <button class="btn" onclick="loadDevices()">Применить</button>
+      <button class="btn" onclick="resetFilters()">Сброс</button>
+    </div>
+  </div>
+
+  <div class="card">
     <h2>Devices</h2>
     <div id="devicesStatus" class="muted">Загрузка...</div>
     <div style="overflow:auto;">
@@ -31,6 +44,7 @@
             <th>Entity</th>
             <th>Role</th>
             <th>Zone</th>
+            <th>Ctrl</th>
             <th>Passport</th>
           </tr>
         </thead>
@@ -48,11 +62,38 @@ async function syncRegistry() {
   await loadDevices();
 }
 
+function boolParam(id) {
+  return document.getElementById(id).checked ? "true" : "";
+}
+
+function resetFilters() {
+  document.getElementById("q").value = "";
+  document.getElementById("onlyEntities").checked = false;
+  document.getElementById("onlyControllable").checked = false;
+  document.getElementById("noPassport").checked = false;
+  document.getElementById("withPassport").checked = false;
+  loadDevices();
+}
+
 async function loadDevices() {
   const stats = await (await fetch("/api/registry-db/stats")).json();
   document.getElementById("statsBox").textContent = JSON.stringify(stats, null, 2);
 
-  const data = await (await fetch("/api/registry-db/devices?limit=1000")).json();
+  const params = new URLSearchParams();
+  params.set("limit", "1000");
+
+  const q = document.getElementById("q").value.trim();
+  if (q) params.set("q", q);
+
+  if (document.getElementById("onlyEntities").checked) params.set("has_entity", "true");
+  if (document.getElementById("onlyControllable").checked) params.set("controllable", "true");
+
+  const noPassport = document.getElementById("noPassport").checked;
+  const withPassport = document.getElementById("withPassport").checked;
+  if (noPassport && !withPassport) params.set("has_passport", "false");
+  if (withPassport && !noPassport) params.set("has_passport", "true");
+
+  const data = await (await fetch("/api/registry-db/devices?" + params.toString())).json();
   document.getElementById("devicesStatus").textContent = `Всего показано: ${data.count}`;
 
   document.getElementById("devicesRows").innerHTML = data.items.map(d => `
@@ -63,8 +104,9 @@ async function loadDevices() {
       <td><code>${escapeHtml(d.entity_id || "")}</code></td>
       <td><code>${escapeHtml(d.logical_role || "")}</code></td>
       <td>${escapeHtml(d.zone || "")}</td>
+      <td>${Number(d.controllable || 0) ? "✅" : ""}</td>
       <td>
-        ${d.logical_role ? `<a href="/web/passports?role=${encodeURIComponent(d.logical_role)}">${d.has_passport ? "✅" : "➕"}</a>` : ""}
+        ${d.logical_role ? `<a href="/web/passports?role=${encodeURIComponent(d.logical_role)}">${Number(d.has_passport || 0) ? "✅ edit" : "➕ create"}</a>` : ""}
       </td>
     </tr>
   `).join("");

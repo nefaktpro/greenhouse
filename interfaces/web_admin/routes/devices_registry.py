@@ -22,8 +22,20 @@ def api_registry_db_sync():
 
 
 @router.get("/devices")
-def api_registry_db_devices(limit: int = Query(500, ge=1, le=1000)):
-    items = get_registry_device_view(limit=limit)
+def api_registry_db_devices(
+    limit: int = Query(500, ge=1, le=1000),
+    q: str | None = None,
+    controllable: bool | None = None,
+    has_entity: bool | None = None,
+    has_passport: bool | None = None,
+):
+    items = get_registry_device_view(
+        limit=limit,
+        q=q,
+        controllable=controllable,
+        has_entity=has_entity,
+        has_passport=has_passport,
+    )
     return {"ok": True, "count": len(items), "items": items}
 
 
