@@ -84,3 +84,27 @@ def api_registry_db_delete_passport(logical_role: str):
 @router.get("/hub-stats")
 def api_registry_db_hub_stats():
     return device_hub_stats()
+
+
+@router.get("/passport-presets")
+def api_passport_presets():
+    from greenhouse_v17.services.device_passport_schema_v1 import list_presets
+    return {"ok": True, "items": list_presets()}
+
+
+@router.get("/passport-template/{preset}/{logical_role}")
+def api_passport_template(preset: str, logical_role: str):
+    from greenhouse_v17.services.device_passport_schema_v1 import build_passport_template
+    center = get_device_center(logical_role)
+    device = center.get("device") or {}
+    return {
+        "ok": True,
+        "item": build_passport_template(
+            preset=preset,
+            logical_role=logical_role,
+            entity_id=center.get("entity_id") or "",
+            name=device.get("name") or logical_role,
+            zone=device.get("zone") or "",
+            description=device.get("description") or "",
+        )
+    }
