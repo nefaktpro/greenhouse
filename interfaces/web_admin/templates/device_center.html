@@ -1,0 +1,272 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+.device-center {
+  display: grid;
+  gap: 18px;
+}
+
+.dc-hero {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(111, 99, 255, .45);
+  border-radius: 22px;
+  padding: 24px;
+  background:
+    radial-gradient(circle at 88% 20%, rgba(117, 74, 255, .28), transparent 34%),
+    radial-gradient(circle at 12% 0%, rgba(29, 155, 240, .24), transparent 28%),
+    rgba(4, 12, 28, .78);
+  box-shadow: 0 0 44px rgba(82, 80, 255, .16);
+}
+
+.dc-hero h1 {
+  margin: 0 0 8px 0;
+  font-size: 36px;
+}
+
+.dc-muted { color: rgba(230,238,255,.68); }
+
+.dc-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(160px, 1fr));
+  gap: 14px;
+}
+
+.dc-stat {
+  border: 1px solid rgba(80, 130, 255, .32);
+  border-radius: 18px;
+  padding: 18px;
+  background: rgba(5, 14, 32, .78);
+  box-shadow: inset 0 0 30px rgba(70,100,220,.08);
+}
+
+.dc-stat .num {
+  font-size: 34px;
+  font-weight: 800;
+  margin-top: 8px;
+}
+
+.dc-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.dc-tab {
+  border: 1px solid rgba(120,150,255,.22);
+  background: rgba(14,24,48,.82);
+  color: #e7eeff;
+  padding: 12px 18px;
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.dc-tab.active {
+  background: linear-gradient(135deg, #6a3cff, #1c83ff);
+  border-color: rgba(170,190,255,.7);
+}
+
+.dc-panel { display: none; }
+.dc-panel.active { display: block; }
+
+.dc-card {
+  border: 1px solid rgba(80, 130, 255, .28);
+  border-radius: 18px;
+  padding: 18px;
+  background: rgba(3, 10, 25, .72);
+  margin-top: 14px;
+}
+
+.dc-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+
+.dc-btn {
+  border: 1px solid rgba(120,150,255,.35);
+  background: rgba(25, 39, 72, .9);
+  color: #edf4ff;
+  padding: 11px 14px;
+  border-radius: 12px;
+  text-decoration: none;
+  display: inline-block;
+}
+
+.dc-btn.primary {
+  background: linear-gradient(135deg, #7240ff, #226dff);
+}
+
+.dc-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.dc-table th, .dc-table td {
+  padding: 10px 8px;
+  border-bottom: 1px solid rgba(120,150,255,.16);
+  text-align: left;
+}
+
+.dc-code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  color: #dce8ff;
+}
+
+@media (max-width: 1000px) {
+  .dc-grid { grid-template-columns: repeat(2, minmax(160px, 1fr)); }
+}
+</style>
+
+<section class="device-center">
+  <div class="dc-hero">
+    <div class="dc-muted">Device Center</div>
+    <h1 id="dcTitle">Загрузка...</h1>
+    <div id="dcSub" class="dc-muted"></div>
+    <div class="dc-actions">
+      <a id="editPassportLink" class="dc-btn primary" href="/web/passports">Редактировать passport</a>
+      <a class="dc-btn" href="/web/devices">← Все устройства</a>
+      <button class="dc-btn" onclick="loadDevice()">Обновить</button>
+    </div>
+  </div>
+
+  <div class="dc-grid">
+    <div class="dc-stat">
+      <div class="dc-muted">Passport</div>
+      <div id="statPassport" class="num">—</div>
+    </div>
+    <div class="dc-stat">
+      <div class="dc-muted">Entities</div>
+      <div id="statEntities" class="num">—</div>
+    </div>
+    <div class="dc-stat">
+      <div class="dc-muted">Actions</div>
+      <div id="statActions" class="num">—</div>
+    </div>
+    <div class="dc-stat">
+      <div class="dc-muted">Reliability</div>
+      <div id="statReliability" class="num">—</div>
+    </div>
+  </div>
+
+  <div class="dc-tabs">
+    <button class="dc-tab active" onclick="showTab('overview')">Overview</button>
+    <button class="dc-tab" onclick="showTab('passport')">Passport</button>
+    <button class="dc-tab" onclick="showTab('sensors')">Sensors</button>
+    <button class="dc-tab" onclick="showTab('actions')">Actions</button>
+    <button class="dc-tab" onclick="showTab('raw')">Raw</button>
+  </div>
+
+  <div id="tab-overview" class="dc-panel active">
+    <div class="dc-card">
+      <h2>Overview</h2>
+      <div id="overviewBox"></div>
+    </div>
+  </div>
+
+  <div id="tab-passport" class="dc-panel">
+    <div class="dc-card">
+      <h2>Passport</h2>
+      <pre id="passportBox"></pre>
+    </div>
+  </div>
+
+  <div id="tab-sensors" class="dc-panel">
+    <div class="dc-card">
+      <h2>Related sensors</h2>
+      <div id="sensorsBox"></div>
+    </div>
+  </div>
+
+  <div id="tab-actions" class="dc-panel">
+    <div class="dc-card">
+      <h2>Actions</h2>
+      <div id="actionsBox"></div>
+    </div>
+  </div>
+
+  <div id="tab-raw" class="dc-panel">
+    <div class="dc-card">
+      <h2>Raw bundle</h2>
+      <pre id="rawBox"></pre>
+    </div>
+  </div>
+</section>
+
+<script>
+const logicalRole = decodeURIComponent(location.pathname.split("/").pop());
+
+function showTab(name) {
+  document.querySelectorAll(".dc-tab").forEach(x => x.classList.remove("active"));
+  document.querySelectorAll(".dc-panel").forEach(x => x.classList.remove("active"));
+  event.target.classList.add("active");
+  document.getElementById("tab-" + name).classList.add("active");
+}
+
+async function loadDevice() {
+  const res = await fetch(`/api/registry-db/device-center/${encodeURIComponent(logicalRole)}`);
+  const data = await res.json();
+
+  if (!data.ok) {
+    document.getElementById("dcTitle").textContent = "Ошибка";
+    document.getElementById("dcSub").textContent = JSON.stringify(data);
+    return;
+  }
+
+  const d = data.device || {};
+  const p = data.passport || {};
+  const s = data.summary || {};
+
+  document.getElementById("dcTitle").textContent = d.name || data.logical_role;
+  document.getElementById("dcSub").innerHTML =
+    `<span class="dc-code">${escapeHtml(data.logical_role)}</span> · <span class="dc-code">${escapeHtml(data.entity_id || "")}</span>`;
+
+  document.getElementById("editPassportLink").href = `/web/passports?role=${encodeURIComponent(data.logical_role)}`;
+
+  document.getElementById("statPassport").textContent = data.has_passport ? "✅" : "—";
+  document.getElementById("statEntities").textContent = s.entities_count ?? 0;
+  document.getElementById("statActions").textContent = s.actions_count ?? 0;
+  document.getElementById("statReliability").textContent = s.reliability || "unknown";
+
+  document.getElementById("overviewBox").innerHTML = `
+    <table class="dc-table">
+      <tr><th>Logical role</th><td class="dc-code">${escapeHtml(data.logical_role)}</td></tr>
+      <tr><th>Entity</th><td class="dc-code">${escapeHtml(data.entity_id || "")}</td></tr>
+      <tr><th>Type</th><td>${escapeHtml(d.type || "")}</td></tr>
+      <tr><th>Zone</th><td>${escapeHtml(d.zone || "")}</td></tr>
+      <tr><th>Verify</th><td>${escapeHtml(s.verify_strategy || "")}</td></tr>
+      <tr><th>Effect</th><td><pre>${escapeHtml(JSON.stringify(data.effect_model || {}, null, 2))}</pre></td></tr>
+    </table>
+  `;
+
+  document.getElementById("passportBox").textContent = JSON.stringify(p || {missing: true, logical_role: data.logical_role}, null, 2);
+
+  const sensors = data.related_sensors || [];
+  document.getElementById("sensorsBox").innerHTML = sensors.length
+    ? `<ul>${sensors.map(x => `<li class="dc-code">${escapeHtml(x)}</li>`).join("")}</ul>`
+    : `<div class="dc-muted">Нет related_sensors в паспорте.</div>`;
+
+  const actions = data.actions || [];
+  document.getElementById("actionsBox").innerHTML = actions.length
+    ? `<table class="dc-table"><thead><tr><th>Action key</th><th>Service</th><th>Expected</th></tr></thead><tbody>${
+        actions.map(a => `<tr><td class="dc-code">${escapeHtml(a.action_key)}</td><td>${escapeHtml(a.service || "")}</td><td>${escapeHtml(a.expected_state || "")}</td></tr>`).join("")
+      }</tbody></table>`
+    : `<div class="dc-muted">Actions не найдены.</div>`;
+
+  document.getElementById("rawBox").textContent = JSON.stringify(data, null, 2);
+}
+
+function escapeHtml(s) {
+  return String(s ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+loadDevice();
+</script>
+{% endblock %}

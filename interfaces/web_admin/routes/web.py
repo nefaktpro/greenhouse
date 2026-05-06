@@ -118,3 +118,8 @@ def devices_page(request: Request):
 @router.get("/passports", response_class=HTMLResponse)
 def passports_page(request: Request):
     return render(request, "passports.html", "Greenhouse v17 — Device Passports")
+
+
+@router.get("/device/{logical_role}", response_class=HTMLResponse)
+def device_center_page(request: Request, logical_role: str):
+    return render(request, "device_center.html", "Greenhouse v17 — Device Center")

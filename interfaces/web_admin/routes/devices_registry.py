@@ -6,6 +6,7 @@ from greenhouse_v17.services.registry_db_service import (
     registry_stats,
     save_device_passport_from_payload,
     sync_registry_to_db,
+    get_device_center,
 )
 
 router = APIRouter(prefix="/api/registry-db", tags=["registry-db"])
@@ -57,3 +58,8 @@ def api_registry_db_passport(logical_role: str):
 def api_registry_db_save_passport(payload: dict = Body(...)):
     result = save_device_passport_from_payload(payload)
     return result
+
+
+@router.get("/device-center/{logical_role}")
+def api_device_center(logical_role: str):
+    return get_device_center(logical_role)

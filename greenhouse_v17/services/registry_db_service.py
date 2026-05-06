@@ -402,3 +402,59 @@ def get_registry_device_view(
         """, (*params, limit)).fetchall()
 
     return [dict(r) for r in rows]
+
+
+def get_device_center(logical_role: str) -> Dict[str, Any]:
+    init_registry_db()
+
+    with _conn() as con:
+        device_rows = con.execute(
+            "SELECT * FROM devices WHERE logical_role = ? ORDER BY id",
+            (logical_role,),
+        ).fetchall()
+
+        action_rows = con.execute(
+            "SELECT * FROM actions WHERE logical_role = ? OR target_role = ? ORDER BY action_key",
+            (logical_role, logical_role),
+        ).fetchall()
+
+        passport_row = con.execute(
+            "SELECT payload_json FROM device_passports WHERE logical_role = ?",
+            (logical_role,),
+        ).fetchone()
+
+    devices = [dict(r) for r in device_rows]
+    actions = [dict(r) for r in action_rows]
+
+    passport = None
+    if passport_row:
+        try:
+            passport = json.loads(passport_row["payload_json"])
+        except Exception:
+            passport = None
+
+    main = devices[0] if devices else None
+    entity_id = (passport or {}).get("entity_id") or (main or {}).get("entity_id")
+    related_sensors = (passport or {}).get("related_sensors") or []
+    effect_model = (passport or {}).get("effect_model") or {}
+
+    return {
+        "ok": True,
+        "logical_role": logical_role,
+        "device": main,
+        "entities": devices,
+        "actions": actions,
+        "passport": passport,
+        "has_passport": passport is not None,
+        "entity_id": entity_id,
+        "related_sensors": related_sensors,
+        "effect_model": effect_model,
+        "summary": {
+            "entities_count": len(devices),
+            "actions_count": len(actions),
+            "related_sensors_count": len(related_sensors),
+            "passport_status": "ready" if passport else "missing",
+            "reliability": (passport or {}).get("reliability") or "unknown",
+            "verify_strategy": (passport or {}).get("verify_strategy") or "unknown",
+        },
+    }
