@@ -128,3 +128,8 @@ def device_center_page(request: Request, logical_role: str):
 @router.get("/passport-workbench", response_class=HTMLResponse)
 def passport_workbench_page(request: Request):
     return render(request, "passport_workbench.html", "Greenhouse v17 — Passport Workbench")
+
+
+@router.get("/passport-builder/{logical_role}", response_class=HTMLResponse)
+def passport_builder_page(request: Request, logical_role: str):
+    return render(request, "passport_builder.html", "Greenhouse v17 — Passport Builder")

@@ -1,0 +1,477 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+.builder-page{display:grid;gap:18px}
+.builder-hero{
+  border:1px solid rgba(126,103,255,.5);border-radius:28px;padding:26px;
+  background:radial-gradient(circle at 86% 18%,rgba(117,74,255,.28),transparent 34%),
+  radial-gradient(circle at 13% 2%,rgba(25,135,255,.20),transparent 28%),
+  linear-gradient(135deg,rgba(7,16,38,.96),rgba(4,9,24,.94));
+  box-shadow:0 0 54px rgba(92,84,255,.16)
+}
+.builder-hero h1{margin:8px 0;font-size:40px}
+.muted{color:rgba(230,238,255,.65)}
+.btn{
+  border:1px solid rgba(130,160,255,.34);background:rgba(18,31,60,.9);color:#edf4ff;
+  padding:11px 15px;border-radius:14px;cursor:pointer;text-decoration:none;display:inline-flex;gap:8px;align-items:center;font-weight:700
+}
+.btn.primary{background:linear-gradient(135deg,#7544ff,#2176ff);border-color:rgba(185,195,255,.65)}
+.btn.danger{background:rgba(128,30,48,.86);border-color:rgba(255,95,120,.45)}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+.builder-layout{display:grid;grid-template-columns:280px minmax(480px,1fr) minmax(360px,.8fr);gap:16px}
+.card{border:1px solid rgba(85,130,255,.28);border-radius:24px;padding:18px;background:rgba(4,11,28,.78)}
+.side-btn{
+  width:100%;text-align:left;margin-bottom:8px;border:1px solid rgba(120,150,255,.22);
+  background:rgba(12,22,46,.86);color:#e8f0ff;padding:14px;border-radius:16px;cursor:pointer
+}
+.side-btn.active{background:linear-gradient(135deg,rgba(112,64,255,.95),rgba(31,115,255,.88));border-color:rgba(190,205,255,.8)}
+.form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+label{display:block;margin:10px 0 6px;color:rgba(230,238,255,.75);font-size:13px}
+input,textarea,select{
+  width:100%;box-sizing:border-box;min-width:0;background:rgba(0,0,0,.24);color:#edf4ff;
+  border:1px solid rgba(120,150,255,.28);border-radius:12px;padding:10px 12px
+}
+textarea{min-height:92px}
+.panel{display:none}.panel.active{display:block}
+.help{border-left:3px solid rgba(116,105,255,.95);background:rgba(103,103,255,.09);border-radius:12px;padding:12px 14px;margin:12px 0 16px}
+.jsonbox{width:100%;min-height:360px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.summary{line-height:1.55}
+.code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+@media(max-width:1250px){.builder-layout{grid-template-columns:1fr}.form-grid{grid-template-columns:1fr}}
+</style>
+
+<section class="builder-page">
+  <div class="builder-hero">
+    <div class="muted">GREENHOUSE v17 / DEVICE PASSPORT</div>
+    <h1>🪪 Конструктор паспорта</h1>
+    <p class="muted">Отдельный мастер одного устройства. Здесь собираем паспорт из понятных блоков: база, управление, эффект, проверка, питание, безопасность и заметки.</p>
+    <div class="actions">
+      <a class="btn" href="/web/devices">← Центр устройств</a>
+      <a id="deviceCenterLink" class="btn" href="#">Device Center</a>
+      <button class="btn primary" onclick="savePassport()">💾 Сохранить</button>
+      <button class="btn" onclick="buildJson()">🧩 Собрать JSON</button>
+      <button class="btn" onclick="validatePassport()">🛡 Проверить паспорт</button>
+      <button class="btn" onclick="applyPreset()">🧠 Предзаполнить</button>
+    </div>
+  </div>
+
+  <div class="builder-layout">
+    <div class="card">
+      <h2>Разделы</h2>
+      <button class="side-btn active" data-panel="base" onclick="showPanel('base')">1. База</button>
+      <button class="side-btn" data-panel="control" onclick="showPanel('control')">2. Управление</button>
+      <button class="side-btn" data-panel="effect" onclick="showPanel('effect')">3. Эффект</button>
+      <button class="side-btn" data-panel="verify" onclick="showPanel('verify')">4. Проверка</button>
+      <button class="side-btn" data-panel="power" onclick="showPanel('power')">5. Питание</button>
+      <button class="side-btn" data-panel="safety" onclick="showPanel('safety')">6. Безопасность</button>
+      <button class="side-btn" data-panel="notes" onclick="showPanel('notes')">7. Заметки</button>
+      <button class="side-btn" data-panel="json" onclick="showPanel('json')">8. JSON</button>
+
+      <div class="help">
+        Заполняй только то, что понятно. Сложные зависимости можно оставить в заметках и уточнить позже.
+      </div>
+    </div>
+
+    <div class="card">
+      <div id="panel-base" class="panel active">
+        <h2>1. База — что это?</h2>
+        <div class="help">Минимум: название, роль, entity, где стоит и что делает простыми словами.</div>
+        
+        <label>Стартовый профиль</label>
+        <select id="presetSelect">
+          <option value="">без профиля</option>
+          <option value="ventilation">Вентиляция</option>
+          <option value="watering">Полив</option>
+          <option value="lighting">Свет</option>
+          <option value="movement">Движение</option>
+          <option value="climate">Климат</option>
+          <option value="sensor">Датчик</option>
+          <option value="power">Питание</option>
+        </select>
+
+        <div class="form-grid">
+
+          <div><label>Название</label><input id="f_name"></div>
+          <div><label>Логическая роль</label><input id="f_role"></div>
+          <div><label>Entity ID</label><input id="f_entity"></div>
+          <div><label>Зона / место</label><input id="f_zone"></div>
+          <div><label>Важность</label><select id="f_importance"><option value="normal">обычное</option><option value="important">важное</option><option value="critical">критичное</option></select></div>
+          <div><label>Тип/группа словами</label><input id="f_type" placeholder="вентиляция, свет, полив, датчик..."></div>
+        </div>
+        <label>Описание простыми словами</label><textarea id="f_description"></textarea>
+      </div>
+
+      <div id="panel-control" class="panel">
+        <h2>2. Управление</h2>
+        <div class="help">Для устройств, которыми можно управлять: включить, выключить, открыть, закрыть, стоп.</div>
+        <label><input type="checkbox" id="f_control_enabled"> устройством можно управлять</label>
+        <div class="form-grid">
+          <div><label>Действия</label><input id="f_actions" placeholder="turn_on, turn_off, open, close"></div>
+          <div><label>Пауза между командами, сек</label><input id="f_cooldown" value="10"></div>
+        </div>
+      </div>
+
+      <div id="panel-effect" class="panel">
+        <h2>3. Эффект</h2>
+        <div class="help">Что должно измениться после действия. Например: влажность растёт, температура падает, свет включается.</div>
+        <label><input type="checkbox" id="f_effect_enabled"> устройство меняет среду / состояние</label>
+        <div class="form-grid">
+          <div><label>Что меняется</label><input id="f_effect_param" placeholder="влажность, температура, свет, движение воздуха"></div>
+          <div><label>Как меняется</label><select id="f_effect_direction"><option value="">не выбрано</option><option value="increase">увеличивается</option><option value="decrease">уменьшается</option><option value="state_change">меняется состояние</option></select></div>
+          <div><label>Примерное изменение</label><input id="f_effect_delta" placeholder="5 или -2"></div>
+          <div><label>Когда проверять, сек</label><input id="f_effect_delay" value="300"></div>
+        </div>
+      </div>
+
+      <div id="panel-verify" class="panel">
+        <h2>4. Проверка</h2>
+        <div class="help">Как система поймёт, что действие реально сработало: state, sensor, photo, delayed_check.</div>
+        <div class="form-grid">
+          <div><label>Способы проверки</label><input id="f_verify_strategy" value="state, sensor, delayed_check"></div>
+          <div><label>Связанные датчики</label><input id="f_sensors" placeholder="sensor.xxx_humidity, sensor.xxx_temperature"></div>
+          <div><label>Связанные камеры</label><input id="f_cameras" placeholder="camera.xxx"></div>
+          <div><label>Задержка verify, сек</label><input id="f_verify_delay" value="5"></div>
+        </div>
+      </div>
+
+      <div id="panel-power" class="panel">
+        <h2>5. Питание</h2>
+        <div class="help">От чего зависит устройство: розетка, сетевой фильтр, щиток, насос, питание HA.</div>
+        <div class="form-grid">
+          <div><label>От чего зависит</label><input id="f_power_depends"></div>
+          <div><label>Источник питания</label><input id="f_power_source"></div>
+        </div>
+        <label><input type="checkbox" id="f_critical_power"> критичное питание</label>
+      </div>
+
+      <div id="panel-safety" class="panel">
+        <h2>6. Безопасность</h2>
+        <div class="help">Риски: вода, перегрев, замерзание, сухой ход, конфликт с другими устройствами.</div>
+        <div class="form-grid">
+          <div><label>Уровень риска</label><select id="f_risk"><option value="low">низкий</option><option value="medium">средний</option><option value="high">высокий</option></select></div>
+          <div><label>С чем конфликтует</label><input id="f_conflicts"></div>
+        </div>
+        <label><input type="checkbox" id="f_water_risk"> риск воды</label>
+        <label><input type="checkbox" id="f_fire_risk"> риск перегрева / пожара</label>
+        <label><input type="checkbox" id="f_freeze_risk"> риск замерзания</label>
+        <label><input type="checkbox" id="f_confirm"> требует подтверждения</label>
+      </div>
+
+      <div id="panel-notes" class="panel">
+        <h2>7. Заметки</h2>
+        <div class="help">Сюда можно писать всё, что пока непонятно как формализовать: зависимости, странности, что проверить позже.</div>
+        <label>Заметки оператора</label><textarea id="f_notes"></textarea>
+        <label>Известные проблемы</label><input id="f_known_problems">
+      </div>
+
+      <div id="panel-json" class="panel">
+        <h2>8. JSON</h2>
+        <div class="help">Расширенный режим. Можно посмотреть/поправить полный паспорт вручную.</div>
+        <textarea id="passportJson" class="jsonbox"></textarea>
+        <pre id="saveResult"></pre>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Предпросмотр</h2>
+      
+      <div id="passportQuality" class="help">
+        Паспорт ещё не проверен.
+      </div>
+
+      <div id="summary" class="summary muted">Загрузка...</div>
+
+      <div class="actions">
+        <button class="btn primary" onclick="buildJson()">🧩 Обновить предпросмотр</button>
+        <button class="btn" onclick="fillFormFromJson()">⬅️ Заполнить форму из JSON</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+const logicalRole = decodeURIComponent(location.pathname.split("/").pop());
+
+function list(v){return String(v||"").split(",").map(x=>x.trim()).filter(Boolean)}
+function val(id){return document.getElementById(id)?.value || ""}
+function checked(id){return !!document.getElementById(id)?.checked}
+function setv(id,v){const e=document.getElementById(id); if(e) e.value = v ?? ""}
+function setc(id,v){const e=document.getElementById(id); if(e) e.checked = !!v}
+
+function showPanel(name){
+  document.querySelectorAll(".side-btn").forEach(x=>x.classList.remove("active"));
+  document.querySelectorAll(".panel").forEach(x=>x.classList.remove("active"));
+  document.querySelector(`[data-panel="${name}"]`)?.classList.add("active");
+  document.getElementById("panel-"+name)?.classList.add("active");
+}
+
+async function fetchJson(url, options){const r=await fetch(url, options||{}); return await r.json()}
+
+async function load(){
+  document.getElementById("deviceCenterLink").href = `/web/device/${encodeURIComponent(logicalRole)}`;
+  const center = await fetchJson(`/api/registry-db/device-center/${encodeURIComponent(logicalRole)}`);
+  const d = center.device || {};
+  const actions = (center.actions || []).map(a => a.action_key).filter(Boolean);
+
+  if(center.passport){
+    document.getElementById("passportJson").value = JSON.stringify(center.passport,null,2);
+  } else {
+    const blank = {
+      schema_version:"device_passport_v1",
+      logical_role: logicalRole,
+      entity_id: center.entity_id || "",
+      name: d.name || logicalRole,
+      zone: d.zone || "",
+      description: d.description || "",
+      control: {
+        enabled: actions.length > 0,
+        actions: actions,
+        supports_on_off: actions.some(x => x.includes("_on") || x.includes("turn_on")),
+        cooldown_sec: 10
+      },
+      verification: {
+        strategy: actions.length > 0 ? ["state"] : ["data_quality"],
+        related_sensors: [],
+        related_cameras: [],
+        verify_delay_sec: 5,
+        confidence: "medium"
+      }
+    };
+    document.getElementById("passportJson").value = JSON.stringify(blank,null,2);
+  }
+
+  fillFormFromJson();
+
+  if(actions.length && !val("f_actions")){
+    setv("f_actions", actions.join(", "));
+    setc("f_control_enabled", true);
+    buildJson();
+  }
+}
+
+function buildJson(){
+  const p = {
+    schema_version:"device_passport_v1",
+    logical_role: val("f_role"),
+    entity_id: val("f_entity"),
+    name: val("f_name"),
+    zone: val("f_zone"),
+    description: val("f_description"),
+    verify_strategy: list(val("f_verify_strategy"))[0] || "state",
+    reliability:"unknown",
+
+    base:{name:val("f_name"),logical_role:val("f_role"),entity_id:val("f_entity"),device_type:val("f_type"),zone:val("f_zone"),description:val("f_description"),importance:val("f_importance"),tags:[]},
+    control:{enabled:checked("f_control_enabled"),actions:list(val("f_actions")),supports_on_off:list(val("f_actions")).some(x=>["turn_on","turn_off"].includes(x)),cooldown_sec:parseInt(val("f_cooldown")||"10")},
+    effect:{enabled:checked("f_effect_enabled"),affects: checked("f_effect_enabled") ? [{parameter:val("f_effect_param"),direction:val("f_effect_direction"),expected_delta:val("f_effect_delta")===""?null:parseFloat(val("f_effect_delta")),delay_sec:parseInt(val("f_effect_delay")||"0")}] : []},
+    verification:{strategy:list(val("f_verify_strategy")),related_sensors:list(val("f_sensors")),related_cameras:list(val("f_cameras")),verify_delay_sec:parseInt(val("f_verify_delay")||"5"),confidence:"medium"},
+    power:{depends_on:list(val("f_power_depends")),power_source:val("f_power_source"),critical_power:checked("f_critical_power")},
+    safety:{risk_level:val("f_risk"),water_risk:checked("f_water_risk"),fire_risk:checked("f_fire_risk"),freeze_risk:checked("f_freeze_risk"),requires_confirmation:checked("f_confirm")},
+    dependencies:{requires:[],conflicts_with:list(val("f_conflicts")),recommended_with:[],blocks:[]},
+    observation:{photo_useful:false,ai_analysis_useful:false,test_relevant:true,seasonal_behavior:false},
+    notes:{operator_notes:val("f_notes"),known_problems:list(val("f_known_problems")),todo:[]}
+  };
+  const first = p.effect.affects[0] || {};
+  p.related_sensors = p.verification.related_sensors;
+  p.related_cameras = p.verification.related_cameras;
+  p.effect_model = {type:p.effect.enabled?"modular":"none",target:first.parameter||"",direction:first.direction||"",sensor:p.related_sensors[0]||"",expected_delta:first.expected_delta??null,typical_delay_sec:first.delay_sec||0};
+  document.getElementById("passportJson").value = JSON.stringify(p,null,2);
+  renderSummary(p);
+  return p;
+}
+
+function fillFormFromJson(){
+  try{
+    const p=JSON.parse(document.getElementById("passportJson").value||"{}");
+    setv("f_name",p.name||p.base?.name||""); setv("f_role",p.logical_role||p.base?.logical_role||logicalRole); setv("f_entity",p.entity_id||p.base?.entity_id||"");
+    setv("f_zone",p.zone||p.base?.zone||""); setv("f_description",p.description||p.base?.description||""); setv("f_type",p.base?.device_type||""); setv("f_importance",p.base?.importance||"normal");
+    setc("f_control_enabled",p.control?.enabled); setv("f_actions",(p.control?.actions||[]).join(", ")); setv("f_cooldown",p.control?.cooldown_sec||10);
+    const eff=(p.effect?.affects||[])[0]||p.effect_model||{}; setc("f_effect_enabled",!!p.effect?.enabled); setv("f_effect_param",eff.parameter||eff.target||""); setv("f_effect_direction",eff.direction||""); setv("f_effect_delta",eff.expected_delta??""); setv("f_effect_delay",eff.delay_sec||eff.typical_delay_sec||300);
+    setv("f_verify_strategy",(p.verification?.strategy||[p.verify_strategy||"state"]).join(", ")); setv("f_sensors",(p.related_sensors||p.verification?.related_sensors||[]).join(", ")); setv("f_cameras",(p.related_cameras||p.verification?.related_cameras||[]).join(", ")); setv("f_verify_delay",p.verification?.verify_delay_sec||5);
+    setv("f_power_depends",(p.power?.depends_on||[]).join(", ")); setv("f_power_source",p.power?.power_source||""); setc("f_critical_power",p.power?.critical_power);
+    setv("f_risk",p.safety?.risk_level||"low"); setc("f_water_risk",p.safety?.water_risk); setc("f_fire_risk",p.safety?.fire_risk); setc("f_freeze_risk",p.safety?.freeze_risk); setc("f_confirm",p.safety?.requires_confirmation);
+    setv("f_conflicts",(p.dependencies?.conflicts_with||[]).join(", ")); setv("f_notes",p.notes?.operator_notes||""); setv("f_known_problems",(p.notes?.known_problems||[]).join(", "));
+    renderSummary(p);
+  }catch(e){alert("Ошибка JSON: "+e)}
+}
+
+function renderSummary(p){
+  renderQuality(p);
+
+  document.getElementById("summary").innerHTML = `
+    <b>${esc(p.name||p.logical_role||"Паспорт")}</b><br>
+    role: <span class="code">${esc(p.logical_role||"")}</span><br>
+    entity: <span class="code">${esc(p.entity_id||"")}</span><br><br>
+    <b>Блоки:</b><br>
+    ${p.control?.enabled?"✅ Управление<br>":""}
+    ${p.effect?.enabled?"✅ Эффект<br>":""}
+    ${(p.verification?.strategy||[]).length?"✅ Проверка<br>":""}
+    ${(p.power?.depends_on||[]).length||p.power?.power_source?"✅ Питание<br>":""}
+    ${p.safety?"✅ Безопасность<br>":""}
+  `;
+}
+
+function validateJson(){try{JSON.parse(document.getElementById("passportJson").value);document.getElementById("saveResult").textContent="✅ JSON OK"}catch(e){document.getElementById("saveResult").textContent="❌ "+e}}
+
+async function savePassport(){
+  const p = buildJson();
+  const data = await fetchJson("/api/registry-db/passports",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(p)});
+  document.getElementById("saveResult").textContent = JSON.stringify(data,null,2);
+}
+
+function esc(s){return String(s??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;")}
+
+
+function scorePassport(p){
+  let score = 0;
+  const issues = [];
+
+  if(p.name) score += 10; else issues.push("нет названия");
+  if(p.logical_role) score += 10; else issues.push("нет logical_role");
+  if(p.entity_id) score += 10; else issues.push("нет entity_id");
+  if(p.description) score += 10; else issues.push("нет описания");
+
+  if(p.control?.enabled && (p.control.actions||[]).length) score += 10;
+  else if(p.control?.enabled) issues.push("нет actions");
+
+  if((p.verification?.strategy||[]).length) score += 10;
+  else issues.push("нет verify strategy");
+
+  if((p.related_sensors||[]).length) score += 10;
+
+  if(p.effect?.enabled) score += 10;
+
+  if(p.safety?.risk_level) score += 10;
+
+  if(p.notes?.operator_notes) score += 10;
+
+  return {score, issues};
+}
+
+function renderQuality(p){
+  const q = scorePassport(p);
+  let color = "#ffb84d";
+
+  if(q.score >= 80) color = "#63ff9b";
+  else if(q.score < 50) color = "#ff6b6b";
+
+  document.getElementById("passportQuality").innerHTML = `
+    <b style="color:${color}">Качество паспорта: ${q.score}%</b><br>
+    ${
+      q.issues.length
+      ? "Не хватает: " + q.issues.map(x => esc(x)).join(", ")
+      : "Паспорт выглядит заполненным."
+    }
+  `;
+}
+
+function validatePassport(){
+  try{
+    const p = buildJson();
+
+    const problems = [];
+
+    if(!p.logical_role) problems.push("нет logical_role");
+    if(!p.entity_id) problems.push("нет entity_id");
+
+    if(p.control?.enabled && !(p.control.actions||[]).length){
+      problems.push("control enabled but no actions");
+    }
+
+    if(
+      p.effect?.enabled &&
+      !(p.effect.affects||[]).length
+    ){
+      problems.push("effect enabled but no affects");
+    }
+
+    if(!(p.verification?.strategy||[]).length){
+      problems.push("нет verification strategy");
+    }
+
+    if(problems.length){
+      document.getElementById("saveResult").textContent =
+        "⚠ ПРОБЛЕМЫ:\n- " + problems.join("\n- ");
+    } else {
+      document.getElementById("saveResult").textContent =
+        "✅ Паспорт выглядит валидным";
+    }
+
+    renderQuality(p);
+
+  }catch(e){
+    document.getElementById("saveResult").textContent =
+      "❌ " + e;
+  }
+}
+
+function applyPreset(){
+  const preset = val("presetSelect");
+
+  if(!preset){
+    alert("Выбери профиль.");
+    return;
+  }
+
+  if(preset === "ventilation"){
+    setc("f_control_enabled", true);
+    setc("f_effect_enabled", true);
+    setv("f_actions", "turn_on, turn_off");
+    setv("f_effect_param", "humidity");
+    setv("f_effect_direction", "decrease");
+    setv("f_verify_strategy", "state, sensor, delayed_check");
+  }
+
+  if(preset === "watering"){
+    setc("f_control_enabled", true);
+    setc("f_effect_enabled", true);
+    setv("f_actions", "turn_on, turn_off");
+    setv("f_effect_param", "soil_moisture");
+    setv("f_effect_direction", "increase");
+    setv("f_verify_strategy", "state, sensor, delayed_check");
+    setc("f_water_risk", true);
+  }
+
+  if(preset === "lighting"){
+    setc("f_control_enabled", true);
+    setc("f_effect_enabled", true);
+    setv("f_actions", "turn_on, turn_off");
+    setv("f_effect_param", "light");
+    setv("f_effect_direction", "increase");
+    setv("f_verify_strategy", "state, photo");
+  }
+
+  if(preset === "movement"){
+    setc("f_control_enabled", true);
+    setv("f_actions", "open, close, stop");
+    setv("f_verify_strategy", "state, delayed_check");
+  }
+
+  if(preset === "climate"){
+    setc("f_control_enabled", true);
+    setc("f_effect_enabled", true);
+    setv("f_actions", "turn_on, turn_off");
+    setv("f_effect_param", "temperature");
+    setv("f_verify_strategy", "state, sensor, delayed_check");
+  }
+
+  if(preset === "sensor"){
+    setc("f_control_enabled", false);
+    setc("f_effect_enabled", false);
+    setv("f_verify_strategy", "data_quality");
+  }
+
+  if(preset === "power"){
+    setc("f_control_enabled", true);
+    setv("f_actions", "turn_on, turn_off");
+    setc("f_confirm", true);
+    setv("f_risk", "high");
+  }
+
+  buildJson();
+}
+
+
+load();
+</script>
+{% endblock %}
