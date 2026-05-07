@@ -39,6 +39,79 @@ textarea{min-height:92px}
 .summary{line-height:1.55}
 .code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
 @media(max-width:1250px){.builder-layout{grid-template-columns:1fr}.form-grid{grid-template-columns:1fr}}
+
+.relation-grid{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  margin-bottom:18px;
+
+  max-height:240px;
+  overflow-y:auto;
+
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:12px;
+  padding:8px;
+  background:rgba(255,255,255,.02);
+}
+
+.rel-card{
+  border:1px solid rgba(255,255,255,.05);
+  border-radius:8px;
+  padding:6px 8px;
+  background:rgba(255,255,255,.02);
+}
+
+.rel-card label{
+  display:flex;
+  gap:10px;
+  align-items:flex-start;
+  cursor:pointer;
+  width:100%;
+}
+
+.rel-card input{
+  margin-top:2px;
+}
+
+.rel-meta{
+  display:flex;
+  flex-direction:column;
+  gap:1px;
+  flex:1;
+}
+
+.rel-title{
+  font-size:13px;
+  font-weight:600;
+  line-height:1.2;
+}
+
+.rel-sub{
+  font-size:11px;
+  opacity:.65;
+  line-height:1.2;
+}
+
+.rel-card label{
+  display:grid !important;
+  grid-template-columns:22px 1fr !important;
+  gap:10px !important;
+  align-items:start !important;
+  width:100% !important;
+}
+.rel-card input{
+  width:auto !important;
+  min-width:0 !important;
+  margin-top:2px !important;
+}
+.rel-meta{
+  min-width:0 !important;
+  width:100% !important;
+}
+.rel-title,.rel-sub{
+  overflow-wrap:anywhere !important;
+}
 </style>
 
 <section class="builder-page">
@@ -65,8 +138,9 @@ textarea{min-height:92px}
       <button class="side-btn" data-panel="verify" onclick="showPanel('verify')">4. Проверка</button>
       <button class="side-btn" data-panel="power" onclick="showPanel('power')">5. Питание</button>
       <button class="side-btn" data-panel="safety" onclick="showPanel('safety')">6. Безопасность</button>
-      <button class="side-btn" data-panel="notes" onclick="showPanel('notes')">7. Заметки</button>
-      <button class="side-btn" data-panel="json" onclick="showPanel('json')">8. JSON</button>
+      <button class="side-btn" data-panel="relations" onclick="showPanel('relations')">7. Связи</button>
+      <button class="side-btn" data-panel="notes" onclick="showPanel('notes')">8. Заметки</button>
+      <button class="side-btn" data-panel="json" onclick="showPanel('json')">9. JSON</button>
 
       <div class="help">
         Заполняй только то, что понятно. Сложные зависимости можно оставить в заметках и уточнить позже.
@@ -87,7 +161,7 @@ textarea{min-height:92px}
           <option value="movement">Движение</option>
           <option value="climate">Климат</option>
           <option value="sensor">Датчик</option>
-          <option value="power">Питание</option>
+          <option value="power">🔌 Питание</option>
         </select>
 
         <div class="form-grid">
@@ -158,6 +232,24 @@ textarea{min-height:92px}
         <label><input type="checkbox" id="f_confirm"> требует подтверждения</label>
       </div>
 
+      <div id="panel-relations" class="panel">
+        <h2>🔗 Связанные устройства</h2>
+
+        <div class="help">
+          Какие устройства помогают проверять или подтверждать работу устройства.
+        </div>
+
+        <label>📟 Связанные датчики</label>
+        <div id="f_rel_sensors" class="relation-grid"></div>
+
+        <label>🔌 Связанные устройства</label>
+        <div id="f_rel_devices" class="relation-grid"></div>
+
+        <label>📷 Связанные камеры</label>
+        <div id="f_rel_cameras" class="relation-grid"></div>
+      </div>
+
+
       <div id="panel-notes" class="panel">
         <h2>7. Заметки</h2>
         <div class="help">Сюда можно писать всё, что пока непонятно как формализовать: зависимости, странности, что проверить позже.</div>
@@ -208,7 +300,87 @@ function showPanel(name){
 
 async function fetchJson(url, options){const r=await fetch(url, options||{}); return await r.json()}
 
+
+function suggestRelations(role, devices){
+  role = String(role || "").toLowerCase();
+
+  const out = {
+    sensors: [],
+    devices: [],
+    cameras: []
+  };
+
+  for(const d of (devices || [])){
+    const lr = String(d.logical_role || "").toLowerCase();
+
+    if(!lr || lr === role) continue;
+
+    const sameZone =
+      role.includes("top") && lr.includes("top")
+      || role.includes("bottom") && lr.includes("bottom")
+      || role.includes("roof") && lr.includes("roof")
+      || role.includes("left") && lr.includes("left")
+      || role.includes("right") && lr.includes("right");
+
+    if(!sameZone) continue;
+
+    if(
+      lr.includes("sensor") ||
+      lr.includes("temperature") ||
+      lr.includes("humidity")
+    ){
+      out.sensors.push(d.logical_role);
+    }
+    else if(
+      lr.includes("cam")
+    ){
+      out.cameras.push(d.logical_role);
+    }
+    else{
+      out.devices.push(d.logical_role);
+    }
+  }
+
+  return out;
+}
+
+function applyRelationSuggestions(center){
+  if(!window.ALL_DEVICES) return;
+
+  const rel = suggestRelations(
+    center.logical_role,
+    window.ALL_DEVICES
+  );
+
+  if(!document.getElementById("f_rel_sensors")?.value){
+    document.getElementById("f_rel_sensors").value =
+      rel.sensors.join(", ");
+  }
+
+  if(!document.getElementById("f_rel_devices")?.value){
+    document.getElementById("f_rel_devices").value =
+      rel.devices.join(", ");
+  }
+
+  if(!document.getElementById("f_rel_cameras")?.value){
+    document.getElementById("f_rel_cameras").value =
+      rel.cameras.join(", ");
+  }
+}
+
+
+
 async function load(){
+  try{
+    window.ALL_DEVICES = await fetchJson("/api/registry-db/devices");
+
+    populateRelationSelects(window.ALL_DEVICES.items || []);
+  }catch(e){
+    console.error(e);
+  }
+
+
+
   document.getElementById("deviceCenterLink").href = `/web/device/${encodeURIComponent(logicalRole)}`;
   const center = await fetchJson(`/api/registry-db/device-center/${encodeURIComponent(logicalRole)}`);
   const d = center.device || {};
@@ -230,7 +402,14 @@ async function load(){
         supports_on_off: actions.some(x => x.includes("_on") || x.includes("turn_on")),
         cooldown_sec: 10
       },
+      relations: {
+        sensors: getCheckedRelations("f_rel_sensors"),
+        devices: getCheckedRelations("f_rel_devices"),
+        cameras: getCheckedRelations("f_rel_cameras")
+      },
+
       verification: {
+
         strategy: actions.length > 0 ? ["state"] : ["data_quality"],
         related_sensors: [],
         related_cameras: [],
@@ -242,6 +421,20 @@ async function load(){
   }
 
   fillFormFromJson();
+
+  try{
+    applyRelationSuggestions(center);
+  }catch(e){
+    console.error(e);
+  }
+
+
+  try{
+    applyRelationSuggestions(center);
+  }catch(e){
+    console.error(e);
+  }
+
 
   if(actions.length && !val("f_actions")){
     setv("f_actions", actions.join(", "));
@@ -288,6 +481,11 @@ function fillFormFromJson(){
     setc("f_control_enabled",p.control?.enabled); setv("f_actions",(p.control?.actions||[]).join(", ")); setv("f_cooldown",p.control?.cooldown_sec||10);
     const eff=(p.effect?.affects||[])[0]||p.effect_model||{}; setc("f_effect_enabled",!!p.effect?.enabled); setv("f_effect_param",eff.parameter||eff.target||""); setv("f_effect_direction",eff.direction||""); setv("f_effect_delta",eff.expected_delta??""); setv("f_effect_delay",eff.delay_sec||eff.typical_delay_sec||300);
     setv("f_verify_strategy",(p.verification?.strategy||[p.verify_strategy||"state"]).join(", ")); setv("f_sensors",(p.related_sensors||p.verification?.related_sensors||[]).join(", ")); setv("f_cameras",(p.related_cameras||p.verification?.related_cameras||[]).join(", ")); setv("f_verify_delay",p.verification?.verify_delay_sec||5);
+
+
+  setCheckedRelations("f_rel_sensors", p.relations?.sensors || []);
+  setCheckedRelations("f_rel_devices", p.relations?.devices || []);
+  setCheckedRelations("f_rel_cameras", p.relations?.cameras || []);
     setv("f_power_depends",(p.power?.depends_on||[]).join(", ")); setv("f_power_source",p.power?.power_source||""); setc("f_critical_power",p.power?.critical_power);
     setv("f_risk",p.safety?.risk_level||"low"); setc("f_water_risk",p.safety?.water_risk); setc("f_fire_risk",p.safety?.fire_risk); setc("f_freeze_risk",p.safety?.freeze_risk); setc("f_confirm",p.safety?.requires_confirmation);
     setv("f_conflicts",(p.dependencies?.conflicts_with||[]).join(", ")); setv("f_notes",p.notes?.operator_notes||""); setv("f_known_problems",(p.notes?.known_problems||[]).join(", "));
@@ -317,6 +515,99 @@ async function savePassport(){
   const p = buildJson();
   const data = await fetchJson("/api/registry-db/passports",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(p)});
   document.getElementById("saveResult").textContent = JSON.stringify(data,null,2);
+}
+
+
+
+function renderRelationCheckboxes(containerId, devices){
+
+  const root = document.getElementById(containerId);
+  if(!root) return;
+
+  root.innerHTML = "";
+
+  for(const d of (devices || [])){
+
+    const role = d.logical_role || "";
+
+    const label =
+      `${d.id || "?"} — ${d.name || role}`;
+
+    const sub =
+      `${d.zone || "-"} • ${d.type || "-"}`;
+
+    root.innerHTML += `
+      <div class="rel-card">
+        <label>
+          <input
+            type="checkbox"
+            value="${esc(role)}"
+          >
+
+          <div class="rel-meta">
+            <div class="rel-title">${esc(label)}</div>
+            <div class="rel-sub">${esc(sub)}</div>
+          </div>
+        </label>
+      </div>
+    `;
+  }
+}
+
+function getCheckedRelations(id){
+
+  const root = document.getElementById(id);
+  if(!root) return [];
+
+  return [...root.querySelectorAll("input:checked")]
+    .map(x => x.value);
+}
+
+function setCheckedRelations(id, values){
+
+  const root = document.getElementById(id);
+  if(!root) return;
+
+  const set = new Set(values || []);
+
+  [...root.querySelectorAll("input")]
+    .forEach(x => {
+      x.checked = set.has(x.value);
+    });
+}
+
+function populateRelationSelects(devices){
+
+  const sensors = [];
+  const cameras = [];
+  const relDevices = [];
+
+  for(const d of (devices || [])){
+
+    const role = (d.logical_role || "").toLowerCase();
+    const type = (d.type || "").toLowerCase();
+
+    if(
+      type.includes("sensor") ||
+      type.includes("battery") ||
+      type.includes("smoke") ||
+      type.includes("moisture")
+    ){
+      sensors.push(d);
+    }
+    else if(
+      type.includes("camera")
+    ){
+      cameras.push(d);
+    }
+    else{
+      relDevices.push(d);
+    }
+  }
+
+  renderRelationCheckboxes("f_rel_sensors", sensors);
+  renderRelationCheckboxes("f_rel_devices", relDevices);
+  renderRelationCheckboxes("f_rel_cameras", cameras);
 }
 
 function esc(s){return String(s??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;")}
@@ -350,18 +641,54 @@ function scorePassport(p){
 
 function renderQuality(p){
   const q = scorePassport(p);
-  let color = "#ffb84d";
 
-  if(q.score >= 80) color = "#63ff9b";
-  else if(q.score < 50) color = "#ff6b6b";
+  let color = "#ffb84d";
+  let label = "🟡 Неполный";
+
+  if(q.score >= 80){
+    color = "#63ff9b";
+    label = "🟢 Готов";
+  }
+  else if(q.score < 50){
+    color = "#ff6b6b";
+    label = "🔴 Проблемы";
+  }
 
   document.getElementById("passportQuality").innerHTML = `
-    <b style="color:${color}">Качество паспорта: ${q.score}%</b><br>
-    ${
-      q.issues.length
-      ? "Не хватает: " + q.issues.map(x => esc(x)).join(", ")
-      : "Паспорт выглядит заполненным."
-    }
+    <div style="
+      border:1px solid ${color};
+      border-radius:18px;
+      padding:16px;
+      background:rgba(255,255,255,.03);
+      margin-bottom:12px;
+    ">
+      <div style="
+        font-size:24px;
+        font-weight:800;
+        color:${color};
+        margin-bottom:8px;
+      ">
+        ${label}
+      </div>
+
+      <div style="
+        font-size:15px;
+        margin-bottom:8px;
+      ">
+        Качество паспорта: ${q.score}%
+      </div>
+
+      <div style="
+        color:rgba(255,255,255,.72);
+        line-height:1.5;
+      ">
+        ${
+          q.issues.length
+          ? "Не хватает: " + q.issues.map(x => esc(x)).join(", ")
+          : "Паспорт выглядит заполненным."
+        }
+      </div>
+    </div>
   `;
 }
 
@@ -469,6 +796,69 @@ function applyPreset(){
   }
 
   buildJson();
+}
+
+
+
+/* visible button feedback wrappers */
+const __oldBuildJson = buildJson;
+buildJson = function(){
+  const result = __oldBuildJson();
+
+  const out = document.getElementById("saveResult");
+  if(out){
+    out.textContent = "✅ JSON собран / предпросмотр обновлён";
+  }
+
+  return result;
+};
+
+const __oldFillFormFromJson = fillFormFromJson;
+fillFormFromJson = function(){
+  const result = __oldFillFormFromJson();
+
+  const out = document.getElementById("saveResult");
+  if(out){
+    out.textContent = "✅ Форма заполнена из JSON";
+  }
+
+  return result;
+};
+
+function validatePassport(){
+  try{
+    const p = buildJson();
+    const issues = [];
+
+    if(!p.logical_role) issues.push("нет logical_role");
+    if(!p.entity_id) issues.push("нет entity_id");
+    if(!p.name) issues.push("нет названия");
+    if(!p.description) issues.push("нет описания");
+
+    if(p.control?.enabled && !(p.control.actions || []).length){
+      issues.push("включено управление, но нет actions");
+    }
+
+    if(!(p.verification?.strategy || []).length){
+      issues.push("нет способа проверки");
+    }
+
+    const out = document.getElementById("saveResult");
+
+    if(!issues.length){
+      out.textContent = "✅ Паспорт выглядит нормально";
+    } else {
+      out.textContent = "⚠️ Паспорт неполный:\n- " + issues.join("\n- ");
+    }
+
+    return issues.length === 0;
+  }catch(e){
+    const out = document.getElementById("saveResult");
+    if(out){
+      out.textContent = "❌ Ошибка проверки: " + e;
+    }
+    return false;
+  }
 }
 
 

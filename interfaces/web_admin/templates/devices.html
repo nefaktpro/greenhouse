@@ -274,7 +274,7 @@ input {
       </div>
       <div class="device-actions">
         <button class="device-btn" onclick="syncRegistry()">🔄 Обновить registry.db</button>
-        <button class="device-btn primary" onclick="showTab('workbench')">➕ Добавить паспорт</button>
+        
       </div>
     </div>
   </div>
@@ -283,7 +283,7 @@ input {
     <button class="device-tab active" data-tab="overview" onclick="showTab('overview')">
       <b>🏠 Обзор</b>
     </button>
-    <button class="device-tab" data-tab="workbench" onclick="showTab('workbench')">
+    <button class="device-tab" onclick="window.location='/web/passports'">
       <b>🪪 Паспорта</b>
     </button>
     <button class="device-tab" data-tab="registry" onclick="showTab('registry')">
@@ -342,13 +342,16 @@ input {
           Паспорт сохраняется в registry.db. Source files devices.csv/action_map.json не меняются.
         </div>
         <div class="device-actions" style="margin:12px 0;">
-          <button class="device-btn primary" onclick="savePassport()">💾 Сохранить</button>
-          <button class="device-btn" onclick="validatePassportJson()">✅ Проверить JSON</button>
-          <button class="device-btn" onclick="loadSuggestion()">🧠 Шаблон</button>
+          
+          <a id="deviceCenterLink" class="device-btn" href="#">Device Center</a>
+          <details><summary>Legacy JSON editor</summary></details>
           <button class="device-btn danger" onclick="deletePassport()">🗑 Удалить</button>
           <a id="deviceCenterLink" class="device-btn" href="#">Открыть Device Center</a>
         </div>
-        <textarea id="passportEditor" class="passport-editor"></textarea>
+        <details style="margin-top:12px;"><summary>Raw JSON editor</summary><textarea id="passportEditor" class="passport-editor"></textarea></details>
+  <summary>Raw JSON editor</summary>
+  <textarea id="passportEditor" class="passport-editor"></textarea>
+</details>
         <pre id="saveResult"></pre>
       </div>
     </div>
@@ -417,10 +420,10 @@ input {
         </div>
 
         <div class="stat-card">
-          <div class="stat-label">JSON fallback</div>
+          
           <div style="font-size:20px;font-weight:900;margin:10px 0;">🪪 Сырой редактор</div>
           <p class="muted">Прямой редактор passport JSON. Основной редактор теперь во вкладке “Паспорта устройств”.</p>
-          <a class="device-btn" href="/web/passports">Открыть raw passports</a>
+          
         </div>
       </div>
     </div>
@@ -507,20 +510,12 @@ async function loadQueue() {
   `).join("");
 }
 
+
 async function selectDevice(role) {
-  selectedRole = role;
-  await loadQueue();
-
-  const data = await fetchJson(`/api/registry-db/device-center/${encodeURIComponent(role)}`);
-  document.getElementById("deviceCenterLink").href = `/web/device/${encodeURIComponent(role)}`;
-  renderDeviceCard(data);
-
-  if (data.passport) {
-    document.getElementById("passportEditor").value = JSON.stringify(data.passport, null, 2);
-  } else {
-    await loadSuggestion();
-  }
+  window.location =
+    '/web/passport-builder/' + encodeURIComponent(role);
 }
+
 
 function renderDeviceCard(data) {
   const d = data.device || {};
@@ -632,7 +627,7 @@ async function loadRegistry() {
       <td><span class="code">${escapeHtml(d.entity_id || "")}</span></td>
       <td><span class="code">${escapeHtml(d.logical_role || "")}</span></td>
       <td>${escapeHtml(d.zone || "")}</td>
-      <td>${d.logical_role ? `<a href="#" onclick="showTab('workbench'); selectDevice('${escapeAttr(d.logical_role)}'); return false;">${Number(d.has_passport || 0) ? "✅ edit" : "➕ create"}</a>` : ""}</td>
+      <td>${d.logical_role ? `<a href="#" onclick="selectDevice('${escapeAttr(d.logical_role)}'); return false;">${Number(d.has_passport || 0) ? "✅ edit" : "➕ create"}</a>` : ""}</td>
     </tr>
   `).join("");
 }
@@ -641,7 +636,7 @@ async function loadPassports() {
   const data = await fetchJson("/api/registry-db/passports");
   document.getElementById("passportsStatus").textContent = `Всего: ${data.count}`;
   document.getElementById("passportsList").innerHTML = (data.items || []).map(p => `
-    <div class="device-item" onclick="showTab('workbench'); selectDevice('${escapeAttr(p.logical_role)}')">
+    <div class="device-item" onclick="selectDevice('${escapeAttr(p.logical_role)}')">
       <b>${escapeHtml(p.logical_role)}</b>
       <div class="muted">${escapeHtml(p.entity_id || "")}</div>
       <div class="muted">reliability: ${escapeHtml(p.reliability || "unknown")}</div>

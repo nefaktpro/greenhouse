@@ -1,121 +1,424 @@
 {% extends "base.html" %}
 
 {% block content %}
-<section class="page">
-  <div class="page-header">
-    <div>
-      <h1>Device Passports</h1>
-      <p>Паспорта устройств: effect_model, related_sensors, reliability, safety.</p>
+<style>
+.passports-page{display:grid;gap:18px}
+.hero{
+  border:1px solid rgba(126,103,255,.45);
+  border-radius:28px;
+  padding:28px;
+  background:
+    radial-gradient(circle at 85% 15%,rgba(117,74,255,.24),transparent 30%),
+    radial-gradient(circle at 15% 0%,rgba(33,118,255,.18),transparent 25%),
+    linear-gradient(135deg,rgba(7,16,38,.96),rgba(4,9,24,.96));
+  box-shadow:0 0 60px rgba(92,84,255,.14);
+}
+.hero h1{font-size:42px;margin:10px 0}
+.muted{color:rgba(232,240,255,.68)}
+
+.tabs{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+}
+
+.tab-btn{
+  border:1px solid rgba(110,150,255,.25);
+  background:rgba(10,20,40,.86);
+  color:#eef4ff;
+  padding:12px 18px;
+  border-radius:14px;
+  cursor:pointer;
+  font-weight:700;
+}
+
+.tab-btn.active{
+  background:linear-gradient(135deg,#7544ff,#2176ff);
+  border-color:rgba(190,205,255,.8);
+}
+
+.panel{display:none}
+.panel.active{display:block}
+
+.grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
+  gap:16px;
+}
+
+.card{
+  border:1px solid rgba(95,135,255,.22);
+  background:rgba(5,12,28,.84);
+  border-radius:24px;
+  padding:18px;
+}
+
+.card h3{
+  margin-top:0;
+  margin-bottom:10px;
+}
+
+.btn{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  text-decoration:none;
+  border:1px solid rgba(120,150,255,.3);
+  background:rgba(16,28,56,.88);
+  color:#edf4ff;
+  padding:10px 14px;
+  border-radius:12px;
+  font-weight:700;
+  cursor:pointer;
+}
+
+.btn.primary{
+  background:linear-gradient(135deg,#7544ff,#2176ff);
+}
+
+.btn-row{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  margin-top:14px;
+}
+
+.stat-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
+  gap:14px;
+}
+
+.stat{
+  border:1px solid rgba(95,135,255,.22);
+  background:rgba(5,12,28,.84);
+  border-radius:20px;
+  padding:18px;
+}
+
+.stat-label{
+  color:rgba(232,240,255,.6);
+  font-size:13px;
+}
+
+.stat-num{
+  font-size:34px;
+  font-weight:800;
+  margin-top:6px;
+}
+
+.list{
+  display:grid;
+  gap:14px;
+}
+
+.device{
+  border:1px solid rgba(95,135,255,.2);
+  background:rgba(6,14,30,.82);
+  border-radius:20px;
+  padding:16px;
+}
+
+.device-top{
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  align-items:center;
+  flex-wrap:wrap;
+}
+
+.badge{
+  border:1px solid rgba(120,150,255,.24);
+  background:rgba(18,30,58,.82);
+  border-radius:999px;
+  padding:6px 10px;
+  font-size:12px;
+}
+
+.help{
+  border-left:3px solid rgba(116,105,255,.95);
+  background:rgba(103,103,255,.09);
+  border-radius:12px;
+  padding:12px 14px;
+  margin-top:12px;
+}
+</style>
+
+<section class="passports-page">
+
+  <div class="hero">
+    <div class="muted">GREENHOUSE v17 / DEVICE PASSPORT SYSTEM</div>
+    <h1>🪪 Паспорта устройств</h1>
+
+    <p class="muted">
+      Центр паспортов устройств. Здесь создаются, проверяются и редактируются
+      паспорта для AI, automation, verify, safety и autopilot logic.
+    </p>
+
+    <div class="btn-row">
+      <a class="btn" href="/web/devices">← Устройства</a>
+
+      <a class="btn primary"
+         href="/web/passport-builder/new">
+         ➕ Создать паспорт
+      </a>
     </div>
-    <button class="btn" onclick="loadPassports()">Обновить</button>
   </div>
 
-  <div class="card">
-    <h2>Passports</h2>
-    <div id="passportsStatus" class="muted">Загрузка...</div>
-    <div id="passportsList" class="stack"></div>
+  <div class="stat-grid">
+    <div class="stat">
+      <div class="stat-label">Всего устройств</div>
+      <div class="stat-num" id="totalDevices">-</div>
+    </div>
+
+    <div class="stat">
+      <div class="stat-label">Готовые паспорта</div>
+      <div class="stat-num" id="readyPassports">-</div>
+    </div>
+
+    <div class="stat">
+      <div class="stat-label">Без паспорта</div>
+      <div class="stat-num" id="missingPassports">-</div>
+    </div>
+
+    <div class="stat">
+      <div class="stat-label">Schema v1</div>
+      <div class="stat-num">✅</div>
+    </div>
   </div>
 
-  <div class="card">
-    <h2>Редактор паспорта</h2>
-    <p class="muted">JSON сохраняется в registry.db / device_passports. CSV/ActionMap не меняются.</p>
-    <textarea id="passportEditor" style="width:100%; min-height:420px; font-family:monospace;"></textarea>
-    <div class="actions">
-      <button class="btn" onclick="savePassport()">💾 Сохранить паспорт</button>
-      <button class="btn" onclick="newTopFanTemplate()">Шаблон top fan</button>
-    </div>
-    <pre id="saveResult"></pre>
+  <div class="tabs">
+    <button class="tab-btn active" onclick="showTab('queue', this)">
+      Очередь
+    </button>
+
+    <button class="tab-btn" onclick="showTab('ready', this)">
+      Готовые
+    </button>
+
+    <button class="tab-btn" onclick="showTab('quality', this)">
+      Качество
+    </button>
+
+    <button class="tab-btn" onclick="showTab('service', this)">
+      Сервис
+    </button>
   </div>
+
+  <div id="tab-queue" class="panel active">
+    <div class="help">
+      Устройства без паспорта. Начинай описание отсюда.
+    </div>
+
+    <div id="queueList" class="list"></div>
+  </div>
+
+  <div id="tab-ready" class="panel">
+    <div class="help">
+      Уже созданные паспорта устройств.
+    </div>
+
+    <div id="readyList" class="list"></div>
+  </div>
+
+  <div id="tab-quality" class="panel">
+    <div class="help">
+      В будущем здесь будет completeness, validation и AI audit.
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <h3>🟢 Production ready</h3>
+        <p class="muted">
+          Полностью заполненные production-паспорта.
+        </p>
+      </div>
+
+      <div class="card">
+        <h3>🟡 Incomplete</h3>
+        <p class="muted">
+          Не хватает verify/safety/effect/dependencies.
+        </p>
+      </div>
+
+      <div class="card">
+        <h3>🔴 Broken</h3>
+        <p class="muted">
+          Ошибки schema или invalid entity/actions.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div id="tab-service" class="panel">
+    <div class="grid">
+
+      <div class="card">
+        <h3>🧰 Legacy</h3>
+
+        <div class="btn-row">
+          <a class="btn" href="/web/devices">
+            Devices Legacy
+          </a>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>📦 Export / Import</h3>
+
+        <p class="muted">
+          Будущие backup/export tools.
+        </p>
+      </div>
+
+      <div class="card">
+        <h3>🤖 AI Ready</h3>
+
+        <p class="muted">
+          Foundation для AI/autopilot reasoning.
+        </p>
+      </div>
+
+    </div>
+  </div>
+
 </section>
 
 <script>
-async function loadPassports() {
-  const data = await (await fetch("/api/registry-db/passports")).json();
-  document.getElementById("passportsStatus").textContent = `Всего: ${data.count}`;
+function showTab(name, btn){
+  document.querySelectorAll(".panel").forEach(x=>x.classList.remove("active"));
+  document.querySelectorAll(".tab-btn").forEach(x=>x.classList.remove("active"));
 
-  document.getElementById("passportsList").innerHTML = data.items.map(p => `
-    <div class="mini-card">
-      <b>${escapeHtml(p.logical_role)}</b>
-      <div class="muted">${escapeHtml(p.entity_id || "")} · reliability: ${escapeHtml(p.reliability || "")}</div>
-      <button class="btn" onclick='editPassport(${escapeAttr(JSON.stringify(p))})'>Редактировать</button>
+  document.getElementById("tab-"+name)?.classList.add("active");
+  btn?.classList.add("active");
+}
+
+function esc(s){
+  return String(s ?? "")
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;");
+}
+
+async function fetchJson(url){
+  const r = await fetch(url);
+  return await r.json();
+}
+
+function renderQueue(items){
+  const root = document.getElementById("queueList");
+
+  if(!items.length){
+    root.innerHTML = `
+      <div class="card">
+        <h3>✅ Все устройства имеют паспорта</h3>
+      </div>
+    `;
+    return;
+  }
+
+  root.innerHTML = items.map(item => `
+    <div class="device">
+      <div class="device-top">
+        <div>
+          <h3>${esc(item.logical_role)}</h3>
+          <div class="muted">${esc(item.entity_id || "")}</div>
+        </div>
+
+        <div class="badge">
+          без паспорта
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <a
+          class="btn primary"
+          href="/web/passport-builder/${encodeURIComponent(item.logical_role)}">
+          🪪 Создать паспорт
+        </a>
+
+        <a
+          class="btn"
+          href="/web/device/${encodeURIComponent(item.logical_role)}">
+          Device Center
+        </a>
+      </div>
     </div>
   `).join("");
+}
 
-  const role = new URLSearchParams(location.search).get("role");
-  if (role) {
-    const res = await fetch(`/api/registry-db/passports/${encodeURIComponent(role)}`);
-    const one = await res.json();
-    if (one.ok) editPassport(JSON.stringify(one.item));
-    else document.getElementById("passportEditor").value = JSON.stringify({logical_role: role}, null, 2);
+function renderReady(items){
+  const root = document.getElementById("readyList");
+
+  if(!items.length){
+    root.innerHTML = `
+      <div class="card">
+        <h3>Пока нет готовых паспортов</h3>
+      </div>
+    `;
+    return;
+  }
+
+  root.innerHTML = items.map(item => `
+    <div class="device">
+      <div class="device-top">
+        <div>
+          <h3>${esc(item.logical_role)}</h3>
+        </div>
+
+        <div class="badge">
+          schema v1
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <a
+          class="btn primary"
+          href="/web/passport-builder/${encodeURIComponent(item.logical_role)}">
+          ✏ Builder
+        </a>
+
+        <a
+          class="btn"
+          href="/web/device/${encodeURIComponent(item.logical_role)}">
+          Device Center
+        </a>
+      </div>
+    </div>
+  `).join("");
+}
+
+async function load(){
+  try{
+    const data = await fetchJson("/api/registry-db/summary");
+    const passportsData = await fetchJson("/api/registry-db/passports");
+    const passports = passportsData.items || passportsData || [];
+
+    document.getElementById("totalDevices").textContent =
+      data.devices ?? 0;
+
+    document.getElementById("readyPassports").textContent =
+      passports.length ?? 0;
+
+    const ready = new Set(
+      passports.map(x => x.logical_role)
+    );
+
+    const missing = (data.devices_list || []).filter(
+      x => !ready.has(x.logical_role)
+    );
+
+    document.getElementById("missingPassports").textContent =
+      missing.length;
+
+    renderQueue(missing);
+    renderReady(passports);
+
+  }catch(e){
+    console.error(e);
   }
 }
 
-function editPassport(payload) {
-  const obj = typeof payload === "string" ? JSON.parse(payload) : payload;
-  document.getElementById("passportEditor").value = JSON.stringify(obj, null, 2);
-}
-
-async function savePassport() {
-  const out = document.getElementById("saveResult");
-  try {
-    const payload = JSON.parse(document.getElementById("passportEditor").value);
-    const res = await fetch("/api/registry-db/passports", {
-      method: "POST",
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify(payload)
-    });
-    const data = await res.json();
-    out.textContent = JSON.stringify(data, null, 2);
-    await loadPassports();
-  } catch (e) {
-    out.textContent = "Ошибка: " + e;
-  }
-}
-
-function newTopFanTemplate() {
-  editPassport({
-    logical_role: "top_air_circulation",
-    device_id: "100",
-    entity_id: "switch.setevoi_filtr_novyi_socket_1",
-    verify_strategy: "state",
-    reliability: "unknown",
-    effect_model: {
-      type: "environmental",
-      target: "humidity",
-      direction: "decrease",
-      sensor: "sensor.temperature_and_humidity_sensor_2_humidity",
-      expected_delta: -2,
-      typical_delay_sec: 60
-    },
-    related_sensors: [
-      "sensor.temperature_and_humidity_sensor_2_humidity",
-      "sensor.temperature_and_humidity_sensor_2_temperature"
-    ],
-    related_cameras: [],
-    safety: {
-      allowed_modes: ["MANUAL", "ASK", "AUTO"],
-      blocked_in: [],
-      cooldown_sec: 10
-    }
-  });
-}
-
-function escapeHtml(s) {
-  return String(s ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
-
-function escapeAttr(s) {
-  return "'" + String(s ?? "")
-    .replaceAll("\\", "\\\\")
-    .replaceAll("'", "\\'")
-    .replaceAll("</", "<\\/") + "'";
-}
-
-loadPassports();
+load();
 </script>
 {% endblock %}
