@@ -5,6 +5,7 @@ import json
 import os
 import time
 from dataclasses import asdict, dataclass, field
+from greenhouse_v17.services.verify_debug_service import run_state_verify_debug
 
 
 import threading
@@ -632,6 +633,24 @@ def execute_action(
         actual_state = _read_state_value(entity_id)
         verified = True
 
+    verify_v2_debug = None
+    try:
+        verify_v2_debug = run_state_verify_debug(
+            entity_id=entity_id,
+            expected_state=expected_state,
+            verify_delay_sec=1,
+        )
+    except Exception as exc:
+        verify_v2_debug = {
+            "ok": False,
+            "status": "failed",
+            "strategy": "state",
+            "entity_id": entity_id,
+            "expected_state": expected_state,
+            "actual_state": None,
+            "reason": f"shadow_verify_error:{type(exc).__name__}",
+        }
+
     result = ExecutionResult(
         ok=verified if expected_state is not None else True,
         action_key=action_key,
@@ -651,6 +670,7 @@ def execute_action(
             "ha_status_code": raw_status,
             "ha_response": raw_json,
             "duration_ms": int((time.time() - call_started) * 1000),
+            "verify_v2_debug": verify_v2_debug,
         },
     )
     if expected_state is not None and not verified:
