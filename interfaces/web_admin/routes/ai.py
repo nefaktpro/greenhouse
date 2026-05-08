@@ -11,6 +11,11 @@ from ai.router import route_ai_message
 from ai.context_resolver import get_context_catalog, read_context_file, save_context_file, list_backups, restore_backup
 from greenhouse_v17.services.unified_log_service import read_recent_execution_logs
 from greenhouse_v17.services.timer_log_service import read_recent_timer_runs
+from greenhouse_v17.services.schedule_log_service import read_recent_schedule_runs
+from greenhouse_v17.services.ai_decision_log_service import read_recent_ai_decision_runs
+from greenhouse_v17.services.test_run_log_service import read_recent_test_runs
+from greenhouse_v17.services.followup_log_service import read_recent_followup_runs
+from greenhouse_v17.services.error_safety_log_service import read_recent_error_safety_runs
 from chat.chat_router import handle_chat_message
 
 router = APIRouter(tags=["ai-lab"])
@@ -343,6 +348,46 @@ def api_sql_logs_recent(limit: int = 100):
 def api_sql_logs_timers_recent(limit: int = 100):
     limit = max(1, min(limit, 500))
     items = read_recent_timer_runs(limit=limit)
+    return {"ok": True, "items": items, "count": len(items)}
+
+
+
+@router.get("/api/sql-logs/schedules/recent")
+def api_sql_logs_schedules_recent(limit: int = 100):
+    limit = max(1, min(limit, 500))
+    items = read_recent_schedule_runs(limit=limit)
+    return {"ok": True, "items": items, "count": len(items)}
+
+
+
+@router.get("/api/sql-logs/ai-decisions/recent")
+def api_sql_logs_ai_decisions_recent(limit: int = 100):
+    limit = max(1, min(limit, 500))
+    items = read_recent_ai_decision_runs(limit=limit)
+    return {"ok": True, "items": items, "count": len(items)}
+
+
+
+@router.get("/api/sql-logs/test-runs/recent")
+def api_sql_logs_test_runs_recent(limit: int = 100):
+    limit = max(1, min(limit, 500))
+    items = read_recent_test_runs(limit=limit)
+    return {"ok": True, "items": items, "count": len(items)}
+
+
+
+@router.get("/api/sql-logs/followups/recent")
+def api_sql_logs_followups_recent(limit: int = 100):
+    limit = max(1, min(limit, 500))
+    items = read_recent_followup_runs(limit=limit)
+    return {"ok": True, "items": items, "count": len(items)}
+
+
+
+@router.get("/api/sql-logs/error-safety/recent")
+def api_sql_logs_error_safety_recent(limit: int = 100):
+    limit = max(1, min(limit, 500))
+    items = read_recent_error_safety_runs(limit=limit)
     return {"ok": True, "items": items, "count": len(items)}
 
 @router.get("/api/ai/chat-live/history")

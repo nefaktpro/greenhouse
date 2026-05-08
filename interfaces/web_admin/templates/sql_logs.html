@@ -133,14 +133,14 @@
   <section class="sql-card">
     <div class="card-label">SQL Logs</div>
     <h2>SQL Log Sources</h2>
-    <div class="sql-muted">Здесь будут жить все новые SQL-логи. Сейчас подключены execution и timers.</div>
+    <div class="sql-muted">Здесь живут SQL-логи для ИИ и системы. Сейчас подключены выполнение, таймеры, расписания, решения ИИ, TEST, follow-up и ошибки/safety.</div>
 
     <details class="sql-source">
       <summary>
         <div class="sql-source-head">
           <div class="sql-source-badge">ACTIVE</div>
-          <div class="sql-source-title">Unified Execution Logs</div>
-          <div class="sql-source-sub">SQLite-логи execution / verify / verify v2.</div>
+          <div class="sql-source-title">Журнал выполнения</div>
+          <div class="sql-source-sub">Выполнение действий, verify и verify v2.</div>
         </div>
         <div class="sql-muted">раскрыть / свернуть</div>
       </summary>
@@ -187,7 +187,7 @@
       <summary>
         <div class="sql-source-head">
           <div class="sql-source-badge">ACTIVE</div>
-          <div class="sql-source-title">Timers Log</div>
+          <div class="sql-source-title">Журнал таймеров</div>
           <div class="sql-source-sub">Отложенные действия, delay/duration, ASK и статусы таймеров.</div>
         </div>
         <div class="sql-muted">раскрыть / свернуть</div>
@@ -234,42 +234,240 @@
     <details class="sql-source">
       <summary>
         <div class="sql-source-head">
-          <div class="sql-source-badge">PLANNED</div>
-          <div class="sql-source-title">Schedules Log</div>
-          <div class="sql-source-sub">Расписания, enable/disable, срабатывания.</div>
+          <div class="sql-source-badge">ACTIVE</div>
+          <div class="sql-source-title">Журнал расписаний</div>
+          <div class="sql-source-sub">Расписания, enable/disable, ближайший запуск и ASK-статусы.</div>
         </div>
-        <div class="sql-muted">скоро</div>
+        <div class="sql-muted">раскрыть / свернуть</div>
       </summary>
       <div class="sql-source-body">
-        <div class="sql-empty">Источник ещё не подключён.</div>
+        <div class="sql-toolbar">
+          <button class="primary-btn" onclick="loadScheduleLogs()">Обновить</button>
+          <label class="sql-muted">Limit</label>
+          <input id="scheduleLimitInput" type="number" value="100" min="1" max="500">
+          <label class="sql-muted">Entity</label>
+          <input id="scheduleEntityFilter" type="text" placeholder="switch.setevoi_filtr...">
+          <label class="sql-muted">Action</label>
+          <input id="scheduleActionFilter" type="text" placeholder="fan_top_on">
+        </div>
+
+        <div class="sql-table-wrap">
+          <table class="sql-table">
+            <thead>
+              <tr>
+                <th>Updated</th>
+                <th>Schedule ID</th>
+                <th>Status</th>
+                <th>Kind</th>
+                <th>Action</th>
+                <th>Entity</th>
+                <th>Cron</th>
+                <th>Next Run</th>
+                <th>ASK</th>
+              </tr>
+            </thead>
+            <tbody id="scheduleLogsBody">
+              <tr><td colspan="9" class="sql-muted">Загрузка...</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <details class="sql-raw">
+          <summary>Показать raw JSON</summary>
+          <pre id="scheduleLogsRaw">[]</pre>
+        </details>
       </div>
     </details>
 
     <details class="sql-source">
       <summary>
         <div class="sql-source-head">
-          <div class="sql-source-badge">PLANNED</div>
-          <div class="sql-source-title">AI Decisions Log</div>
-          <div class="sql-source-sub">Решения AI, объяснения, follow-up и decision trails.</div>
+          <div class="sql-source-badge">ACTIVE</div>
+          <div class="sql-source-title">Журнал решений ИИ</div>
+          <div class="sql-source-sub">Решения ИИ, нормализация intent, предложенные действия, confidence и связь с ASK/execution.</div>
         </div>
-        <div class="sql-muted">скоро</div>
+        <div class="sql-muted">раскрыть / свернуть</div>
       </summary>
       <div class="sql-source-body">
-        <div class="sql-empty">Источник ещё не подключён.</div>
+        <div class="sql-toolbar">
+          <button class="primary-btn" onclick="loadAiDecisionLogs()">Обновить</button>
+          <label class="sql-muted">Limit</label>
+          <input id="aiDecisionLimitInput" type="number" value="100" min="1" max="500">
+          <label class="sql-muted">Entity</label>
+          <input id="aiDecisionEntityFilter" type="text" placeholder="switch.setevoi_filtr...">
+          <label class="sql-muted">Action</label>
+          <input id="aiDecisionActionFilter" type="text" placeholder="fan_top_on">
+        </div>
+
+        <div class="sql-table-wrap">
+          <table class="sql-table">
+            <thead>
+              <tr>
+                <th>Updated</th>
+                <th>Decision ID</th>
+                <th>Status</th>
+                <th>Kind</th>
+                <th>Action</th>
+                <th>Entity</th>
+                <th>Confidence</th>
+                <th>Risk</th>
+                <th>ASK</th>
+              </tr>
+            </thead>
+            <tbody id="aiDecisionLogsBody">
+              <tr><td colspan="9" class="sql-muted">Загрузка...</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <details class="sql-raw">
+          <summary>Показать raw JSON</summary>
+          <pre id="aiDecisionLogsRaw">[]</pre>
+        </details>
       </div>
     </details>
 
     <details class="sql-source">
       <summary>
         <div class="sql-source-head">
-          <div class="sql-source-badge">PLANNED</div>
-          <div class="sql-source-title">TEST Runs Log</div>
-          <div class="sql-source-sub">TEST-эксперименты, прогоны, результаты и learnings.</div>
+          <div class="sql-source-badge">ACTIVE</div>
+          <div class="sql-source-title">Журнал TEST-прогонов</div>
+          <div class="sql-source-sub">TEST-эксперименты, гипотезы, результаты, learnings и verify outcomes.</div>
         </div>
-        <div class="sql-muted">скоро</div>
+        <div class="sql-muted">раскрыть / свернуть</div>
       </summary>
       <div class="sql-source-body">
-        <div class="sql-empty">Источник ещё не подключён.</div>
+        <div class="sql-toolbar">
+          <button class="primary-btn" onclick="loadTestRunLogs()">Обновить</button>
+          <label class="sql-muted">Limit</label>
+          <input id="testRunLimitInput" type="number" value="100" min="1" max="500">
+          <label class="sql-muted">Entity</label>
+          <input id="testRunEntityFilter" type="text" placeholder="switch.setevoi_filtr...">
+          <label class="sql-muted">Action</label>
+          <input id="testRunActionFilter" type="text" placeholder="fan_top_on">
+        </div>
+
+        <div class="sql-table-wrap">
+          <table class="sql-table">
+            <thead>
+              <tr>
+                <th>Updated</th>
+                <th>Test ID</th>
+                <th>Status</th>
+                <th>Kind</th>
+                <th>Action</th>
+                <th>Entity</th>
+                <th>Verify</th>
+                <th>Verify v2</th>
+                <th>Confidence</th>
+              </tr>
+            </thead>
+            <tbody id="testRunLogsBody">
+              <tr><td colspan="9" class="sql-muted">Загрузка...</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <details class="sql-raw">
+          <summary>Показать raw JSON</summary>
+          <pre id="testRunLogsRaw">[]</pre>
+        </details>
+      </div>
+    </details>
+
+    <details class="sql-source">
+      <summary>
+        <div class="sql-source-head">
+          <div class="sql-source-badge">ACTIVE</div>
+          <div class="sql-source-title">Журнал follow-up</div>
+          <div class="sql-source-sub">Повторные проверки, post-check, дозамеры и контрольные точки после действий.</div>
+        </div>
+        <div class="sql-muted">раскрыть / свернуть</div>
+      </summary>
+      <div class="sql-source-body">
+        <div class="sql-toolbar">
+          <button class="primary-btn" onclick="loadFollowupLogs()">Обновить</button>
+          <label class="sql-muted">Limit</label>
+          <input id="followupLimitInput" type="number" value="100" min="1" max="500">
+          <label class="sql-muted">Entity</label>
+          <input id="followupEntityFilter" type="text" placeholder="switch.setevoi_filtr...">
+          <label class="sql-muted">Action</label>
+          <input id="followupActionFilter" type="text" placeholder="fan_top_on">
+        </div>
+
+        <div class="sql-table-wrap">
+          <table class="sql-table">
+            <thead>
+              <tr>
+                <th>Updated</th>
+                <th>Follow-up ID</th>
+                <th>Status</th>
+                <th>Kind</th>
+                <th>Action</th>
+                <th>Entity</th>
+                <th>Проверка</th>
+                <th>Решение</th>
+                <th>Confidence</th>
+              </tr>
+            </thead>
+            <tbody id="followupLogsBody">
+              <tr><td colspan="9" class="sql-muted">Загрузка...</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <details class="sql-raw">
+          <summary>Показать raw JSON</summary>
+          <pre id="followupLogsRaw">[]</pre>
+        </details>
+      </div>
+    </details>
+
+    <details class="sql-source">
+      <summary>
+        <div class="sql-source-head">
+          <div class="sql-source-badge">ACTIVE</div>
+          <div class="sql-source-title">Журнал ошибок и safety</div>
+          <div class="sql-source-sub">Ошибки, safety-блокировки, severity, rule violations и auto-reaction.</div>
+        </div>
+        <div class="sql-muted">раскрыть / свернуть</div>
+      </summary>
+      <div class="sql-source-body">
+        <div class="sql-toolbar">
+          <button class="primary-btn" onclick="loadErrorSafetyLogs()">Обновить</button>
+          <label class="sql-muted">Limit</label>
+          <input id="errorSafetyLimitInput" type="number" value="100" min="1" max="500">
+          <label class="sql-muted">Entity</label>
+          <input id="errorSafetyEntityFilter" type="text" placeholder="switch.setevoi_filtr...">
+          <label class="sql-muted">Action</label>
+          <input id="errorSafetyActionFilter" type="text" placeholder="watering_top_on">
+        </div>
+
+        <div class="sql-table-wrap">
+          <table class="sql-table">
+            <thead>
+              <tr>
+                <th>Updated</th>
+                <th>Error ID</th>
+                <th>Severity</th>
+                <th>Status</th>
+                <th>Layer</th>
+                <th>Action</th>
+                <th>Entity</th>
+                <th>Safety</th>
+                <th>Decision</th>
+              </tr>
+            </thead>
+            <tbody id="errorSafetyLogsBody">
+              <tr><td colspan="9" class="sql-muted">Загрузка...</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <details class="sql-raw">
+          <summary>Показать raw JSON</summary>
+          <pre id="errorSafetyLogsRaw">[]</pre>
+        </details>
       </div>
     </details>
   </section>
@@ -280,6 +478,11 @@
 <script>
 let EXECUTION_LOG_ITEMS = [];
 let TIMER_LOG_ITEMS = [];
+let SCHEDULE_LOG_ITEMS = [];
+let AI_DECISION_LOG_ITEMS = [];
+let TEST_RUN_LOG_ITEMS = [];
+let FOLLOWUP_LOG_ITEMS = [];
+let ERROR_SAFETY_LOG_ITEMS = [];
 
 function esc(v){
   return String(v ?? "")
@@ -292,7 +495,6 @@ function esc(v){
 function applyExecutionFilters(items){
   const entity = (document.getElementById("executionEntityFilter")?.value || "").toLowerCase().trim();
   const action = (document.getElementById("executionActionFilter")?.value || "").toLowerCase().trim();
-
   return items.filter(item => {
     const entityOk = !entity || String(item.entity_id || "").toLowerCase().includes(entity);
     const actionOk = !action || String(item.action_key || "").toLowerCase().includes(action);
@@ -304,14 +506,11 @@ function renderExecutionLogs(){
   const body = document.getElementById("executionLogsBody");
   const raw = document.getElementById("executionLogsRaw");
   const items = applyExecutionFilters(EXECUTION_LOG_ITEMS);
-
   raw.textContent = JSON.stringify(items, null, 2);
-
   if(!items.length){
     body.innerHTML = `<tr><td colspan="9" class="sql-muted">Нет записей</td></tr>`;
     return;
   }
-
   body.innerHTML = items.map(item => `
     <tr>
       <td>${esc(item.ts)}</td>
@@ -330,7 +529,6 @@ function renderExecutionLogs(){
 function applyTimerFilters(items){
   const entity = (document.getElementById("timerEntityFilter")?.value || "").toLowerCase().trim();
   const action = (document.getElementById("timerActionFilter")?.value || "").toLowerCase().trim();
-
   return items.filter(item => {
     const entityOk = !entity || String(item.entity_id || "").toLowerCase().includes(entity);
     const actionOk = !action || String(item.action_key || "").toLowerCase().includes(action);
@@ -342,14 +540,11 @@ function renderTimerLogs(){
   const body = document.getElementById("timerLogsBody");
   const raw = document.getElementById("timerLogsRaw");
   const items = applyTimerFilters(TIMER_LOG_ITEMS);
-
   raw.textContent = JSON.stringify(items, null, 2);
-
   if(!items.length){
     body.innerHTML = `<tr><td colspan="9" class="sql-muted">Нет записей</td></tr>`;
     return;
   }
-
   body.innerHTML = items.map(item => `
     <tr>
       <td>${esc(item.updated_at)}</td>
@@ -365,11 +560,180 @@ function renderTimerLogs(){
   `).join("");
 }
 
+function applyScheduleFilters(items){
+  const entity = (document.getElementById("scheduleEntityFilter")?.value || "").toLowerCase().trim();
+  const action = (document.getElementById("scheduleActionFilter")?.value || "").toLowerCase().trim();
+  return items.filter(item => {
+    const entityOk = !entity || String(item.entity_id || "").toLowerCase().includes(entity);
+    const actionOk = !action || String(item.action_key || "").toLowerCase().includes(action);
+    return entityOk && actionOk;
+  });
+}
+
+function renderScheduleLogs(){
+  const body = document.getElementById("scheduleLogsBody");
+  const raw = document.getElementById("scheduleLogsRaw");
+  const items = applyScheduleFilters(SCHEDULE_LOG_ITEMS);
+  raw.textContent = JSON.stringify(items, null, 2);
+  if(!items.length){
+    body.innerHTML = `<tr><td colspan="9" class="sql-muted">Нет записей</td></tr>`;
+    return;
+  }
+  body.innerHTML = items.map(item => `
+    <tr>
+      <td>${esc(item.updated_at)}</td>
+      <td>${esc(item.schedule_id)}</td>
+      <td>${esc(item.schedule_status)}</td>
+      <td>${esc(item.schedule_kind)}</td>
+      <td>${esc(item.action_key)}</td>
+      <td>${esc(item.entity_id)}</td>
+      <td>${esc(item.cron_expr)}</td>
+      <td>${esc(item.next_run_at)}</td>
+      <td>${item.ask_required ? 'ask' : 'no'}</td>
+    </tr>
+  `).join("");
+}
+
+function applyAiDecisionFilters(items){
+  const entity = (document.getElementById("aiDecisionEntityFilter")?.value || "").toLowerCase().trim();
+  const action = (document.getElementById("aiDecisionActionFilter")?.value || "").toLowerCase().trim();
+  return items.filter(item => {
+    const entityOk = !entity || String(item.proposed_entity_id || "").toLowerCase().includes(entity);
+    const actionOk = !action || String(item.proposed_action_key || "").toLowerCase().includes(action);
+    return entityOk && actionOk;
+  });
+}
+
+function renderAiDecisionLogs(){
+  const body = document.getElementById("aiDecisionLogsBody");
+  const raw = document.getElementById("aiDecisionLogsRaw");
+  const items = applyAiDecisionFilters(AI_DECISION_LOG_ITEMS);
+  raw.textContent = JSON.stringify(items, null, 2);
+  if(!items.length){
+    body.innerHTML = `<tr><td colspan="9" class="sql-muted">Нет записей</td></tr>`;
+    return;
+  }
+  body.innerHTML = items.map(item => `
+    <tr>
+      <td>${esc(item.updated_at)}</td>
+      <td>${esc(item.decision_id)}</td>
+      <td>${esc(item.decision_status)}</td>
+      <td>${esc(item.decision_kind)}</td>
+      <td>${esc(item.proposed_action_key)}</td>
+      <td>${esc(item.proposed_entity_id)}</td>
+      <td>${esc(item.confidence)}</td>
+      <td>${esc(item.risk_level)}</td>
+      <td>${item.ask_required ? 'ask' : 'no'}</td>
+    </tr>
+  `).join("");
+}
+
+function applyTestRunFilters(items){
+  const entity = (document.getElementById("testRunEntityFilter")?.value || "").toLowerCase().trim();
+  const action = (document.getElementById("testRunActionFilter")?.value || "").toLowerCase().trim();
+  return items.filter(item => {
+    const entityOk = !entity || String(item.entity_id || "").toLowerCase().includes(entity);
+    const actionOk = !action || String(item.action_key || "").toLowerCase().includes(action);
+    return entityOk && actionOk;
+  });
+}
+
+function renderTestRunLogs(){
+  const body = document.getElementById("testRunLogsBody");
+  const raw = document.getElementById("testRunLogsRaw");
+  const items = applyTestRunFilters(TEST_RUN_LOG_ITEMS);
+  raw.textContent = JSON.stringify(items, null, 2);
+  if(!items.length){
+    body.innerHTML = `<tr><td colspan="9" class="sql-muted">Нет записей</td></tr>`;
+    return;
+  }
+  body.innerHTML = items.map(item => `
+    <tr>
+      <td>${esc(item.updated_at)}</td>
+      <td>${esc(item.test_id)}</td>
+      <td>${esc(item.test_status)}</td>
+      <td>${esc(item.test_kind)}</td>
+      <td>${esc(item.action_key)}</td>
+      <td>${esc(item.entity_id)}</td>
+      <td>${item.verify_ok ? 'yes' : 'no'}</td>
+      <td>${esc(item.verify_v2_status)}</td>
+      <td>${esc(item.confidence)}</td>
+    </tr>
+  `).join("");
+}
+
+function applyFollowupFilters(items){
+  const entity = (document.getElementById("followupEntityFilter")?.value || "").toLowerCase().trim();
+  const action = (document.getElementById("followupActionFilter")?.value || "").toLowerCase().trim();
+  return items.filter(item => {
+    const entityOk = !entity || String(item.linked_entity_id || "").toLowerCase().includes(entity);
+    const actionOk = !action || String(item.linked_action_key || "").toLowerCase().includes(action);
+    return entityOk && actionOk;
+  });
+}
+
+function renderFollowupLogs(){
+  const body = document.getElementById("followupLogsBody");
+  const raw = document.getElementById("followupLogsRaw");
+  const items = applyFollowupFilters(FOLLOWUP_LOG_ITEMS);
+  raw.textContent = JSON.stringify(items, null, 2);
+  if(!items.length){
+    body.innerHTML = `<tr><td colspan="9" class="sql-muted">Нет записей</td></tr>`;
+    return;
+  }
+  body.innerHTML = items.map(item => `
+    <tr>
+      <td>${esc(item.updated_at)}</td>
+      <td>${esc(item.followup_id)}</td>
+      <td>${esc(item.followup_status)}</td>
+      <td>${esc(item.followup_kind)}</td>
+      <td>${esc(item.linked_action_key)}</td>
+      <td>${esc(item.linked_entity_id)}</td>
+      <td>${esc(item.expected_check)}</td>
+      <td>${esc(item.decision)}</td>
+      <td>${esc(item.confidence)}</td>
+    </tr>
+  `).join("");
+}
+
+function applyErrorSafetyFilters(items){
+  const entity = (document.getElementById("errorSafetyEntityFilter")?.value || "").toLowerCase().trim();
+  const action = (document.getElementById("errorSafetyActionFilter")?.value || "").toLowerCase().trim();
+  return items.filter(item => {
+    const entityOk = !entity || String(item.entity_id || "").toLowerCase().includes(entity);
+    const actionOk = !action || String(item.action_key || "").toLowerCase().includes(action);
+    return entityOk && actionOk;
+  });
+}
+
+function renderErrorSafetyLogs(){
+  const body = document.getElementById("errorSafetyLogsBody");
+  const raw = document.getElementById("errorSafetyLogsRaw");
+  const items = applyErrorSafetyFilters(ERROR_SAFETY_LOG_ITEMS);
+  raw.textContent = JSON.stringify(items, null, 2);
+  if(!items.length){
+    body.innerHTML = `<tr><td colspan="9" class="sql-muted">Нет записей</td></tr>`;
+    return;
+  }
+  body.innerHTML = items.map(item => `
+    <tr>
+      <td>${esc(item.updated_at)}</td>
+      <td>${esc(item.error_id)}</td>
+      <td>${esc(item.severity)}</td>
+      <td>${esc(item.status)}</td>
+      <td>${esc(item.layer)}</td>
+      <td>${esc(item.action_key)}</td>
+      <td>${esc(item.entity_id)}</td>
+      <td>${item.safety_related ? 'yes' : 'no'}</td>
+      <td>${esc(item.decision)}</td>
+    </tr>
+  `).join("");
+}
+
 async function loadExecutionLogs(){
   const limit = Math.max(1, Math.min(500, Number(document.getElementById("executionLimitInput")?.value || 100)));
   const body = document.getElementById("executionLogsBody");
   body.innerHTML = `<tr><td colspan="9" class="sql-muted">Загрузка...</td></tr>`;
-
   try{
     const res = await fetch(`/api/sql-logs/recent?limit=${encodeURIComponent(limit)}`, {cache:"no-store"});
     const data = await res.json();
@@ -384,7 +748,6 @@ async function loadTimerLogs(){
   const limit = Math.max(1, Math.min(500, Number(document.getElementById("timerLimitInput")?.value || 100)));
   const body = document.getElementById("timerLogsBody");
   body.innerHTML = `<tr><td colspan="9" class="sql-muted">Загрузка...</td></tr>`;
-
   try{
     const res = await fetch(`/api/sql-logs/timers/recent?limit=${encodeURIComponent(limit)}`, {cache:"no-store"});
     const data = await res.json();
@@ -395,14 +758,99 @@ async function loadTimerLogs(){
   }
 }
 
+async function loadScheduleLogs(){
+  const limit = Math.max(1, Math.min(500, Number(document.getElementById("scheduleLimitInput")?.value || 100)));
+  const body = document.getElementById("scheduleLogsBody");
+  body.innerHTML = `<tr><td colspan="9" class="sql-muted">Загрузка...</td></tr>`;
+  try{
+    const res = await fetch(`/api/sql-logs/schedules/recent?limit=${encodeURIComponent(limit)}`, {cache:"no-store"});
+    const data = await res.json();
+    SCHEDULE_LOG_ITEMS = data.items || [];
+    renderScheduleLogs();
+  }catch(e){
+    body.innerHTML = `<tr><td colspan="9" class="sql-bad">Ошибка загрузки: ${esc(String(e))}</td></tr>`;
+  }
+}
+
+async function loadAiDecisionLogs(){
+  const limit = Math.max(1, Math.min(500, Number(document.getElementById("aiDecisionLimitInput")?.value || 100)));
+  const body = document.getElementById("aiDecisionLogsBody");
+  body.innerHTML = `<tr><td colspan="9" class="sql-muted">Загрузка...</td></tr>`;
+  try{
+    const res = await fetch(`/api/sql-logs/ai-decisions/recent?limit=${encodeURIComponent(limit)}`, {cache:"no-store"});
+    const data = await res.json();
+    AI_DECISION_LOG_ITEMS = data.items || [];
+    renderAiDecisionLogs();
+  }catch(e){
+    body.innerHTML = `<tr><td colspan="9" class="sql-bad">Ошибка загрузки: ${esc(String(e))}</td></tr>`;
+  }
+}
+
+async function loadTestRunLogs(){
+  const limit = Math.max(1, Math.min(500, Number(document.getElementById("testRunLimitInput")?.value || 100)));
+  const body = document.getElementById("testRunLogsBody");
+  body.innerHTML = `<tr><td colspan="9" class="sql-muted">Загрузка...</td></tr>`;
+  try{
+    const res = await fetch(`/api/sql-logs/test-runs/recent?limit=${encodeURIComponent(limit)}`, {cache:"no-store"});
+    const data = await res.json();
+    TEST_RUN_LOG_ITEMS = data.items || [];
+    renderTestRunLogs();
+  }catch(e){
+    body.innerHTML = `<tr><td colspan="9" class="sql-bad">Ошибка загрузки: ${esc(String(e))}</td></tr>`;
+  }
+}
+
+async function loadFollowupLogs(){
+  const limit = Math.max(1, Math.min(500, Number(document.getElementById("followupLimitInput")?.value || 100)));
+  const body = document.getElementById("followupLogsBody");
+  body.innerHTML = `<tr><td colspan="9" class="sql-muted">Загрузка...</td></tr>`;
+  try{
+    const res = await fetch(`/api/sql-logs/followups/recent?limit=${encodeURIComponent(limit)}`, {cache:"no-store"});
+    const data = await res.json();
+    FOLLOWUP_LOG_ITEMS = data.items || [];
+    renderFollowupLogs();
+  }catch(e){
+    body.innerHTML = `<tr><td colspan="9" class="sql-bad">Ошибка загрузки: ${esc(String(e))}</td></tr>`;
+  }
+}
+
+async function loadErrorSafetyLogs(){
+  const limit = Math.max(1, Math.min(500, Number(document.getElementById("errorSafetyLimitInput")?.value || 100)));
+  const body = document.getElementById("errorSafetyLogsBody");
+  body.innerHTML = `<tr><td colspan="9" class="sql-muted">Загрузка...</td></tr>`;
+  try{
+    const res = await fetch(`/api/sql-logs/error-safety/recent?limit=${encodeURIComponent(limit)}`, {cache:"no-store"});
+    const data = await res.json();
+    ERROR_SAFETY_LOG_ITEMS = data.items || [];
+    renderErrorSafetyLogs();
+  }catch(e){
+    body.innerHTML = `<tr><td colspan="9" class="sql-bad">Ошибка загрузки: ${esc(String(e))}</td></tr>`;
+  }
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("executionEntityFilter")?.addEventListener("input", renderExecutionLogs);
   document.getElementById("executionActionFilter")?.addEventListener("input", renderExecutionLogs);
   document.getElementById("timerEntityFilter")?.addEventListener("input", renderTimerLogs);
   document.getElementById("timerActionFilter")?.addEventListener("input", renderTimerLogs);
+  document.getElementById("scheduleEntityFilter")?.addEventListener("input", renderScheduleLogs);
+  document.getElementById("scheduleActionFilter")?.addEventListener("input", renderScheduleLogs);
+  document.getElementById("aiDecisionEntityFilter")?.addEventListener("input", renderAiDecisionLogs);
+  document.getElementById("aiDecisionActionFilter")?.addEventListener("input", renderAiDecisionLogs);
+  document.getElementById("testRunEntityFilter")?.addEventListener("input", renderTestRunLogs);
+  document.getElementById("testRunActionFilter")?.addEventListener("input", renderTestRunLogs);
+  document.getElementById("followupEntityFilter")?.addEventListener("input", renderFollowupLogs);
+  document.getElementById("followupActionFilter")?.addEventListener("input", renderFollowupLogs);
+  document.getElementById("errorSafetyEntityFilter")?.addEventListener("input", renderErrorSafetyLogs);
+  document.getElementById("errorSafetyActionFilter")?.addEventListener("input", renderErrorSafetyLogs);
 
   loadExecutionLogs();
   loadTimerLogs();
+  loadScheduleLogs();
+  loadAiDecisionLogs();
+  loadTestRunLogs();
+  loadFollowupLogs();
+  loadErrorSafetyLogs();
 });
 </script>
 {% endblock %}
