@@ -2,59 +2,226 @@
 
 {% block content %}
 <style>
+.main{
+  max-width:none !important;
+  width:100% !important;
+}
+
 .control-page{
   width:100%;
-  max-width:1320px;
-  margin:0 auto;
+  max-width:none;
+  margin:0;
   display:grid;
-  grid-template-columns:minmax(0,1fr) 380px;
+  grid-template-columns:minmax(0,1fr) 320px;
   gap:20px;
   align-items:start;
 }
-.control-panel,.control-result-card{
+
+.control-main,
+.control-sidebar{
   background:rgba(7,16,34,.92);
   border:1px solid rgba(71,115,190,.42);
   border-radius:22px;
   padding:22px;
   min-width:0;
 }
-.control-panel h2{font-size:28px;margin:10px 0 12px}
-.control-tools{display:flex;gap:12px;margin:16px 0}
-.control-tools input{width:420px;max-width:100%}
-.control-action-list{
-  max-height:68vh;
-  overflow:auto;
+
+.control-header{
+  margin-bottom:18px;
+}
+
+.control-header h2{
+  font-size:26px;
+  margin:10px 0 12px;
+}
+
+.control-header p{
+  margin:0;
+  color:#a9b7d3;
+  line-height:1.45;
+}
+
+.control-toolbar{
+  display:flex;
+  gap:12px;
+  align-items:center;
+  margin:18px 0;
+}
+
+.control-toolbar input{
+  width:520px;
+  max-width:100%;
+}
+
+.control-summary{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:12px;
+  margin-bottom:18px;
+}
+
+.control-summary-card{
+  border:1px solid rgba(255,255,255,.08);
+  background:rgba(255,255,255,.03);
+  border-radius:16px;
+  padding:14px 16px;
+}
+
+.control-summary-label{
+  font-size:11px;
+  font-weight:900;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+  color:#8fb3ff;
+}
+
+.control-summary-value{
+  margin-top:8px;
+  font-size:28px;
+  font-weight:900;
+  color:#fff;
+}
+
+.control-summary-sub{
+  margin-top:4px;
+  font-size:13px;
+  color:#9fb2d0;
+}
+
+.control-device-list{
+  height:calc(100vh - 230px);
+  min-height:820px;
+  overflow-y:auto;
+  overflow-x:hidden;
+  overscroll-behavior:contain;
   border:1px solid rgba(71,115,190,.22);
   border-radius:18px;
 }
-.control-action-row{
+
+.control-device-card{
   display:grid;
-  grid-template-columns:220px 210px 130px 190px;
+  grid-template-columns:minmax(220px,0.95fr) minmax(0,1fr) 176px;
   gap:14px;
   align-items:center;
-  padding:14px 16px;
+  padding:16px 18px;
   border-bottom:1px solid rgba(255,255,255,.07);
+  cursor:pointer;
+  transition:background .16s ease, box-shadow .16s ease;
 }
-.control-action-row:last-child{border-bottom:0}
-.control-action-kicker{
+
+.control-device-card:last-child{
+  border-bottom:0;
+}
+
+.control-device-card:hover{
+  background:rgba(255,255,255,.025);
+}
+
+.control-device-card.selected{
+  background:linear-gradient(180deg, rgba(122,162,255,.10), rgba(255,255,255,.02));
+  box-shadow:0 0 0 1px rgba(122,162,255,.14) inset;
+}
+
+.control-device-kicker{
   color:#8fb3ff;
   font-size:11px;
   font-weight:900;
   letter-spacing:.12em;
   text-transform:uppercase;
 }
-.control-action-title{
+
+.control-device-title{
   font-size:17px;
   font-weight:900;
   color:#fff;
   margin-top:4px;
 }
-.control-action-meta{
+
+.control-device-meta{
   color:#9fb2d0;
   font-size:13px;
-  line-height:1.35;
+  line-height:1.42;
+  min-width:0;
+  overflow:hidden;
 }
-.control-action-meta span{color:#8fb3ff;font-weight:800}
+
+.control-device-meta span{
+  color:#8fb3ff;
+  font-weight:800;
+}
+
+.control-device-meta div{
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.control-device-live{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  flex-wrap:wrap;
+  margin-top:6px;
+}
+
+.control-actions{
+  display:flex;
+  gap:8px;
+  justify-content:flex-end;
+  align-items:center;
+  min-width:176px;
+  width:176px;
+  margin-left:auto;
+}
+
+.control-actions button{
+  min-width:84px !important;
+  width:84px !important;
+  padding:9px 8px !important;
+  font-size:13px !important;
+  border-radius:12px !important;
+  flex:0 0 auto;
+}
+
+.control-actions .btn-on-active{
+  background:linear-gradient(180deg, rgba(90,154,255,.95), rgba(74,122,255,.92)) !important;
+  color:#fff !important;
+  box-shadow:0 6px 18px rgba(83,122,255,.28);
+  border-color:rgba(120,160,255,.35) !important;
+}
+
+.control-actions .btn-off-active{
+  background:rgba(255,216,102,.12) !important;
+  color:#ffd866 !important;
+  border:1px solid rgba(255,216,102,.28) !important;
+  box-shadow:0 0 0 1px rgba(255,216,102,.08) inset;
+}
+
+.control-actions .btn-idle{
+  opacity:.88;
+}
+
+.control-sidebar h3{
+  font-size:20px;
+  margin:8px 0 14px;
+}
+
+.control-grid{
+  display:grid;
+  gap:10px;
+  font-size:15px;
+  line-height:1.5;
+}
+
+.control-grid span{
+  display:inline-block;
+  min-width:118px;
+  color:#95a8ca;
+  margin-right:6px;
+}
+
+
 .state-pill{
   display:inline-flex;
   justify-content:center;
@@ -65,51 +232,342 @@
   font-weight:900;
   min-width:86px;
 }
-.state-on{background:rgba(126,231,135,.12);color:#7ee787;border:1px solid rgba(126,231,135,.34)}
-.state-off{background:rgba(255,216,102,.10);color:#ffd866;border:1px solid rgba(255,216,102,.30)}
-.state-bad{background:rgba(255,92,122,.10);color:#ffc2cd;border:1px solid rgba(255,92,122,.30)}
-.control-buttons{
+
+.state-on{
+  background:rgba(126,231,135,.12);
+  color:#7ee787;
+  border:1px solid rgba(126,231,135,.34);
+}
+
+.state-off{
+  background:rgba(255,216,102,.10);
+  color:#ffd866;
+  border:1px solid rgba(255,216,102,.30);
+}
+
+.state-bad{
+  background:rgba(255,92,122,.10);
+  color:#ffc2cd;
+  border:1px solid rgba(255,92,122,.30);
+}
+
+.fresh-badge{
+  display:inline-flex;
+  align-items:center;
+  padding:4px 8px;
+  border-radius:999px;
+  font-size:11px;
+  font-weight:800;
+  text-transform:uppercase;
+  letter-spacing:.06em;
+}
+
+.fresh-online{
+  color:#7ee787;
+  background:rgba(126,231,135,.12);
+  border:1px solid rgba(126,231,135,.28);
+}
+
+.fresh-stale{
+  color:#ffd866;
+  background:rgba(255,216,102,.10);
+  border:1px solid rgba(255,216,102,.24);
+}
+
+.fresh-offline{
+  color:#ff8fa3;
+  background:rgba(255,92,122,.10);
+  border:1px solid rgba(255,92,122,.24);
+}
+
+.fresh-unknown{
+  color:#c7d2fe;
+  background:rgba(199,210,254,.08);
+  border:1px solid rgba(199,210,254,.18);
+}
+
+.fresh-text{
+  font-size:12px;
+  color:#9aa4bf;
+}
+
+.fresh-text::before{
+  content:"·";
+  margin-right:6px;
+  color:#7184a8;
+}
+
+.control-sidebar{
+  position:sticky;
+  top:16px;
+  min-height:calc(100vh - 120px);
   display:flex;
+  flex-direction:column;
+}
+
+.control-sidebar h3{
+  margin:8px 0 12px;
+  font-size:18px;
+}
+
+.control-result-stack{
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+  min-height:calc(100vh - 220px);
+}
+
+.control-section{
+  border:1px solid rgba(255,255,255,.08);
+  background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.025));
+  border-radius:18px;
+  padding:16px 18px;
+}
+
+.control-section-title{
+  font-size:12px;
+  font-weight:900;
+  color:#c8d2ff;
+  margin-bottom:12px;
+  text-transform:uppercase;
+  letter-spacing:.10em;
+}
+
+.control-grid{
+  display:grid;
   gap:8px;
-  justify-content:flex-end;
+  font-size:14px;
+  line-height:1.45;
 }
-.control-buttons button{
-  min-width:82px!important;
-  width:82px!important;
-  padding:9px 8px!important;
-  font-size:13px!important;
-  border-radius:12px!important;
+
+.control-grid span{
+  display:inline-block;
+  min-width:110px;
+  color:#9aa4bf;
+  margin-right:6px;
 }
-.result-box{
-  height:58vh;
+
+.control-empty{
+  min-height:220px;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  color:#b7c2df;
+  font-size:15px;
+  line-height:1.6;
+}
+
+.control-raw{
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:14px;
+  padding:10px 12px;
+  background:rgba(255,255,255,.02);
+}
+
+.control-raw summary{
+  cursor:pointer;
+  font-size:13px;
+  font-weight:700;
+  color:#c8d2ff;
+}
+
+.control-raw pre{
+  max-height:240px;
   overflow:auto;
   white-space:pre-wrap;
+  margin-top:10px;
 }
-@media(max-width:1100px){
-  .control-page{grid-template-columns:1fr}
-  .control-action-row{grid-template-columns:1fr}
-  .control-buttons{justify-content:flex-start}
+
+@media(max-width:1200px){
+  .control-page{
+    grid-template-columns:1fr;
+  }
+  .control-sidebar{
+    position:static;
+  }
 }
+
+@media(max-width:980px){
+  .control-summary{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+  .control-device-card{
+    grid-template-columns:1fr;
+  }
+  .control-actions{
+    justify-content:flex-start;
+    width:auto;
+    min-width:0;
+  }
+}
+
+
+
+/* CLEAN RIGHT PANEL */
+.control-sidebar{
+  position: static !important;
+  top: auto !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  overflow: visible !important;
+  padding-right: 0 !important;
+  align-self: start !important;
+}
+
+.control-result-stack{
+  display:flex !important;
+  flex-direction:column !important;
+  gap:14px !important;
+  height:auto !important;
+  min-height:0 !important;
+  max-height:none !important;
+  overflow:visible !important;
+}
+
+.control-section{
+  overflow: visible !important;
+}
+
+.control-raw{
+  overflow: visible !important;
+}
+
+.control-raw pre{
+  max-height: none !important;
+  overflow: visible !important;
+}
+
+
+/* ABSOLUTE FINAL RIGHT PANEL AUTO SIZE */
+.control-sidebar{
+  position: static !important;
+  top: auto !important;
+  height: fit-content !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  overflow: visible !important;
+  align-self: start !important;
+}
+
+#action-result-box,
+.control-result-stack{
+  display: block !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  overflow: visible !important;
+}
+
+.control-section{
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  overflow: visible !important;
+}
+
+.control-empty{
+  min-height: 0 !important;
+}
+
+.control-raw,
+.control-raw pre{
+  max-height: none !important;
+  overflow: visible !important;
+}
+
+
+/* FINAL BUTTON + SIDEBAR MICRO FIX */
+.control-sidebar{
+  padding-right: 10px !important;
+  margin-right: 0 !important;
+}
+
+.control-result-stack{
+  margin-right: 0 !important;
+}
+
+.control-actions{
+  gap: 10px !important;
+}
+
+.control-actions .btn-idle{
+  opacity: .30 !important;
+  filter: saturate(.55) brightness(.9) !important;
+  box-shadow: none !important;
+}
+
+.control-actions .btn-on-active{
+  background: linear-gradient(180deg, #6ea8ff, #4f7cff) !important;
+  color: #ffffff !important;
+  border-color: rgba(120,160,255,.42) !important;
+  box-shadow: 0 8px 22px rgba(79,124,255,.32) !important;
+  opacity: 1 !important;
+  filter: none !important;
+}
+
+.control-actions .btn-off-active{
+  background: linear-gradient(180deg, rgba(255,216,102,.18), rgba(255,216,102,.10)) !important;
+  color: #ffd866 !important;
+  border: 1px solid rgba(255,216,102,.36) !important;
+  box-shadow: 0 0 0 1px rgba(255,216,102,.10) inset !important;
+  opacity: 1 !important;
+  filter: none !important;
+}
+
+.control-actions .btn-on-active::after{
+  content: " •";
+}
+
+.control-actions .btn-off-active::after{
+  content: " •";
+}
+
 </style>
 
 <div class="control-page">
-  <section class="control-panel">
-    <div class="card-label">Control</div>
-    <h2>Действия через общий pipeline</h2>
-    <p class="muted">Кнопки идут через action_key → Validation / Execution / HA. Статус читается из Home Assistant.</p>
+  <section class="control-main">
+    <div class="control-header">
+      <div class="card-label">Control</div>
+      <h2>Действия через общий pipeline</h2>
+      <p>Кнопки идут через action_key → Validation / Execution / HA. Статус читается из Home Assistant.</p>
+    </div>
 
-    <div class="control-tools">
+    <div class="control-toolbar">
       <button class="primary-btn" onclick="loadActions()">Обновить</button>
       <input id="action-search" type="text" placeholder="Поиск: устройство, роль, action key..." oninput="renderActions()">
+    </div>
+
+    <div class="control-summary">
+      <div class="control-summary-card">
+        <div class="control-summary-label">Devices</div>
+        <div class="control-summary-value" id="sum-devices">0</div>
+        <div class="control-summary-sub">карточек на странице</div>
+      </div>
+      <div class="control-summary-card">
+        <div class="control-summary-label">Online</div>
+        <div class="control-summary-value" id="sum-online">0</div>
+        <div class="control-summary-sub">свежие данные</div>
+      </div>
+      <div class="control-summary-card">
+        <div class="control-summary-label">Stale</div>
+        <div class="control-summary-value" id="sum-stale">0</div>
+        <div class="control-summary-sub">устаревшие данные</div>
+      </div>
+      <div class="control-summary-card">
+        <div class="control-summary-label">Offline</div>
+        <div class="control-summary-value" id="sum-offline">0</div>
+        <div class="control-summary-sub">нет связи / unavailable</div>
+      </div>
     </div>
 
     <div id="actions-box">Загрузка...</div>
   </section>
 
-  <aside class="control-result-card">
+  <aside class="control-sidebar">
     <div class="card-label">Live result</div>
     <h3>Результат</h3>
-    <pre id="action-result-box" class="result-box">Ожидание...</pre>
+    <div id="action-result-box" class="control-result-stack"></div>
   </aside>
 </div>
 {% endblock %}
@@ -117,6 +575,10 @@
 {% block scripts %}
 <script>
 let ACTION_GROUPS = [];
+let SELECTED_DEVICE_KEY = null;
+let LAST_ACTION_RESULT = null;
+let LAST_ACTION_RESULTS = {};
+let LAST_PERSISTED_LOGS = {};
 
 function esc(v){
   return String(v ?? "—")
@@ -154,13 +616,37 @@ function groupItems(items){
     if(!key.includes("_")) continue;
     const base = key.replace(/_on$/,"").replace(/_off$/,"");
     if(!groups[base]){
-      groups[base] = {base, title:humanName(key,item), on:null, off:null, sample:item};
+      groups[base] = {base, title:humanName(key,item), on:null, off:null, single:null, sample:item};
     }
     if(key.endsWith("_on")) groups[base].on = item;
     else if(key.endsWith("_off")) groups[base].off = item;
     else groups[base].single = item;
   }
   return Object.values(groups);
+}
+
+function deviceKey(g){
+  return g.sample?.entity_id || g.sample?.target_role || g.title;
+}
+
+function currentState(g){
+  return g.on?.state ?? g.off?.state ?? g.single?.state ?? g.sample?.state ?? null;
+}
+
+function currentUpdated(g){
+  return (
+    g.on?.last_updated ??
+    g.on?.last_changed ??
+    g.off?.last_updated ??
+    g.off?.last_changed ??
+    g.single?.last_updated ??
+    g.single?.last_changed ??
+    g.sample?.last_updated ??
+    g.sample?.last_changed ??
+    g.sample?.updated_at ??
+    g.sample?.ts ??
+    null
+  );
 }
 
 function stateLabel(state){
@@ -172,8 +658,226 @@ function stateLabel(state){
   return `<span class="state-pill state-bad">${esc(state)}</span>`;
 }
 
-function currentState(g){
-  return g.on?.state ?? g.off?.state ?? g.single?.state ?? null;
+function formatTime(v){
+  if(!v) return "—";
+  try{
+    const d = new Date(v);
+    if(isNaN(d.getTime())) return esc(v);
+    return d.toLocaleTimeString("ru-RU", {hour:"2-digit", minute:"2-digit", second:"2-digit"});
+  }catch(_e){
+    return esc(v);
+  }
+}
+
+function ageSec(v){
+  if(!v) return null;
+  try{
+    const d = new Date(v);
+    if(isNaN(d.getTime())) return null;
+    return Math.floor((Date.now() - d.getTime()) / 1000);
+  }catch(_e){
+    return null;
+  }
+}
+
+function freshnessStatus(state, lastUpdated){
+  if(!state && !lastUpdated) return {code:"unknown", label:"unknown", text:"нет данных"};
+  if(["unavailable","unknown",null,""].includes(state)) return {code:"offline", label:"offline", text:"данные недоступны"};
+  const age = ageSec(lastUpdated);
+  if(age == null) return {code:"unknown", label:"unknown", text:"нет данных"};
+  if(age <= 90) return {code:"online", label:"online", text:`обновлено ${age} сек назад`};
+  if(age <= 600) return {code:"stale", label:"stale", text:`обновлено ${Math.floor(age/60)} мин назад`};
+  return {code:"offline", label:"offline", text:`обновлено ${Math.floor(age/60)} мин назад`};
+}
+
+function freshnessBadge(state, lastUpdated){
+  const f = freshnessStatus(state, lastUpdated);
+  return `<span class="fresh-badge fresh-${f.code}">${f.label}</span><span class="fresh-text">${f.text}</span>`;
+}
+
+function updateSummary(groups){
+  let online = 0, stale = 0, offline = 0;
+  for(const g of groups){
+    const f = freshnessStatus(currentState(g), currentUpdated(g));
+    if(f.code === "online") online++;
+    else if(f.code === "stale") stale++;
+    else if(f.code === "offline") offline++;
+  }
+  document.getElementById("sum-devices").textContent = String(groups.length);
+  document.getElementById("sum-online").textContent = String(online);
+  document.getElementById("sum-stale").textContent = String(stale);
+  document.getElementById("sum-offline").textContent = String(offline);
+}
+
+function selectedDeviceGroup(){
+  if(!SELECTED_DEVICE_KEY) return null;
+  return ACTION_GROUPS.find(g => deviceKey(g) === SELECTED_DEVICE_KEY) || null;
+}
+
+async function fetchLastExecutionLog(entityId){
+  if(!entityId) return null;
+  try{
+    const res = await fetch(`/api/actions/logs/execution/last?entity_id=${encodeURIComponent(entityId)}&ts=${Date.now()}`, {cache:"no-store"});
+    const data = await res.json();
+    const item = data?.item || null;
+    if(item){
+      LAST_PERSISTED_LOGS[entityId] = item;
+    }
+    return item;
+  }catch(e){
+    console.log("fetchLastExecutionLog error", e);
+    return null;
+  }
+}
+
+function renderEmptyInspector(){
+  const box = document.getElementById("action-result-box");
+  box.innerHTML = `
+    <section class="control-section control-empty">
+      Выбери устройство слева, чтобы посмотреть его текущее состояние,
+      последнюю проверку и результат последнего действия.
+    </section>
+  `;
+}
+
+function renderInspector(){
+  const g = selectedDeviceGroup();
+  if(!g){
+    if(LAST_ACTION_RESULT){
+      renderResultCard(LAST_ACTION_RESULT);
+      return;
+    }
+    renderEmptyInspector();
+    return;
+  }
+
+  const state = currentState(g) ?? "—";
+  const updated = currentUpdated(g);
+  const fresh = freshnessStatus(state, updated);
+
+  const deviceResult =
+    LAST_ACTION_RESULTS[g.sample?.entity_id] ||
+    LAST_PERSISTED_LOGS[g.sample?.entity_id] ||
+    (LAST_ACTION_RESULT && (
+      LAST_ACTION_RESULT.entity_id === g.sample?.entity_id ||
+      LAST_ACTION_RESULT.action_key === g.on?.action_key ||
+      LAST_ACTION_RESULT.action_key === g.off?.action_key ||
+      LAST_ACTION_RESULT.action_key === g.single?.action_key
+    ) ? LAST_ACTION_RESULT : null);
+
+  const actionBlock = deviceResult ? `
+    <section class="control-section">
+      <div class="control-section-title">Последнее действие</div>
+      <div class="control-grid">
+        <div><span>Статус:</span> <strong>${deviceResult.ok ? "✅ Выполнено" : "⚠ Не подтверждено"}</strong></div>
+        <div><span>Устройство:</span> ${esc(g.title || deviceResult.entity_id || "—")}</div>
+        <div><span>Действие:</span> ${esc(deviceResult.action_key || "—")}</div>
+        <div><span>Режим:</span> ${esc(deviceResult.requested_mode || "—")}</div>
+      </div>
+    </section>
+  ` : "";
+
+  const verifyBlock = deviceResult ? `
+    <section class="control-section">
+      <div class="control-section-title">Крайняя проверка</div>
+      <div class="control-grid">
+        <div><span>Verify:</span> ${deviceResult.verified ? "✅ ok" : "❌ failed"}</div>
+        <div><span>Verify v2:</span> ${
+          deviceResult?.details?.verify_v2_debug
+            ? (deviceResult.details.verify_v2_debug.ok ? "✅ ok" : `❌ ${esc(deviceResult.details.verify_v2_debug.status || "failed")}`)
+            : "—"
+        }</div>
+        <div><span>Expected:</span> ${esc(deviceResult.expected_state || "—")}</div>
+        <div><span>Actual:</span> ${esc(deviceResult.actual_state || "—")}</div>
+      </div>
+    </section>
+  ` : `
+    <section class="control-section">
+      <div class="control-section-title">Крайняя проверка</div>
+      <div class="control-empty">Пока нет данных по последней проверке для этого устройства.</div>
+    </section>
+  `;
+
+  document.getElementById("action-result-box").innerHTML = `
+    ${actionBlock}
+    ${verifyBlock}
+    <section class="control-section">
+      <div class="control-section-title">Состояние устройства</div>
+      <div class="control-grid">
+        <div><span>Устройство:</span> ${esc(g.title || "—")}</div>
+        <div><span>Role:</span> ${esc(g.sample?.target_role || "—")}</div>
+        <div><span>Entity:</span> ${esc(g.sample?.entity_id || "—")}</div>
+        <div><span>Связь:</span> ${fresh.code === "online" ? "✅ есть" : fresh.code === "stale" ? "⚠ stale" : fresh.code === "offline" ? "❌ нет" : "—"}</div>
+        <div><span>State:</span> ${esc(state)}</div>
+        <div><span>Обновлено:</span> ${formatTime(updated)}</div>
+        <div><span>Актуальность:</span> ${esc(fresh.label)}</div>
+      </div>
+    </section>
+    <details class="control-raw">
+      <summary>Показать raw JSON</summary>
+      <pre>${esc(JSON.stringify({selected_device: g, last_action: deviceResult || LAST_ACTION_RESULT}, null, 2))}</pre>
+    </details>
+  `;
+}
+
+function renderResultCard(result){
+  const v2 = result?.details?.verify_v2_debug || null;
+  const v2Text = !v2 ? "—" : (v2.ok ? "✅ ok" : `❌ ${esc(v2.status || "failed")}`);
+  const statusText = result?.ok ? "✅ Выполнено" : "⚠ Не подтверждено";
+  const verifyText = result?.verified ? "✅ ok" : "❌ failed";
+  const state = result?.actual_state ?? "—";
+  const updated = v2?.last_updated || "—";
+  const fresh = freshnessStatus(state, updated);
+
+  document.getElementById("action-result-box").innerHTML = `
+    <section class="control-section">
+      <div class="control-section-title">Последнее действие</div>
+      <div class="control-grid">
+        <div><span>Статус:</span> <strong>${statusText}</strong></div>
+        <div><span>Устройство:</span> ${esc(result?.entity_id || "—")}</div>
+        <div><span>Действие:</span> ${esc(result?.action_key || "—")}</div>
+        <div><span>Режим:</span> ${esc(result?.requested_mode || "—")}</div>
+      </div>
+    </section>
+
+    <section class="control-section">
+      <div class="control-section-title">Крайняя проверка</div>
+      <div class="control-grid">
+        <div><span>Verify:</span> ${verifyText}</div>
+        <div><span>Verify v2:</span> ${v2Text}</div>
+        <div><span>Expected:</span> ${esc(result?.expected_state || "—")}</div>
+        <div><span>Actual:</span> ${esc(result?.actual_state || "—")}</div>
+      </div>
+    </section>
+
+    <section class="control-section">
+      <div class="control-section-title">Состояние устройства</div>
+      <div class="control-grid">
+        <div><span>Связь:</span> ${fresh.code === "online" ? "✅ есть" : fresh.code === "stale" ? "⚠ stale" : fresh.code === "offline" ? "❌ нет" : "—"}</div>
+        <div><span>State:</span> ${esc(state)}</div>
+        <div><span>Обновлено:</span> ${formatTime(updated)}</div>
+        <div><span>Актуальность:</span> ${esc(fresh.label)}</div>
+      </div>
+    </section>
+
+    <details class="control-raw">
+      <summary>Показать raw JSON</summary>
+      <pre>${esc(JSON.stringify(result, null, 2))}</pre>
+    </details>
+  `;
+}
+
+async function selectDevice(key){
+  SELECTED_DEVICE_KEY = key;
+  renderActions();
+  renderInspector();
+
+  const g = selectedDeviceGroup();
+  const entityId = g?.sample?.entity_id;
+  if(entityId){
+    await fetchLastExecutionLog(entityId);
+    renderInspector();
+  }
 }
 
 function renderActions(){
@@ -186,67 +890,75 @@ function renderActions(){
     return !q || blob.includes(q);
   });
 
+  updateSummary(groups);
+
   if(!groups.length){
-    box.innerHTML = `<div class="control-action-row">Действия не найдены</div>`;
+    box.innerHTML = `<div class="control-device-list"><div class="control-device-card">Действия не найдены</div></div>`;
     return;
   }
 
-  box.innerHTML = `<div class="control-action-list">${
+  box.innerHTML = `<div class="control-device-list">${
     groups.map(g => `
-      <article class="control-action-row">
+      <article class="control-device-card ${deviceKey(g) === SELECTED_DEVICE_KEY ? "selected" : ""}" onclick='selectDevice(${JSON.stringify(deviceKey(g))})'>
         <div>
-          <div class="control-action-kicker">Устройство</div>
-          <div class="control-action-title">${esc(g.title)}</div>
+          <div class="control-device-kicker">Устройство</div>
+          <div class="control-device-title">${esc(g.title)}</div>
         </div>
 
-        <div class="control-action-meta">
+        <div class="control-device-meta">
           <div><span>role:</span> ${esc(g.sample?.target_role)}</div>
           <div><span>entity:</span> ${esc(g.sample?.entity_id)}</div>
+          <div class="control-device-live">${freshnessBadge(currentState(g), currentUpdated(g))}</div>
         </div>
 
-        <div>${stateLabel(currentState(g))}</div>
-
-        <div class="control-buttons">
-          ${g.on ? `<button class="primary-btn" onclick='runAction(${JSON.stringify(g.on.action_key)})'>Вкл</button>` : ""}
-          ${g.off ? `<button class="ghost-btn" onclick='runAction(${JSON.stringify(g.off.action_key)})'>Выкл</button>` : ""}
-          ${!g.on && !g.off && g.single ? `<button class="primary-btn" onclick='runAction(${JSON.stringify(g.single.action_key)})'>Пуск</button>` : ""}
+        <div class="control-actions" onclick="event.stopPropagation()">
+          ${g.on ? `<button class="${currentState(g)==='on' ? 'primary-btn btn-on-active' : 'primary-btn btn-idle'}" onclick='runAction(${JSON.stringify(g.on.action_key)}, ${JSON.stringify(deviceKey(g))})'>Вкл</button>` : ""}
+          ${g.off ? `<button class="${currentState(g)==='off' ? 'ghost-btn btn-off-active' : 'ghost-btn btn-idle'}" onclick='runAction(${JSON.stringify(g.off.action_key)}, ${JSON.stringify(deviceKey(g))})'>Выкл</button>` : ""}
+          ${!g.on && !g.off && g.single ? `<button class="primary-btn" onclick='runAction(${JSON.stringify(g.single.action_key)}, ${JSON.stringify(deviceKey(g))})'>Пуск</button>` : ""}
         </div>
       </article>
     `).join("")
   }</div>`;
 }
 
-
-
 async function refreshStates(){
   try {
     const res = await fetch("/api/live/states?ts=" + Date.now(), {cache:"no-store"});
     const data = await res.json();
     const items = data.items || [];
-
     const map = {};
-    for(const i of items){
-      map[i.entity_id] = i.state;
-    }
+    for(const i of items) map[i.entity_id] = i;
 
-    // обновляем состояния внутри ACTION_GROUPS
     for(const g of ACTION_GROUPS){
       if(g.sample?.entity_id && map[g.sample.entity_id] !== undefined){
-        const newState = map[g.sample.entity_id];
+        const live = map[g.sample.entity_id];
+        const newState = live.state;
+        const lastUpdated = live.last_updated || live.last_changed || live.updated_at || live.ts || null;
 
-        if(g.on) g.on.state = newState;
-        if(g.off) g.off.state = newState;
-        if(g.single) g.single.state = newState;
+        g.sample.state = newState;
+        g.sample.last_updated = lastUpdated;
+
+        if(g.on){
+          g.on.state = newState;
+          g.on.last_updated = lastUpdated;
+        }
+        if(g.off){
+          g.off.state = newState;
+          g.off.last_updated = lastUpdated;
+        }
+        if(g.single){
+          g.single.state = newState;
+          g.single.last_updated = lastUpdated;
+        }
       }
     }
 
     renderActions();
-
+    renderInspector();
   } catch(e){
     console.log("refreshStates error", e);
   }
 }
-
 
 async function loadActions(){
   if(!requireAuth()) return;
@@ -261,57 +973,53 @@ async function loadActions(){
 
   ACTION_GROUPS = groupItems(data.items || []);
   renderActions();
+  renderInspector();
+  await refreshStates();
+
+  const g = selectedDeviceGroup();
+  const entityId = g?.sample?.entity_id;
+  if(entityId){
+    await fetchLastExecutionLog(entityId);
+    renderInspector();
+  }
 }
 
-
-
-async function runAction(actionKey){
+async function runAction(actionKey, selectedKey=null){
   if(!requireAuth()) return;
 
-  document.getElementById("action-result-box").textContent = "Выполняю: " + actionKey;
+  document.getElementById("action-result-box").innerHTML = `
+    <section class="control-section">
+      <div class="control-section-title">Выполнение</div>
+      <div class="control-empty">Выполняю: ${esc(actionKey)}</div>
+    </section>
+  `;
 
   try {
-    const result = await ghTryPostVariants([
+    const payload = await ghTryPostVariants([
       {url:"/api/actions/execute", body:{action_key:actionKey}}
     ]);
 
-    pretty("action-result-box", result);
+    const result = payload?.result || payload?.data?.result || payload;
+
+    LAST_ACTION_RESULT = result;
+    if(result?.entity_id){
+      LAST_ACTION_RESULTS[result.entity_id] = result;
+      LAST_PERSISTED_LOGS[result.entity_id] = result;
+    }
+    if(selectedKey) SELECTED_DEVICE_KEY = selectedKey;
+    renderInspector();
 
     setTimeout(async () => {
-      try {
-        const res = await fetch("/api/live/states?ts=" + Date.now(), {cache:"no-store"});
-        const data = await res.json();
-        const items = data.items || [];
-
-        const map = {};
-        for(const i of items){
-          map[i.entity_id] = i.state;
-        }
-
-        for(const g of ACTION_GROUPS){
-          const eid = g.sample?.entity_id;
-          if(eid && map[eid] !== undefined){
-            const st = map[eid];
-            if(g.on) g.on.state = st;
-            if(g.off) g.off.state = st;
-            if(g.single) g.single.state = st;
-          }
-        }
-
-        renderActions();
-
-      } catch(e){
-        console.log("refresh error", e);
-      }
+      await refreshStates();
     }, 1000);
 
   } catch(err){
     console.error(err);
-    document.getElementById("action-result-box").textContent = "Ошибка выполнения";
+    LAST_ACTION_RESULT = {ok:false, error:String(err)};
+    if(selectedKey) SELECTED_DEVICE_KEY = selectedKey;
+    renderInspector();
   }
 }
-
-
 
 loadActions();
 </script>

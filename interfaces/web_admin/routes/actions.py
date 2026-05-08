@@ -6,6 +6,7 @@ from greenhouse_v17.services.mode_service import get_mode_flags
 from greenhouse_v17.services.decision_logger import log_decision
 
 from greenhouse_v17.services.webadmin_execution_service import execute_action, create_pending_ask, debug_action_map_full, load_action_map, resolve_action, _read_state_value, load_ask_state
+from greenhouse_v17.services.unified_log_service import read_last_log_for_entity
 
 router = APIRouter(prefix="/api/actions", tags=["actions"])
 
@@ -105,3 +106,9 @@ def actions_catalog():
         })
 
     return {"ok": True, "count": len(items), "items": items}
+
+@router.get("/logs/execution/last")
+def api_last_execution_log(entity_id: str):
+    item = read_last_log_for_entity(entity_id)
+    return {"ok": True, "item": item}
+

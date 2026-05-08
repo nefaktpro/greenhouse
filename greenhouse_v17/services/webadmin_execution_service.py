@@ -6,6 +6,7 @@ import os
 import time
 from dataclasses import asdict, dataclass, field
 from greenhouse_v17.services.verify_debug_service import run_state_verify_debug
+from greenhouse_v17.services.unified_log_service import append_execution_log
 
 
 import threading
@@ -693,6 +694,32 @@ def execute_action(
             result.details["followup"] = fu
         except Exception as exc:
             result.details["followup_error"] = str(exc)
+
+    try:
+        append_execution_log(
+            source=source,
+            mode=requested_mode,
+            action_key=action_key,
+            entity_id=entity_id,
+            target_role=(meta or {}).get("target_role"),
+            operation=operation,
+            service_domain=service_domain,
+            service_name=service_name,
+            ok=result.ok,
+            message=result.message,
+            expected_state=result.expected_state,
+            actual_state=result.actual_state,
+            verified=result.verified,
+            verify_strategy="state",
+            verify_v2_ok=(verify_v2_debug or {}).get("ok"),
+            verify_v2_status=(verify_v2_debug or {}).get("status"),
+            verify_v2_reason=(verify_v2_debug or {}).get("reason"),
+            verify_v2_strategy=(verify_v2_debug or {}).get("strategy"),
+            ha_status_code=result.details.get("ha_status_code"),
+            duration_ms=result.details.get("duration_ms"),
+        )
+    except Exception as exc:
+        result.details["unified_log_error"] = type(exc).__name__
 
     _append_log(result.to_dict())
     return result.to_dict()
