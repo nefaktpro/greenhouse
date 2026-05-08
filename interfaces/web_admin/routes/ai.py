@@ -9,6 +9,8 @@ import time
 
 from ai.router import route_ai_message
 from ai.context_resolver import get_context_catalog, read_context_file, save_context_file, list_backups, restore_backup
+from greenhouse_v17.services.unified_log_service import read_recent_execution_logs
+from greenhouse_v17.services.timer_log_service import read_recent_timer_runs
 from chat.chat_router import handle_chat_message
 
 router = APIRouter(tags=["ai-lab"])
@@ -318,6 +320,30 @@ class AIChatLiveRequest(BaseModel):
 def ai_chat_live(payload: AIChatLiveRequest):
     return ask_ai_chat_live(payload.message)
 
+
+
+
+
+
+
+@router.get("/web/sql-logs", response_class=HTMLResponse)
+def web_sql_logs(request: Request):
+    return templates.TemplateResponse(request, "sql_logs.html", {})
+
+
+@router.get("/api/sql-logs/recent")
+def api_sql_logs_recent(limit: int = 100):
+    limit = max(1, min(limit, 500))
+    items = read_recent_execution_logs(limit=limit)
+    return {"ok": True, "items": items, "count": len(items)}
+
+
+
+@router.get("/api/sql-logs/timers/recent")
+def api_sql_logs_timers_recent(limit: int = 100):
+    limit = max(1, min(limit, 500))
+    items = read_recent_timer_runs(limit=limit)
+    return {"ok": True, "items": items, "count": len(items)}
 
 @router.get("/api/ai/chat-live/history")
 def ai_chat_live_history():

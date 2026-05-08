@@ -1,0 +1,408 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+.sql-page{
+  width:100%;
+  max-width:1680px;
+  margin:0 auto;
+  display:flex;
+  flex-direction:column;
+  gap:16px;
+}
+.sql-card{
+  background:rgba(7,16,34,.92);
+  border:1px solid rgba(71,115,190,.42);
+  border-radius:22px;
+  padding:22px;
+}
+.sql-card h2{
+  margin:8px 0 10px;
+}
+.sql-muted{
+  color:#9fb2d0;
+}
+.sql-source{
+  border:1px solid rgba(255,255,255,.08);
+  background:rgba(255,255,255,.03);
+  border-radius:18px;
+  margin-top:14px;
+  overflow:hidden;
+}
+.sql-source summary{
+  list-style:none;
+  cursor:pointer;
+  padding:18px 20px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+}
+.sql-source summary::-webkit-details-marker{
+  display:none;
+}
+.sql-source-head{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+.sql-source-title{
+  color:#fff;
+  font-size:20px;
+  font-weight:900;
+}
+.sql-source-sub{
+  color:#9fb2d0;
+  font-size:14px;
+}
+.sql-source-badge{
+  color:#8fb3ff;
+  font-size:12px;
+  font-weight:900;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+.sql-source-body{
+  padding:0 20px 20px 20px;
+  border-top:1px solid rgba(255,255,255,.06);
+}
+.sql-empty{
+  padding:18px 0 4px;
+  color:#9fb2d0;
+}
+.sql-toolbar{
+  display:flex;
+  gap:12px;
+  align-items:center;
+  flex-wrap:wrap;
+  margin-top:16px;
+}
+.sql-toolbar input{
+  width:260px;
+  max-width:100%;
+}
+.sql-table-wrap{
+  overflow:auto;
+  border:1px solid rgba(71,115,190,.22);
+  border-radius:16px;
+  margin-top:16px;
+}
+.sql-table{
+  width:100%;
+  border-collapse:collapse;
+  min-width:1200px;
+}
+.sql-table th,
+.sql-table td{
+  padding:10px 12px;
+  border-bottom:1px solid rgba(255,255,255,.08);
+  text-align:left;
+  vertical-align:top;
+  font-size:14px;
+}
+.sql-table th{
+  color:#8fb3ff;
+  font-size:12px;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+  background:rgba(255,255,255,.03);
+}
+.sql-ok{
+  color:#7ee787;
+  font-weight:800;
+}
+.sql-bad{
+  color:#ff8fa3;
+  font-weight:800;
+}
+.sql-raw{
+  margin-top:16px;
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:14px;
+  padding:10px 12px;
+  background:rgba(255,255,255,.02);
+}
+.sql-raw pre{
+  white-space:pre-wrap;
+  overflow:auto;
+  max-height:320px;
+}
+</style>
+
+<div class="sql-page">
+  <section class="sql-card">
+    <div class="card-label">SQL Logs</div>
+    <h2>SQL Log Sources</h2>
+    <div class="sql-muted">Здесь будут жить все новые SQL-логи. Сейчас подключены execution и timers.</div>
+
+    <details class="sql-source">
+      <summary>
+        <div class="sql-source-head">
+          <div class="sql-source-badge">ACTIVE</div>
+          <div class="sql-source-title">Unified Execution Logs</div>
+          <div class="sql-source-sub">SQLite-логи execution / verify / verify v2.</div>
+        </div>
+        <div class="sql-muted">раскрыть / свернуть</div>
+      </summary>
+      <div class="sql-source-body">
+        <div class="sql-toolbar">
+          <button class="primary-btn" onclick="loadExecutionLogs()">Обновить</button>
+          <label class="sql-muted">Limit</label>
+          <input id="executionLimitInput" type="number" value="100" min="1" max="500">
+          <label class="sql-muted">Entity</label>
+          <input id="executionEntityFilter" type="text" placeholder="switch.setevoi_filtr...">
+          <label class="sql-muted">Action</label>
+          <input id="executionActionFilter" type="text" placeholder="fan_top_on">
+        </div>
+
+        <div class="sql-table-wrap">
+          <table class="sql-table">
+            <thead>
+              <tr>
+                <th>TS</th>
+                <th>Action</th>
+                <th>Entity</th>
+                <th>Role</th>
+                <th>Mode</th>
+                <th>OK</th>
+                <th>Verified</th>
+                <th>Verify v2</th>
+                <th>Duration</th>
+              </tr>
+            </thead>
+            <tbody id="executionLogsBody">
+              <tr><td colspan="9" class="sql-muted">Загрузка...</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <details class="sql-raw">
+          <summary>Показать raw JSON</summary>
+          <pre id="executionLogsRaw">[]</pre>
+        </details>
+      </div>
+    </details>
+
+    <details class="sql-source">
+      <summary>
+        <div class="sql-source-head">
+          <div class="sql-source-badge">ACTIVE</div>
+          <div class="sql-source-title">Timers Log</div>
+          <div class="sql-source-sub">Отложенные действия, delay/duration, ASK и статусы таймеров.</div>
+        </div>
+        <div class="sql-muted">раскрыть / свернуть</div>
+      </summary>
+      <div class="sql-source-body">
+        <div class="sql-toolbar">
+          <button class="primary-btn" onclick="loadTimerLogs()">Обновить</button>
+          <label class="sql-muted">Limit</label>
+          <input id="timerLimitInput" type="number" value="100" min="1" max="500">
+          <label class="sql-muted">Entity</label>
+          <input id="timerEntityFilter" type="text" placeholder="switch.setevoi_filtr...">
+          <label class="sql-muted">Action</label>
+          <input id="timerActionFilter" type="text" placeholder="fan_top_on">
+        </div>
+
+        <div class="sql-table-wrap">
+          <table class="sql-table">
+            <thead>
+              <tr>
+                <th>Updated</th>
+                <th>Timer ID</th>
+                <th>Status</th>
+                <th>Kind</th>
+                <th>Action</th>
+                <th>Entity</th>
+                <th>Delay</th>
+                <th>Duration</th>
+                <th>ASK</th>
+              </tr>
+            </thead>
+            <tbody id="timerLogsBody">
+              <tr><td colspan="9" class="sql-muted">Загрузка...</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <details class="sql-raw">
+          <summary>Показать raw JSON</summary>
+          <pre id="timerLogsRaw">[]</pre>
+        </details>
+      </div>
+    </details>
+
+    <details class="sql-source">
+      <summary>
+        <div class="sql-source-head">
+          <div class="sql-source-badge">PLANNED</div>
+          <div class="sql-source-title">Schedules Log</div>
+          <div class="sql-source-sub">Расписания, enable/disable, срабатывания.</div>
+        </div>
+        <div class="sql-muted">скоро</div>
+      </summary>
+      <div class="sql-source-body">
+        <div class="sql-empty">Источник ещё не подключён.</div>
+      </div>
+    </details>
+
+    <details class="sql-source">
+      <summary>
+        <div class="sql-source-head">
+          <div class="sql-source-badge">PLANNED</div>
+          <div class="sql-source-title">AI Decisions Log</div>
+          <div class="sql-source-sub">Решения AI, объяснения, follow-up и decision trails.</div>
+        </div>
+        <div class="sql-muted">скоро</div>
+      </summary>
+      <div class="sql-source-body">
+        <div class="sql-empty">Источник ещё не подключён.</div>
+      </div>
+    </details>
+
+    <details class="sql-source">
+      <summary>
+        <div class="sql-source-head">
+          <div class="sql-source-badge">PLANNED</div>
+          <div class="sql-source-title">TEST Runs Log</div>
+          <div class="sql-source-sub">TEST-эксперименты, прогоны, результаты и learnings.</div>
+        </div>
+        <div class="sql-muted">скоро</div>
+      </summary>
+      <div class="sql-source-body">
+        <div class="sql-empty">Источник ещё не подключён.</div>
+      </div>
+    </details>
+  </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let EXECUTION_LOG_ITEMS = [];
+let TIMER_LOG_ITEMS = [];
+
+function esc(v){
+  return String(v ?? "")
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;");
+}
+
+function applyExecutionFilters(items){
+  const entity = (document.getElementById("executionEntityFilter")?.value || "").toLowerCase().trim();
+  const action = (document.getElementById("executionActionFilter")?.value || "").toLowerCase().trim();
+
+  return items.filter(item => {
+    const entityOk = !entity || String(item.entity_id || "").toLowerCase().includes(entity);
+    const actionOk = !action || String(item.action_key || "").toLowerCase().includes(action);
+    return entityOk && actionOk;
+  });
+}
+
+function renderExecutionLogs(){
+  const body = document.getElementById("executionLogsBody");
+  const raw = document.getElementById("executionLogsRaw");
+  const items = applyExecutionFilters(EXECUTION_LOG_ITEMS);
+
+  raw.textContent = JSON.stringify(items, null, 2);
+
+  if(!items.length){
+    body.innerHTML = `<tr><td colspan="9" class="sql-muted">Нет записей</td></tr>`;
+    return;
+  }
+
+  body.innerHTML = items.map(item => `
+    <tr>
+      <td>${esc(item.ts)}</td>
+      <td>${esc(item.action_key)}</td>
+      <td>${esc(item.entity_id)}</td>
+      <td>${esc(item.target_role)}</td>
+      <td>${esc(item.mode)}</td>
+      <td class="${item.ok ? 'sql-ok' : 'sql-bad'}">${item.ok ? 'ok' : 'fail'}</td>
+      <td class="${item.verified ? 'sql-ok' : 'sql-bad'}">${item.verified ? 'yes' : 'no'}</td>
+      <td>${esc(item.verify_v2_status)}</td>
+      <td>${esc(item.duration_ms)}</td>
+    </tr>
+  `).join("");
+}
+
+function applyTimerFilters(items){
+  const entity = (document.getElementById("timerEntityFilter")?.value || "").toLowerCase().trim();
+  const action = (document.getElementById("timerActionFilter")?.value || "").toLowerCase().trim();
+
+  return items.filter(item => {
+    const entityOk = !entity || String(item.entity_id || "").toLowerCase().includes(entity);
+    const actionOk = !action || String(item.action_key || "").toLowerCase().includes(action);
+    return entityOk && actionOk;
+  });
+}
+
+function renderTimerLogs(){
+  const body = document.getElementById("timerLogsBody");
+  const raw = document.getElementById("timerLogsRaw");
+  const items = applyTimerFilters(TIMER_LOG_ITEMS);
+
+  raw.textContent = JSON.stringify(items, null, 2);
+
+  if(!items.length){
+    body.innerHTML = `<tr><td colspan="9" class="sql-muted">Нет записей</td></tr>`;
+    return;
+  }
+
+  body.innerHTML = items.map(item => `
+    <tr>
+      <td>${esc(item.updated_at)}</td>
+      <td>${esc(item.timer_id)}</td>
+      <td>${esc(item.timer_status)}</td>
+      <td>${esc(item.timer_kind)}</td>
+      <td>${esc(item.action_key)}</td>
+      <td>${esc(item.entity_id)}</td>
+      <td>${esc(item.delay_seconds)}</td>
+      <td>${esc(item.duration_seconds)}</td>
+      <td>${item.ask_required ? 'ask' : 'no'}</td>
+    </tr>
+  `).join("");
+}
+
+async function loadExecutionLogs(){
+  const limit = Math.max(1, Math.min(500, Number(document.getElementById("executionLimitInput")?.value || 100)));
+  const body = document.getElementById("executionLogsBody");
+  body.innerHTML = `<tr><td colspan="9" class="sql-muted">Загрузка...</td></tr>`;
+
+  try{
+    const res = await fetch(`/api/sql-logs/recent?limit=${encodeURIComponent(limit)}`, {cache:"no-store"});
+    const data = await res.json();
+    EXECUTION_LOG_ITEMS = data.items || [];
+    renderExecutionLogs();
+  }catch(e){
+    body.innerHTML = `<tr><td colspan="9" class="sql-bad">Ошибка загрузки: ${esc(String(e))}</td></tr>`;
+  }
+}
+
+async function loadTimerLogs(){
+  const limit = Math.max(1, Math.min(500, Number(document.getElementById("timerLimitInput")?.value || 100)));
+  const body = document.getElementById("timerLogsBody");
+  body.innerHTML = `<tr><td colspan="9" class="sql-muted">Загрузка...</td></tr>`;
+
+  try{
+    const res = await fetch(`/api/sql-logs/timers/recent?limit=${encodeURIComponent(limit)}`, {cache:"no-store"});
+    const data = await res.json();
+    TIMER_LOG_ITEMS = data.items || [];
+    renderTimerLogs();
+  }catch(e){
+    body.innerHTML = `<tr><td colspan="9" class="sql-bad">Ошибка загрузки: ${esc(String(e))}</td></tr>`;
+  }
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("executionEntityFilter")?.addEventListener("input", renderExecutionLogs);
+  document.getElementById("executionActionFilter")?.addEventListener("input", renderExecutionLogs);
+  document.getElementById("timerEntityFilter")?.addEventListener("input", renderTimerLogs);
+  document.getElementById("timerActionFilter")?.addEventListener("input", renderTimerLogs);
+
+  loadExecutionLogs();
+  loadTimerLogs();
+});
+</script>
+{% endblock %}
