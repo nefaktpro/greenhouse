@@ -56,11 +56,22 @@
   font-size:14px;
 }
 .sql-source-badge{
-  color:#8fb3ff;
   font-size:12px;
   font-weight:900;
   letter-spacing:.08em;
   text-transform:uppercase;
+}
+.sql-source-badge.live{
+  color:#7ee787;
+}
+.sql-source-badge.hooked{
+  color:#7dcfff;
+}
+.sql-source-badge.ready{
+  color:#ffd866;
+}
+.sql-source-badge.planned{
+  color:#8fb3ff;
 }
 .sql-source-body{
   padding:0 20px 20px 20px;
@@ -138,7 +149,7 @@
     <details class="sql-source">
       <summary>
         <div class="sql-source-head">
-          <div class="sql-source-badge">ACTIVE</div>
+          <div class="sql-source-badge live">🟢 VERIFIED LIVE</div>
           <div class="sql-source-title">Журнал выполнения</div>
           <div class="sql-source-sub">Выполнение действий, verify и verify v2.</div>
         </div>
@@ -186,7 +197,7 @@
     <details class="sql-source">
       <summary>
         <div class="sql-source-head">
-          <div class="sql-source-badge">ACTIVE</div>
+          <div class="sql-source-badge hooked">🔵 HOOKED</div>
           <div class="sql-source-title">Журнал таймеров</div>
           <div class="sql-source-sub">Отложенные действия, delay/duration, ASK и статусы таймеров.</div>
         </div>
@@ -234,7 +245,7 @@
     <details class="sql-source">
       <summary>
         <div class="sql-source-head">
-          <div class="sql-source-badge">ACTIVE</div>
+          <div class="sql-source-badge hooked">🔵 HOOKED</div>
           <div class="sql-source-title">Журнал расписаний</div>
           <div class="sql-source-sub">Расписания, enable/disable, ближайший запуск и ASK-статусы.</div>
         </div>
@@ -282,7 +293,7 @@
     <details class="sql-source">
       <summary>
         <div class="sql-source-head">
-          <div class="sql-source-badge">ACTIVE</div>
+          <div class="sql-source-badge live">🟢 LIVE</div>
           <div class="sql-source-title">Журнал решений ИИ</div>
           <div class="sql-source-sub">Решения ИИ, нормализация intent, предложенные действия, confidence и связь с ASK/execution.</div>
         </div>
@@ -330,7 +341,7 @@
     <details class="sql-source">
       <summary>
         <div class="sql-source-head">
-          <div class="sql-source-badge">ACTIVE</div>
+          <div class="sql-source-badge ready">🟡 READY</div>
           <div class="sql-source-title">Журнал TEST-прогонов</div>
           <div class="sql-source-sub">TEST-эксперименты, гипотезы, результаты, learnings и verify outcomes.</div>
         </div>
@@ -378,7 +389,7 @@
     <details class="sql-source">
       <summary>
         <div class="sql-source-head">
-          <div class="sql-source-badge">ACTIVE</div>
+          <div class="sql-source-badge hooked">🔵 HOOKED</div>
           <div class="sql-source-title">Журнал follow-up</div>
           <div class="sql-source-sub">Повторные проверки, post-check, дозамеры и контрольные точки после действий.</div>
         </div>
@@ -426,7 +437,7 @@
     <details class="sql-source">
       <summary>
         <div class="sql-source-head">
-          <div class="sql-source-badge">ACTIVE</div>
+          <div class="sql-source-badge hooked">🔵 HOOKED</div>
           <div class="sql-source-title">Журнал ошибок и safety</div>
           <div class="sql-source-sub">Ошибки, safety-блокировки, severity, rule violations и auto-reaction.</div>
         </div>
@@ -474,7 +485,7 @@
     <details class="sql-source">
       <summary>
         <div class="sql-source-head">
-          <div class="sql-source-badge">ACTIVE</div>
+          <div class="sql-source-badge hooked">🔵 HOOKED</div>
           <div class="sql-source-title">Журнал валидации и отказов</div>
           <div class="sql-source-sub">Почему действие не допущено: rule_name, rejection_reason, safety_blocked и suggested resolution.</div>
         </div>
@@ -521,7 +532,7 @@
     <details class="sql-source">
       <summary>
         <div class="sql-source-head">
-          <div class="sql-source-badge">LEGACY JSON</div>
+          <div class="sql-source-badge planned">⚪ LEGACY JSON</div>
           <div class="sql-source-title">Legacy runtime logs</div>
           <div class="sql-source-sub">Файловые логи из AI Context: manual / ask / test / auto / autopilot / index.</div>
         </div>
@@ -535,7 +546,7 @@
     <details class="sql-source">
       <summary>
         <div class="sql-source-head">
-          <div class="sql-source-badge">LEGACY JSON</div>
+          <div class="sql-source-badge planned">⚪ LEGACY JSON</div>
           <div class="sql-source-title">Журнал AI chat I/O</div>
           <div class="sql-source-sub">Что ушло в ИИ, какой context был приложен, какая история была отправлена и что ИИ ответил.</div>
         </div>
@@ -549,7 +560,7 @@
     <details class="sql-source">
       <summary>
         <div class="sql-source-head">
-          <div class="sql-source-badge">ACTIVE</div>
+          <div class="sql-source-badge hooked">🔵 HOOKED</div>
           <div class="sql-source-title">Журнал кейсов</div>
           <div class="sql-source-sub">Кейсы, case-candidates, validated patterns и связи с TEST / follow-up / validation.</div>
         </div>
@@ -597,7 +608,7 @@
     <details class="sql-source">
       <summary>
         <div class="sql-source-head">
-          <div class="sql-source-badge">PLANNED SQL</div>
+          <div class="sql-source-badge planned">⚪ PLANNED</div>
           <div class="sql-source-title">Журнал cleanup</div>
           <div class="sql-source-sub">Что архивировали, что сжимали, что удаляли, что оставили как critical/safety.</div>
         </div>
@@ -611,7 +622,7 @@
     <details class="sql-source">
       <summary>
         <div class="sql-source-head">
-          <div class="sql-source-badge">PLANNED SQL</div>
+          <div class="sql-source-badge planned">⚪ PLANNED</div>
           <div class="sql-source-title">Журнал памяти и сжатия</div>
           <div class="sql-source-sub">Compression, summaries, active memory refresh, memory cleanup и переукладка знаний.</div>
         </div>
@@ -625,7 +636,7 @@
     <details class="sql-source">
       <summary>
         <div class="sql-source-head">
-          <div class="sql-source-badge">PLANNED SQL</div>
+          <div class="sql-source-badge planned">⚪ PLANNED</div>
           <div class="sql-source-title">Журнал архива</div>
           <div class="sql-source-sub">Что ушло в архив, когда, по какой политике, и как связано с cleanup/compression.</div>
         </div>
@@ -639,7 +650,7 @@
     <details class="sql-source">
       <summary>
         <div class="sql-source-head">
-          <div class="sql-source-badge">PLANNED SQL</div>
+          <div class="sql-source-badge planned">⚪ PLANNED</div>
           <div class="sql-source-title">Журнал фото с камер</div>
           <div class="sql-source-sub">Снимки с камер, визуальные подтверждения, состояние растений и устройств, before/after.</div>
         </div>
@@ -653,7 +664,7 @@
     <details class="sql-source">
       <summary>
         <div class="sql-source-head">
-          <div class="sql-source-badge">PLANNED SQL</div>
+          <div class="sql-source-badge planned">⚪ PLANNED</div>
           <div class="sql-source-title">Журнал autopilot</div>
           <div class="sql-source-sub">Autopilot triggers, goals, decisions, risk/confidence, action linkage и follow-up linkage.</div>
         </div>
@@ -667,7 +678,7 @@
     <details class="sql-source">
       <summary>
         <div class="sql-source-head">
-          <div class="sql-source-badge">PLANNED SQL</div>
+          <div class="sql-source-badge planned">⚪ PLANNED</div>
           <div class="sql-source-title">Журнал system / debug trace</div>
           <div class="sql-source-sub">Системные trace-записи, debug trails, service-level diagnostics и технические цепочки.</div>
         </div>
