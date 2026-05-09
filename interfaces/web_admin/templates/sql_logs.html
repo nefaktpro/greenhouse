@@ -133,7 +133,7 @@
   <section class="sql-card">
     <div class="card-label">SQL Logs</div>
     <h2>SQL Log Sources</h2>
-    <div class="sql-muted">Здесь живут SQL-логи для ИИ и системы. Сейчас подключены выполнение, таймеры, расписания, решения ИИ, TEST, follow-up и ошибки/safety.</div>
+    <div class="sql-muted">Здесь живут SQL-логи для ИИ и системы. Сверху — уже рабочие SQL-журналы. Ниже — legacy/planned источники, которые пока остаются file-based или будут реализованы позже.</div>
 
     <details class="sql-source">
       <summary>
@@ -470,6 +470,214 @@
         </details>
       </div>
     </details>
+
+    <details class="sql-source">
+      <summary>
+        <div class="sql-source-head">
+          <div class="sql-source-badge">ACTIVE</div>
+          <div class="sql-source-title">Журнал валидации и отказов</div>
+          <div class="sql-source-sub">Почему действие не допущено: rule_name, rejection_reason, safety_blocked и suggested resolution.</div>
+        </div>
+        <div class="sql-muted">раскрыть / свернуть</div>
+      </summary>
+      <div class="sql-source-body">
+        <div class="sql-toolbar">
+          <button class="primary-btn" onclick="loadValidationRejectionLogs()">Обновить</button>
+          <label class="sql-muted">Limit</label>
+          <input id="validationRejectionLimitInput" type="number" value="100" min="1" max="500">
+          <label class="sql-muted">Entity</label>
+          <input id="validationRejectionEntityFilter" type="text" placeholder="switch.setevoi_filtr...">
+          <label class="sql-muted">Action</label>
+          <input id="validationRejectionActionFilter" type="text" placeholder="watering_top_on">
+        </div>
+
+        <div class="sql-table-wrap">
+          <table class="sql-table">
+            <thead>
+              <tr>
+                <th>Updated</th>
+                <th>Validation ID</th>
+                <th>Status</th>
+                <th>Layer</th>
+                <th>Action</th>
+                <th>Entity</th>
+                <th>Rule</th>
+                <th>Safety</th>
+                <th>Причина</th>
+              </tr>
+            </thead>
+            <tbody id="validationRejectionLogsBody">
+              <tr><td colspan="9" class="sql-muted">Загрузка...</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <details class="sql-raw">
+          <summary>Показать raw JSON</summary>
+          <pre id="validationRejectionLogsRaw">[]</pre>
+        </details>
+      </div>
+    </details>
+    <details class="sql-source">
+      <summary>
+        <div class="sql-source-head">
+          <div class="sql-source-badge">LEGACY JSON</div>
+          <div class="sql-source-title">Legacy runtime logs</div>
+          <div class="sql-source-sub">Файловые логи из AI Context: manual / ask / test / auto / autopilot / index.</div>
+        </div>
+        <div class="sql-muted">пока file-based</div>
+      </summary>
+      <div class="sql-source-body">
+        <div class="sql-empty">Пока остаётся в JSON и AI Context. Переносить в SQL только если понадобится поиск, trace и связи между событиями.</div>
+      </div>
+    </details>
+
+    <details class="sql-source">
+      <summary>
+        <div class="sql-source-head">
+          <div class="sql-source-badge">LEGACY JSON</div>
+          <div class="sql-source-title">Журнал AI chat I/O</div>
+          <div class="sql-source-sub">Что ушло в ИИ, какой context был приложен, какая история была отправлена и что ИИ ответил.</div>
+        </div>
+        <div class="sql-muted">пока file/api based</div>
+      </summary>
+      <div class="sql-source-body">
+        <div class="sql-empty">Пока живёт через AI Context / AI Logs. В SQL переносим только если захотим trace, search и linkage с решениями ИИ.</div>
+      </div>
+    </details>
+
+    <details class="sql-source">
+      <summary>
+        <div class="sql-source-head">
+          <div class="sql-source-badge">ACTIVE</div>
+          <div class="sql-source-title">Журнал кейсов</div>
+          <div class="sql-source-sub">Кейсы, case-candidates, validated patterns и связи с TEST / follow-up / validation.</div>
+        </div>
+        <div class="sql-muted">раскрыть / свернуть</div>
+      </summary>
+      <div class="sql-source-body">
+        <div class="sql-toolbar">
+          <button class="primary-btn" onclick="loadCaseLogs()">Обновить</button>
+          <label class="sql-muted">Limit</label>
+          <input id="caseLimitInput" type="number" value="100" min="1" max="500">
+          <label class="sql-muted">Entity</label>
+          <input id="caseEntityFilter" type="text" placeholder="switch.setevoi_filtr...">
+          <label class="sql-muted">Action</label>
+          <input id="caseActionFilter" type="text" placeholder="fan_top_on">
+        </div>
+
+        <div class="sql-table-wrap">
+          <table class="sql-table">
+            <thead>
+              <tr>
+                <th>Updated</th>
+                <th>Case ID</th>
+                <th>Status</th>
+                <th>Kind</th>
+                <th>Action</th>
+                <th>Entity</th>
+                <th>Validated</th>
+                <th>Repeatable</th>
+                <th>Confidence</th>
+              </tr>
+            </thead>
+            <tbody id="caseLogsBody">
+              <tr><td colspan="9" class="sql-muted">Загрузка...</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <details class="sql-raw">
+          <summary>Показать raw JSON</summary>
+          <pre id="caseLogsRaw">[]</pre>
+        </details>
+      </div>
+    </details>
+
+    <details class="sql-source">
+      <summary>
+        <div class="sql-source-head">
+          <div class="sql-source-badge">PLANNED SQL</div>
+          <div class="sql-source-title">Журнал cleanup</div>
+          <div class="sql-source-sub">Что архивировали, что сжимали, что удаляли, что оставили как critical/safety.</div>
+        </div>
+        <div class="sql-muted">ждёт реализацию cleanup</div>
+      </summary>
+      <div class="sql-source-body">
+        <div class="sql-empty">Пока только заготовка. Подключаем, когда будет реальный cleanup-loop.</div>
+      </div>
+    </details>
+
+    <details class="sql-source">
+      <summary>
+        <div class="sql-source-head">
+          <div class="sql-source-badge">PLANNED SQL</div>
+          <div class="sql-source-title">Журнал памяти и сжатия</div>
+          <div class="sql-source-sub">Compression, summaries, active memory refresh, memory cleanup и переукладка знаний.</div>
+        </div>
+        <div class="sql-muted">planned</div>
+      </summary>
+      <div class="sql-source-body">
+        <div class="sql-empty">Пока только заготовка. Подключаем, когда будет реальный memory/compression pipeline.</div>
+      </div>
+    </details>
+
+    <details class="sql-source">
+      <summary>
+        <div class="sql-source-head">
+          <div class="sql-source-badge">PLANNED SQL</div>
+          <div class="sql-source-title">Журнал архива</div>
+          <div class="sql-source-sub">Что ушло в архив, когда, по какой политике, и как связано с cleanup/compression.</div>
+        </div>
+        <div class="sql-muted">planned</div>
+      </summary>
+      <div class="sql-source-body">
+        <div class="sql-empty">Пока только заготовка. Подключаем, когда появится archive policy и archive flow.</div>
+      </div>
+    </details>
+
+    <details class="sql-source">
+      <summary>
+        <div class="sql-source-head">
+          <div class="sql-source-badge">PLANNED SQL</div>
+          <div class="sql-source-title">Журнал фото с камер</div>
+          <div class="sql-source-sub">Снимки с камер, визуальные подтверждения, состояние растений и устройств, before/after.</div>
+        </div>
+        <div class="sql-muted">planned</div>
+      </summary>
+      <div class="sql-source-body">
+        <div class="sql-empty">Пока только заготовка. Подключаем, когда будет реальный loop камер, снимков и визуальных проверок.</div>
+      </div>
+    </details>
+
+    <details class="sql-source">
+      <summary>
+        <div class="sql-source-head">
+          <div class="sql-source-badge">PLANNED SQL</div>
+          <div class="sql-source-title">Журнал autopilot</div>
+          <div class="sql-source-sub">Autopilot triggers, goals, decisions, risk/confidence, action linkage и follow-up linkage.</div>
+        </div>
+        <div class="sql-muted">planned</div>
+      </summary>
+      <div class="sql-source-body">
+        <div class="sql-empty">Пока только заготовка. Подключаем, когда будет реальный autopilot runtime-loop.</div>
+      </div>
+    </details>
+
+    <details class="sql-source">
+      <summary>
+        <div class="sql-source-head">
+          <div class="sql-source-badge">PLANNED SQL</div>
+          <div class="sql-source-title">Журнал system / debug trace</div>
+          <div class="sql-source-sub">Системные trace-записи, debug trails, service-level diagnostics и технические цепочки.</div>
+        </div>
+        <div class="sql-muted">planned</div>
+      </summary>
+      <div class="sql-source-body">
+        <div class="sql-empty">Пока только заготовка. Подключаем, если захотим отдельный trace/debug центр поверх operational logs.</div>
+      </div>
+    </details>
+
   </section>
 </div>
 {% endblock %}
@@ -483,6 +691,8 @@ let AI_DECISION_LOG_ITEMS = [];
 let TEST_RUN_LOG_ITEMS = [];
 let FOLLOWUP_LOG_ITEMS = [];
 let ERROR_SAFETY_LOG_ITEMS = [];
+let VALIDATION_REJECTION_LOG_ITEMS = [];
+let CASE_LOG_ITEMS = [];
 
 function esc(v){
   return String(v ?? "")
@@ -507,33 +717,19 @@ function renderExecutionLogs(){
   const raw = document.getElementById("executionLogsRaw");
   const items = applyExecutionFilters(EXECUTION_LOG_ITEMS);
   raw.textContent = JSON.stringify(items, null, 2);
-  if(!items.length){
-    body.innerHTML = `<tr><td colspan="9" class="sql-muted">Нет записей</td></tr>`;
-    return;
-  }
+  if(!items.length){ body.innerHTML = `<tr><td colspan="9" class="sql-muted">Нет записей</td></tr>`; return; }
   body.innerHTML = items.map(item => `
     <tr>
-      <td>${esc(item.ts)}</td>
-      <td>${esc(item.action_key)}</td>
-      <td>${esc(item.entity_id)}</td>
-      <td>${esc(item.target_role)}</td>
-      <td>${esc(item.mode)}</td>
-      <td class="${item.ok ? 'sql-ok' : 'sql-bad'}">${item.ok ? 'ok' : 'fail'}</td>
-      <td class="${item.verified ? 'sql-ok' : 'sql-bad'}">${item.verified ? 'yes' : 'no'}</td>
-      <td>${esc(item.verify_v2_status)}</td>
-      <td>${esc(item.duration_ms)}</td>
-    </tr>
-  `).join("");
+      <td>${esc(item.ts)}</td><td>${esc(item.action_key)}</td><td>${esc(item.entity_id)}</td><td>${esc(item.target_role)}</td>
+      <td>${esc(item.mode)}</td><td class="${item.ok ? 'sql-ok' : 'sql-bad'}">${item.ok ? 'ok' : 'fail'}</td>
+      <td class="${item.verified ? 'sql-ok' : 'sql-bad'}">${item.verified ? 'yes' : 'no'}</td><td>${esc(item.verify_v2_status)}</td><td>${esc(item.duration_ms)}</td>
+    </tr>`).join("");
 }
 
 function applyTimerFilters(items){
   const entity = (document.getElementById("timerEntityFilter")?.value || "").toLowerCase().trim();
   const action = (document.getElementById("timerActionFilter")?.value || "").toLowerCase().trim();
-  return items.filter(item => {
-    const entityOk = !entity || String(item.entity_id || "").toLowerCase().includes(entity);
-    const actionOk = !action || String(item.action_key || "").toLowerCase().includes(action);
-    return entityOk && actionOk;
-  });
+  return items.filter(item => (!entity || String(item.entity_id || "").toLowerCase().includes(entity)) && (!action || String(item.action_key || "").toLowerCase().includes(action)));
 }
 
 function renderTimerLogs(){
@@ -541,33 +737,18 @@ function renderTimerLogs(){
   const raw = document.getElementById("timerLogsRaw");
   const items = applyTimerFilters(TIMER_LOG_ITEMS);
   raw.textContent = JSON.stringify(items, null, 2);
-  if(!items.length){
-    body.innerHTML = `<tr><td colspan="9" class="sql-muted">Нет записей</td></tr>`;
-    return;
-  }
+  if(!items.length){ body.innerHTML = `<tr><td colspan="9" class="sql-muted">Нет записей</td></tr>`; return; }
   body.innerHTML = items.map(item => `
     <tr>
-      <td>${esc(item.updated_at)}</td>
-      <td>${esc(item.timer_id)}</td>
-      <td>${esc(item.timer_status)}</td>
-      <td>${esc(item.timer_kind)}</td>
-      <td>${esc(item.action_key)}</td>
-      <td>${esc(item.entity_id)}</td>
-      <td>${esc(item.delay_seconds)}</td>
-      <td>${esc(item.duration_seconds)}</td>
-      <td>${item.ask_required ? 'ask' : 'no'}</td>
-    </tr>
-  `).join("");
+      <td>${esc(item.updated_at)}</td><td>${esc(item.timer_id)}</td><td>${esc(item.timer_status)}</td><td>${esc(item.timer_kind)}</td>
+      <td>${esc(item.action_key)}</td><td>${esc(item.entity_id)}</td><td>${esc(item.delay_seconds)}</td><td>${esc(item.duration_seconds)}</td><td>${item.ask_required ? 'ask' : 'no'}</td>
+    </tr>`).join("");
 }
 
 function applyScheduleFilters(items){
   const entity = (document.getElementById("scheduleEntityFilter")?.value || "").toLowerCase().trim();
   const action = (document.getElementById("scheduleActionFilter")?.value || "").toLowerCase().trim();
-  return items.filter(item => {
-    const entityOk = !entity || String(item.entity_id || "").toLowerCase().includes(entity);
-    const actionOk = !action || String(item.action_key || "").toLowerCase().includes(action);
-    return entityOk && actionOk;
-  });
+  return items.filter(item => (!entity || String(item.entity_id || "").toLowerCase().includes(entity)) && (!action || String(item.action_key || "").toLowerCase().includes(action)));
 }
 
 function renderScheduleLogs(){
@@ -575,33 +756,18 @@ function renderScheduleLogs(){
   const raw = document.getElementById("scheduleLogsRaw");
   const items = applyScheduleFilters(SCHEDULE_LOG_ITEMS);
   raw.textContent = JSON.stringify(items, null, 2);
-  if(!items.length){
-    body.innerHTML = `<tr><td colspan="9" class="sql-muted">Нет записей</td></tr>`;
-    return;
-  }
+  if(!items.length){ body.innerHTML = `<tr><td colspan="9" class="sql-muted">Нет записей</td></tr>`; return; }
   body.innerHTML = items.map(item => `
     <tr>
-      <td>${esc(item.updated_at)}</td>
-      <td>${esc(item.schedule_id)}</td>
-      <td>${esc(item.schedule_status)}</td>
-      <td>${esc(item.schedule_kind)}</td>
-      <td>${esc(item.action_key)}</td>
-      <td>${esc(item.entity_id)}</td>
-      <td>${esc(item.cron_expr)}</td>
-      <td>${esc(item.next_run_at)}</td>
-      <td>${item.ask_required ? 'ask' : 'no'}</td>
-    </tr>
-  `).join("");
+      <td>${esc(item.updated_at)}</td><td>${esc(item.schedule_id)}</td><td>${esc(item.schedule_status)}</td><td>${esc(item.schedule_kind)}</td>
+      <td>${esc(item.action_key)}</td><td>${esc(item.entity_id)}</td><td>${esc(item.cron_expr)}</td><td>${esc(item.next_run_at)}</td><td>${item.ask_required ? 'ask' : 'no'}</td>
+    </tr>`).join("");
 }
 
 function applyAiDecisionFilters(items){
   const entity = (document.getElementById("aiDecisionEntityFilter")?.value || "").toLowerCase().trim();
   const action = (document.getElementById("aiDecisionActionFilter")?.value || "").toLowerCase().trim();
-  return items.filter(item => {
-    const entityOk = !entity || String(item.proposed_entity_id || "").toLowerCase().includes(entity);
-    const actionOk = !action || String(item.proposed_action_key || "").toLowerCase().includes(action);
-    return entityOk && actionOk;
-  });
+  return items.filter(item => (!entity || String(item.proposed_entity_id || "").toLowerCase().includes(entity)) && (!action || String(item.proposed_action_key || "").toLowerCase().includes(action)));
 }
 
 function renderAiDecisionLogs(){
@@ -609,33 +775,18 @@ function renderAiDecisionLogs(){
   const raw = document.getElementById("aiDecisionLogsRaw");
   const items = applyAiDecisionFilters(AI_DECISION_LOG_ITEMS);
   raw.textContent = JSON.stringify(items, null, 2);
-  if(!items.length){
-    body.innerHTML = `<tr><td colspan="9" class="sql-muted">Нет записей</td></tr>`;
-    return;
-  }
+  if(!items.length){ body.innerHTML = `<tr><td colspan="9" class="sql-muted">Нет записей</td></tr>`; return; }
   body.innerHTML = items.map(item => `
     <tr>
-      <td>${esc(item.updated_at)}</td>
-      <td>${esc(item.decision_id)}</td>
-      <td>${esc(item.decision_status)}</td>
-      <td>${esc(item.decision_kind)}</td>
-      <td>${esc(item.proposed_action_key)}</td>
-      <td>${esc(item.proposed_entity_id)}</td>
-      <td>${esc(item.confidence)}</td>
-      <td>${esc(item.risk_level)}</td>
-      <td>${item.ask_required ? 'ask' : 'no'}</td>
-    </tr>
-  `).join("");
+      <td>${esc(item.updated_at)}</td><td>${esc(item.decision_id)}</td><td>${esc(item.decision_status)}</td><td>${esc(item.decision_kind)}</td>
+      <td>${esc(item.proposed_action_key)}</td><td>${esc(item.proposed_entity_id)}</td><td>${esc(item.confidence)}</td><td>${esc(item.risk_level)}</td><td>${item.ask_required ? 'ask' : 'no'}</td>
+    </tr>`).join("");
 }
 
 function applyTestRunFilters(items){
   const entity = (document.getElementById("testRunEntityFilter")?.value || "").toLowerCase().trim();
   const action = (document.getElementById("testRunActionFilter")?.value || "").toLowerCase().trim();
-  return items.filter(item => {
-    const entityOk = !entity || String(item.entity_id || "").toLowerCase().includes(entity);
-    const actionOk = !action || String(item.action_key || "").toLowerCase().includes(action);
-    return entityOk && actionOk;
-  });
+  return items.filter(item => (!entity || String(item.entity_id || "").toLowerCase().includes(entity)) && (!action || String(item.action_key || "").toLowerCase().includes(action)));
 }
 
 function renderTestRunLogs(){
@@ -643,33 +794,18 @@ function renderTestRunLogs(){
   const raw = document.getElementById("testRunLogsRaw");
   const items = applyTestRunFilters(TEST_RUN_LOG_ITEMS);
   raw.textContent = JSON.stringify(items, null, 2);
-  if(!items.length){
-    body.innerHTML = `<tr><td colspan="9" class="sql-muted">Нет записей</td></tr>`;
-    return;
-  }
+  if(!items.length){ body.innerHTML = `<tr><td colspan="9" class="sql-muted">Нет записей</td></tr>`; return; }
   body.innerHTML = items.map(item => `
     <tr>
-      <td>${esc(item.updated_at)}</td>
-      <td>${esc(item.test_id)}</td>
-      <td>${esc(item.test_status)}</td>
-      <td>${esc(item.test_kind)}</td>
-      <td>${esc(item.action_key)}</td>
-      <td>${esc(item.entity_id)}</td>
-      <td>${item.verify_ok ? 'yes' : 'no'}</td>
-      <td>${esc(item.verify_v2_status)}</td>
-      <td>${esc(item.confidence)}</td>
-    </tr>
-  `).join("");
+      <td>${esc(item.updated_at)}</td><td>${esc(item.test_id)}</td><td>${esc(item.test_status)}</td><td>${esc(item.test_kind)}</td>
+      <td>${esc(item.action_key)}</td><td>${esc(item.entity_id)}</td><td>${item.verify_ok ? 'yes' : 'no'}</td><td>${esc(item.verify_v2_status)}</td><td>${esc(item.confidence)}</td>
+    </tr>`).join("");
 }
 
 function applyFollowupFilters(items){
   const entity = (document.getElementById("followupEntityFilter")?.value || "").toLowerCase().trim();
   const action = (document.getElementById("followupActionFilter")?.value || "").toLowerCase().trim();
-  return items.filter(item => {
-    const entityOk = !entity || String(item.linked_entity_id || "").toLowerCase().includes(entity);
-    const actionOk = !action || String(item.linked_action_key || "").toLowerCase().includes(action);
-    return entityOk && actionOk;
-  });
+  return items.filter(item => (!entity || String(item.linked_entity_id || "").toLowerCase().includes(entity)) && (!action || String(item.linked_action_key || "").toLowerCase().includes(action)));
 }
 
 function renderFollowupLogs(){
@@ -677,33 +813,18 @@ function renderFollowupLogs(){
   const raw = document.getElementById("followupLogsRaw");
   const items = applyFollowupFilters(FOLLOWUP_LOG_ITEMS);
   raw.textContent = JSON.stringify(items, null, 2);
-  if(!items.length){
-    body.innerHTML = `<tr><td colspan="9" class="sql-muted">Нет записей</td></tr>`;
-    return;
-  }
+  if(!items.length){ body.innerHTML = `<tr><td colspan="9" class="sql-muted">Нет записей</td></tr>`; return; }
   body.innerHTML = items.map(item => `
     <tr>
-      <td>${esc(item.updated_at)}</td>
-      <td>${esc(item.followup_id)}</td>
-      <td>${esc(item.followup_status)}</td>
-      <td>${esc(item.followup_kind)}</td>
-      <td>${esc(item.linked_action_key)}</td>
-      <td>${esc(item.linked_entity_id)}</td>
-      <td>${esc(item.expected_check)}</td>
-      <td>${esc(item.decision)}</td>
-      <td>${esc(item.confidence)}</td>
-    </tr>
-  `).join("");
+      <td>${esc(item.updated_at)}</td><td>${esc(item.followup_id)}</td><td>${esc(item.followup_status)}</td><td>${esc(item.followup_kind)}</td>
+      <td>${esc(item.linked_action_key)}</td><td>${esc(item.linked_entity_id)}</td><td>${esc(item.expected_check)}</td><td>${esc(item.decision)}</td><td>${esc(item.confidence)}</td>
+    </tr>`).join("");
 }
 
 function applyErrorSafetyFilters(items){
   const entity = (document.getElementById("errorSafetyEntityFilter")?.value || "").toLowerCase().trim();
   const action = (document.getElementById("errorSafetyActionFilter")?.value || "").toLowerCase().trim();
-  return items.filter(item => {
-    const entityOk = !entity || String(item.entity_id || "").toLowerCase().includes(entity);
-    const actionOk = !action || String(item.action_key || "").toLowerCase().includes(action);
-    return entityOk && actionOk;
-  });
+  return items.filter(item => (!entity || String(item.entity_id || "").toLowerCase().includes(entity)) && (!action || String(item.action_key || "").toLowerCase().includes(action)));
 }
 
 function renderErrorSafetyLogs(){
@@ -711,122 +832,61 @@ function renderErrorSafetyLogs(){
   const raw = document.getElementById("errorSafetyLogsRaw");
   const items = applyErrorSafetyFilters(ERROR_SAFETY_LOG_ITEMS);
   raw.textContent = JSON.stringify(items, null, 2);
-  if(!items.length){
-    body.innerHTML = `<tr><td colspan="9" class="sql-muted">Нет записей</td></tr>`;
-    return;
-  }
+  if(!items.length){ body.innerHTML = `<tr><td colspan="9" class="sql-muted">Нет записей</td></tr>`; return; }
   body.innerHTML = items.map(item => `
     <tr>
-      <td>${esc(item.updated_at)}</td>
-      <td>${esc(item.error_id)}</td>
-      <td>${esc(item.severity)}</td>
-      <td>${esc(item.status)}</td>
-      <td>${esc(item.layer)}</td>
-      <td>${esc(item.action_key)}</td>
-      <td>${esc(item.entity_id)}</td>
-      <td>${item.safety_related ? 'yes' : 'no'}</td>
-      <td>${esc(item.decision)}</td>
-    </tr>
-  `).join("");
+      <td>${esc(item.updated_at)}</td><td>${esc(item.error_id)}</td><td>${esc(item.severity)}</td><td>${esc(item.status)}</td>
+      <td>${esc(item.layer)}</td><td>${esc(item.action_key)}</td><td>${esc(item.entity_id)}</td><td>${item.safety_related ? 'yes' : 'no'}</td><td>${esc(item.decision)}</td>
+    </tr>`).join("");
 }
 
-async function loadExecutionLogs(){
-  const limit = Math.max(1, Math.min(500, Number(document.getElementById("executionLimitInput")?.value || 100)));
-  const body = document.getElementById("executionLogsBody");
-  body.innerHTML = `<tr><td colspan="9" class="sql-muted">Загрузка...</td></tr>`;
-  try{
-    const res = await fetch(`/api/sql-logs/recent?limit=${encodeURIComponent(limit)}`, {cache:"no-store"});
-    const data = await res.json();
-    EXECUTION_LOG_ITEMS = data.items || [];
-    renderExecutionLogs();
-  }catch(e){
-    body.innerHTML = `<tr><td colspan="9" class="sql-bad">Ошибка загрузки: ${esc(String(e))}</td></tr>`;
-  }
+function applyValidationRejectionFilters(items){
+  const entity = (document.getElementById("validationRejectionEntityFilter")?.value || "").toLowerCase().trim();
+  const action = (document.getElementById("validationRejectionActionFilter")?.value || "").toLowerCase().trim();
+  return items.filter(item => (!entity || String(item.entity_id || "").toLowerCase().includes(entity)) && (!action || String(item.action_key || "").toLowerCase().includes(action)));
 }
 
-async function loadTimerLogs(){
-  const limit = Math.max(1, Math.min(500, Number(document.getElementById("timerLimitInput")?.value || 100)));
-  const body = document.getElementById("timerLogsBody");
-  body.innerHTML = `<tr><td colspan="9" class="sql-muted">Загрузка...</td></tr>`;
-  try{
-    const res = await fetch(`/api/sql-logs/timers/recent?limit=${encodeURIComponent(limit)}`, {cache:"no-store"});
-    const data = await res.json();
-    TIMER_LOG_ITEMS = data.items || [];
-    renderTimerLogs();
-  }catch(e){
-    body.innerHTML = `<tr><td colspan="9" class="sql-bad">Ошибка загрузки: ${esc(String(e))}</td></tr>`;
-  }
+function renderValidationRejectionLogs(){
+  const body = document.getElementById("validationRejectionLogsBody");
+  const raw = document.getElementById("validationRejectionLogsRaw");
+  const items = applyValidationRejectionFilters(VALIDATION_REJECTION_LOG_ITEMS);
+  raw.textContent = JSON.stringify(items, null, 2);
+  if(!items.length){ body.innerHTML = `<tr><td colspan="9" class="sql-muted">Нет записей</td></tr>`; return; }
+  body.innerHTML = items.map(item => `
+    <tr>
+      <td>${esc(item.updated_at)}</td><td>${esc(item.validation_id)}</td><td>${esc(item.status)}</td><td>${esc(item.layer)}</td>
+      <td>${esc(item.action_key)}</td><td>${esc(item.entity_id)}</td><td>${esc(item.rule_name)}</td><td>${item.safety_blocked ? 'yes' : 'no'}</td><td>${esc(item.rejection_reason)}</td>
+    </tr>`).join("");
 }
 
-async function loadScheduleLogs(){
-  const limit = Math.max(1, Math.min(500, Number(document.getElementById("scheduleLimitInput")?.value || 100)));
-  const body = document.getElementById("scheduleLogsBody");
-  body.innerHTML = `<tr><td colspan="9" class="sql-muted">Загрузка...</td></tr>`;
-  try{
-    const res = await fetch(`/api/sql-logs/schedules/recent?limit=${encodeURIComponent(limit)}`, {cache:"no-store"});
-    const data = await res.json();
-    SCHEDULE_LOG_ITEMS = data.items || [];
-    renderScheduleLogs();
-  }catch(e){
-    body.innerHTML = `<tr><td colspan="9" class="sql-bad">Ошибка загрузки: ${esc(String(e))}</td></tr>`;
-  }
+function applyCaseFilters(items){
+  const entity = (document.getElementById("caseEntityFilter")?.value || "").toLowerCase().trim();
+  const action = (document.getElementById("caseActionFilter")?.value || "").toLowerCase().trim();
+  return items.filter(item => (!entity || String(item.entity_id || "").toLowerCase().includes(entity)) && (!action || String(item.action_key || "").toLowerCase().includes(action)));
 }
 
-async function loadAiDecisionLogs(){
-  const limit = Math.max(1, Math.min(500, Number(document.getElementById("aiDecisionLimitInput")?.value || 100)));
-  const body = document.getElementById("aiDecisionLogsBody");
-  body.innerHTML = `<tr><td colspan="9" class="sql-muted">Загрузка...</td></tr>`;
-  try{
-    const res = await fetch(`/api/sql-logs/ai-decisions/recent?limit=${encodeURIComponent(limit)}`, {cache:"no-store"});
-    const data = await res.json();
-    AI_DECISION_LOG_ITEMS = data.items || [];
-    renderAiDecisionLogs();
-  }catch(e){
-    body.innerHTML = `<tr><td colspan="9" class="sql-bad">Ошибка загрузки: ${esc(String(e))}</td></tr>`;
-  }
+function renderCaseLogs(){
+  const body = document.getElementById("caseLogsBody");
+  const raw = document.getElementById("caseLogsRaw");
+  const items = applyCaseFilters(CASE_LOG_ITEMS);
+  raw.textContent = JSON.stringify(items, null, 2);
+  if(!items.length){ body.innerHTML = `<tr><td colspan="9" class="sql-muted">Нет записей</td></tr>`; return; }
+  body.innerHTML = items.map(item => `
+    <tr>
+      <td>${esc(item.updated_at)}</td><td>${esc(item.case_id)}</td><td>${esc(item.case_status)}</td><td>${esc(item.case_kind)}</td>
+      <td>${esc(item.action_key)}</td><td>${esc(item.entity_id)}</td><td>${item.validated ? 'yes' : 'no'}</td><td>${item.repeatable ? 'yes' : 'no'}</td><td>${esc(item.confidence)}</td>
+    </tr>`).join("");
 }
 
-async function loadTestRunLogs(){
-  const limit = Math.max(1, Math.min(500, Number(document.getElementById("testRunLimitInput")?.value || 100)));
-  const body = document.getElementById("testRunLogsBody");
-  body.innerHTML = `<tr><td colspan="9" class="sql-muted">Загрузка...</td></tr>`;
-  try{
-    const res = await fetch(`/api/sql-logs/test-runs/recent?limit=${encodeURIComponent(limit)}`, {cache:"no-store"});
-    const data = await res.json();
-    TEST_RUN_LOG_ITEMS = data.items || [];
-    renderTestRunLogs();
-  }catch(e){
-    body.innerHTML = `<tr><td colspan="9" class="sql-bad">Ошибка загрузки: ${esc(String(e))}</td></tr>`;
-  }
-}
-
-async function loadFollowupLogs(){
-  const limit = Math.max(1, Math.min(500, Number(document.getElementById("followupLimitInput")?.value || 100)));
-  const body = document.getElementById("followupLogsBody");
-  body.innerHTML = `<tr><td colspan="9" class="sql-muted">Загрузка...</td></tr>`;
-  try{
-    const res = await fetch(`/api/sql-logs/followups/recent?limit=${encodeURIComponent(limit)}`, {cache:"no-store"});
-    const data = await res.json();
-    FOLLOWUP_LOG_ITEMS = data.items || [];
-    renderFollowupLogs();
-  }catch(e){
-    body.innerHTML = `<tr><td colspan="9" class="sql-bad">Ошибка загрузки: ${esc(String(e))}</td></tr>`;
-  }
-}
-
-async function loadErrorSafetyLogs(){
-  const limit = Math.max(1, Math.min(500, Number(document.getElementById("errorSafetyLimitInput")?.value || 100)));
-  const body = document.getElementById("errorSafetyLogsBody");
-  body.innerHTML = `<tr><td colspan="9" class="sql-muted">Загрузка...</td></tr>`;
-  try{
-    const res = await fetch(`/api/sql-logs/error-safety/recent?limit=${encodeURIComponent(limit)}`, {cache:"no-store"});
-    const data = await res.json();
-    ERROR_SAFETY_LOG_ITEMS = data.items || [];
-    renderErrorSafetyLogs();
-  }catch(e){
-    body.innerHTML = `<tr><td colspan="9" class="sql-bad">Ошибка загрузки: ${esc(String(e))}</td></tr>`;
-  }
-}
+async function loadExecutionLogs(){ const limit = Math.max(1, Math.min(500, Number(document.getElementById("executionLimitInput")?.value || 100))); const body = document.getElementById("executionLogsBody"); body.innerHTML = `<tr><td colspan="9" class="sql-muted">Загрузка...</td></tr>`; try{ const res = await fetch(`/api/sql-logs/recent?limit=${encodeURIComponent(limit)}`, {cache:"no-store"}); const data = await res.json(); EXECUTION_LOG_ITEMS = data.items || []; renderExecutionLogs(); }catch(e){ body.innerHTML = `<tr><td colspan="9" class="sql-bad">Ошибка загрузки: ${esc(String(e))}</td></tr>`; } }
+async function loadTimerLogs(){ const limit = Math.max(1, Math.min(500, Number(document.getElementById("timerLimitInput")?.value || 100))); const body = document.getElementById("timerLogsBody"); body.innerHTML = `<tr><td colspan="9" class="sql-muted">Загрузка...</td></tr>`; try{ const res = await fetch(`/api/sql-logs/timers/recent?limit=${encodeURIComponent(limit)}`, {cache:"no-store"}); const data = await res.json(); TIMER_LOG_ITEMS = data.items || []; renderTimerLogs(); }catch(e){ body.innerHTML = `<tr><td colspan="9" class="sql-bad">Ошибка загрузки: ${esc(String(e))}</td></tr>`; } }
+async function loadScheduleLogs(){ const limit = Math.max(1, Math.min(500, Number(document.getElementById("scheduleLimitInput")?.value || 100))); const body = document.getElementById("scheduleLogsBody"); body.innerHTML = `<tr><td colspan="9" class="sql-muted">Загрузка...</td></tr>`; try{ const res = await fetch(`/api/sql-logs/schedules/recent?limit=${encodeURIComponent(limit)}`, {cache:"no-store"}); const data = await res.json(); SCHEDULE_LOG_ITEMS = data.items || []; renderScheduleLogs(); }catch(e){ body.innerHTML = `<tr><td colspan="9" class="sql-bad">Ошибка загрузки: ${esc(String(e))}</td></tr>`; } }
+async function loadAiDecisionLogs(){ const limit = Math.max(1, Math.min(500, Number(document.getElementById("aiDecisionLimitInput")?.value || 100))); const body = document.getElementById("aiDecisionLogsBody"); body.innerHTML = `<tr><td colspan="9" class="sql-muted">Загрузка...</td></tr>`; try{ const res = await fetch(`/api/sql-logs/ai-decisions/recent?limit=${encodeURIComponent(limit)}`, {cache:"no-store"}); const data = await res.json(); AI_DECISION_LOG_ITEMS = data.items || []; renderAiDecisionLogs(); }catch(e){ body.innerHTML = `<tr><td colspan="9" class="sql-bad">Ошибка загрузки: ${esc(String(e))}</td></tr>`; } }
+async function loadTestRunLogs(){ const limit = Math.max(1, Math.min(500, Number(document.getElementById("testRunLimitInput")?.value || 100))); const body = document.getElementById("testRunLogsBody"); body.innerHTML = `<tr><td colspan="9" class="sql-muted">Загрузка...</td></tr>`; try{ const res = await fetch(`/api/sql-logs/test-runs/recent?limit=${encodeURIComponent(limit)}`, {cache:"no-store"}); const data = await res.json(); TEST_RUN_LOG_ITEMS = data.items || []; renderTestRunLogs(); }catch(e){ body.innerHTML = `<tr><td colspan="9" class="sql-bad">Ошибка загрузки: ${esc(String(e))}</td></tr>`; } }
+async function loadFollowupLogs(){ const limit = Math.max(1, Math.min(500, Number(document.getElementById("followupLimitInput")?.value || 100))); const body = document.getElementById("followupLogsBody"); body.innerHTML = `<tr><td colspan="9" class="sql-muted">Загрузка...</td></tr>`; try{ const res = await fetch(`/api/sql-logs/followups/recent?limit=${encodeURIComponent(limit)}`, {cache:"no-store"}); const data = await res.json(); FOLLOWUP_LOG_ITEMS = data.items || []; renderFollowupLogs(); }catch(e){ body.innerHTML = `<tr><td colspan="9" class="sql-bad">Ошибка загрузки: ${esc(String(e))}</td></tr>`; } }
+async function loadErrorSafetyLogs(){ const limit = Math.max(1, Math.min(500, Number(document.getElementById("errorSafetyLimitInput")?.value || 100))); const body = document.getElementById("errorSafetyLogsBody"); body.innerHTML = `<tr><td colspan="9" class="sql-muted">Загрузка...</td></tr>`; try{ const res = await fetch(`/api/sql-logs/error-safety/recent?limit=${encodeURIComponent(limit)}`, {cache:"no-store"}); const data = await res.json(); ERROR_SAFETY_LOG_ITEMS = data.items || []; renderErrorSafetyLogs(); }catch(e){ body.innerHTML = `<tr><td colspan="9" class="sql-bad">Ошибка загрузки: ${esc(String(e))}</td></tr>`; } }
+async function loadValidationRejectionLogs(){ const limit = Math.max(1, Math.min(500, Number(document.getElementById("validationRejectionLimitInput")?.value || 100))); const body = document.getElementById("validationRejectionLogsBody"); body.innerHTML = `<tr><td colspan="9" class="sql-muted">Загрузка...</td></tr>`; try{ const res = await fetch(`/api/sql-logs/validation-rejections/recent?limit=${encodeURIComponent(limit)}`, {cache:"no-store"}); const data = await res.json(); VALIDATION_REJECTION_LOG_ITEMS = data.items || []; renderValidationRejectionLogs(); }catch(e){ body.innerHTML = `<tr><td colspan="9" class="sql-bad">Ошибка загрузки: ${esc(String(e))}</td></tr>`; } }
+async function loadCaseLogs(){ const limit = Math.max(1, Math.min(500, Number(document.getElementById("caseLimitInput")?.value || 100))); const body = document.getElementById("caseLogsBody"); body.innerHTML = `<tr><td colspan="9" class="sql-muted">Загрузка...</td></tr>`; try{ const res = await fetch(`/api/sql-logs/cases/recent?limit=${encodeURIComponent(limit)}`, {cache:"no-store"}); const data = await res.json(); CASE_LOG_ITEMS = data.items || []; renderCaseLogs(); }catch(e){ body.innerHTML = `<tr><td colspan="9" class="sql-bad">Ошибка загрузки: ${esc(String(e))}</td></tr>`; } }
 
 document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("executionEntityFilter")?.addEventListener("input", renderExecutionLogs);
@@ -843,6 +903,10 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("followupActionFilter")?.addEventListener("input", renderFollowupLogs);
   document.getElementById("errorSafetyEntityFilter")?.addEventListener("input", renderErrorSafetyLogs);
   document.getElementById("errorSafetyActionFilter")?.addEventListener("input", renderErrorSafetyLogs);
+  document.getElementById("validationRejectionEntityFilter")?.addEventListener("input", renderValidationRejectionLogs);
+  document.getElementById("validationRejectionActionFilter")?.addEventListener("input", renderValidationRejectionLogs);
+  document.getElementById("caseEntityFilter")?.addEventListener("input", renderCaseLogs);
+  document.getElementById("caseActionFilter")?.addEventListener("input", renderCaseLogs);
 
   loadExecutionLogs();
   loadTimerLogs();
@@ -851,6 +915,8 @@ document.addEventListener("DOMContentLoaded", () => {
   loadTestRunLogs();
   loadFollowupLogs();
   loadErrorSafetyLogs();
+  loadValidationRejectionLogs();
+  loadCaseLogs();
 });
 </script>
 {% endblock %}

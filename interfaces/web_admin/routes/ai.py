@@ -16,6 +16,8 @@ from greenhouse_v17.services.ai_decision_log_service import read_recent_ai_decis
 from greenhouse_v17.services.test_run_log_service import read_recent_test_runs
 from greenhouse_v17.services.followup_log_service import read_recent_followup_runs
 from greenhouse_v17.services.error_safety_log_service import read_recent_error_safety_runs
+from greenhouse_v17.services.validation_rejection_log_service import read_recent_validation_rejection_runs
+from greenhouse_v17.services.case_log_service import read_recent_case_runs
 from chat.chat_router import handle_chat_message
 
 router = APIRouter(tags=["ai-lab"])
@@ -388,6 +390,22 @@ def api_sql_logs_followups_recent(limit: int = 100):
 def api_sql_logs_error_safety_recent(limit: int = 100):
     limit = max(1, min(limit, 500))
     items = read_recent_error_safety_runs(limit=limit)
+    return {"ok": True, "items": items, "count": len(items)}
+
+
+
+@router.get("/api/sql-logs/validation-rejections/recent")
+def api_sql_logs_validation_rejections_recent(limit: int = 100):
+    limit = max(1, min(limit, 500))
+    items = read_recent_validation_rejection_runs(limit=limit)
+    return {"ok": True, "items": items, "count": len(items)}
+
+
+
+@router.get("/api/sql-logs/cases/recent")
+def api_sql_logs_cases_recent(limit: int = 100):
+    limit = max(1, min(limit, 500))
+    items = read_recent_case_runs(limit=limit)
     return {"ok": True, "items": items, "count": len(items)}
 
 @router.get("/api/ai/chat-live/history")
