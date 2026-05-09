@@ -8,6 +8,8 @@ import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from greenhouse_v17.services.followup_log_service import insert_followup_run
+from greenhouse_v17.services.case_log_service import insert_case_run
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -16,6 +18,124 @@ FOLLOWUP_LOG_PATH = ROOT / "data/memory/logs/followup_log.json"
 OBSERVATIONS_PATH = ROOT / "data/runtime/observations.json"
 CASE_CANDIDATES_PATH = ROOT / "data/runtime/case_candidates.json"
 CASES_PATH = ROOT / "data/runtime/cases.json"
+
+
+
+def _safe_sql_followup_log(
+    *,
+    followup_id: str,
+    source: str,
+    mode: str | None,
+    created_by: str,
+    followup_status: str,
+    followup_kind: str,
+    linked_log_type: str | None = None,
+    linked_log_id: str | None = None,
+    linked_action_key: str | None = None,
+    linked_entity_id: str | None = None,
+    linked_target_role: str | None = None,
+    reason: str | None = None,
+    expected_check: str | None = None,
+    actual_result: str | None = None,
+    decision: str | None = None,
+    scheduled_for: str | None = None,
+    started_at: str | None = None,
+    completed_at: str | None = None,
+    canceled_at: str | None = None,
+    execution_ok: bool | None = None,
+    verify_ok: bool | None = None,
+    verify_v2_ok: bool | None = None,
+    verify_v2_status: str | None = None,
+    confidence: float | None = None,
+    source_text: str | None = None,
+    note: str | None = None,
+) -> None:
+    try:
+        insert_followup_run(
+            followup_id=followup_id,
+            source=source,
+            mode=mode,
+            created_by=created_by,
+            followup_status=followup_status,
+            followup_kind=followup_kind,
+            linked_log_type=linked_log_type,
+            linked_log_id=linked_log_id,
+            linked_action_key=linked_action_key,
+            linked_entity_id=linked_entity_id,
+            linked_target_role=linked_target_role,
+            reason=reason,
+            expected_check=expected_check,
+            actual_result=actual_result,
+            decision=decision,
+            scheduled_for=scheduled_for,
+            started_at=started_at,
+            completed_at=completed_at,
+            canceled_at=canceled_at,
+            execution_ok=execution_ok,
+            verify_ok=verify_ok,
+            verify_v2_ok=verify_v2_ok,
+            verify_v2_status=verify_v2_status,
+            confidence=confidence,
+            source_text=source_text,
+            note=note,
+        )
+    except Exception:
+        pass
+
+
+def _safe_sql_case_log(
+    *,
+    case_id: str,
+    source: str,
+    mode: str | None,
+    created_by: str,
+    case_status: str,
+    case_kind: str,
+    title: str | None = None,
+    summary: str | None = None,
+    linked_test_id: str | None = None,
+    linked_followup_id: str | None = None,
+    linked_error_id: str | None = None,
+    linked_validation_id: str | None = None,
+    action_key: str | None = None,
+    entity_id: str | None = None,
+    target_role: str | None = None,
+    confidence: float | None = None,
+    validated: bool | None = None,
+    repeatable: bool | None = None,
+    important: bool | None = None,
+    learning: str | None = None,
+    recommended_action: str | None = None,
+    note: str | None = None,
+) -> None:
+    try:
+        insert_case_run(
+            case_id=case_id,
+            source=source,
+            mode=mode,
+            created_by=created_by,
+            case_status=case_status,
+            case_kind=case_kind,
+            title=title,
+            summary=summary,
+            linked_test_id=linked_test_id,
+            linked_followup_id=linked_followup_id,
+            linked_error_id=linked_error_id,
+            linked_validation_id=linked_validation_id,
+            action_key=action_key,
+            entity_id=entity_id,
+            target_role=target_role,
+            confidence=confidence,
+            validated=validated,
+            repeatable=repeatable,
+            important=important,
+            learning=learning,
+            recommended_action=recommended_action,
+            note=note,
+        )
+    except Exception:
+        pass
+
 
 
 def _now_iso() -> str:
@@ -167,7 +287,7 @@ def create_case_candidate_from_observation(obs: Dict[str, Any]) -> Optional[Dict
         recommendation = "check_device_reliability"
         confidence = 0.50
 
-    return _append_case_candidate({
+    candidate = _append_case_candidate({
         "type": "case_candidate",
         "case_type": case_type,
         "title": title,
@@ -193,6 +313,32 @@ def create_case_candidate_from_observation(obs: Dict[str, Any]) -> Optional[Dict
         "links": [x for x in [obs.get("observation_id"), obs.get("followup_id")] if x],
         "tags": ["followup", category],
     })
+
+    _safe_sql_case_log(
+        case_id=str(candidate.get("case_candidate_id") or ""),
+        source="followup",
+        mode=None,
+        created_by="system",
+        case_status=str(candidate.get("status") or "candidate"),
+        case_kind=str(candidate.get("case_type") or "case_candidate"),
+        title=candidate.get("title"),
+        summary=candidate.get("conclusion") or candidate.get("problem"),
+        linked_test_id=None,
+        linked_followup_id=obs.get("followup_id"),
+        linked_error_id=None,
+        linked_validation_id=None,
+        action_key=action_key,
+        entity_id=obs.get("entity_id") or obs.get("target_entity"),
+        target_role=None,
+        confidence=float(candidate.get("confidence") or 0.0),
+        validated=False,
+        repeatable=(category in ("effect_success", "effect_failure")),
+        important=(category in ("verify_failure", "effect_failure")),
+        learning=obs.get("summary"),
+        recommended_action=candidate.get("recommendation"),
+        note="auto from create_case_candidate_from_observation",
+    )
+    return candidate
 
 
 def _observation_from_followup(fu: Dict[str, Any], result: Dict[str, Any]) -> Optional[Dict[str, Any]]:
@@ -440,6 +586,35 @@ def create_followup(
         "followup_type": type,
         "target_entity": target_entity,
     })
+
+    _safe_sql_followup_log(
+        followup_id=fu_id,
+        source=source,
+        mode=(meta or {}).get("mode"),
+        created_by="system",
+        followup_status="scheduled",
+        followup_kind=type,
+        linked_log_type="followup",
+        linked_log_id=fu_id,
+        linked_action_key=action_key,
+        linked_entity_id=entity_id or target_entity,
+        linked_target_role=(meta or {}).get("target_role"),
+        reason=(meta or {}).get("reason") or f"followup_created:{type}",
+        expected_check=(f"state={expected_state}" if expected_state else f"effect_check:{target_entity}" if target_entity else None),
+        actual_result=None,
+        decision="pending",
+        scheduled_for=item.get("created_at"),
+        started_at=None,
+        completed_at=None,
+        canceled_at=None,
+        execution_ok=None,
+        verify_ok=None,
+        verify_v2_ok=None,
+        verify_v2_status=None,
+        confidence=0.8,
+        source_text=(meta or {}).get("source_text"),
+        note="auto from create_followup",
+    )
     return item
 
 
@@ -563,6 +738,35 @@ def run_due_followups_once() -> Dict[str, Any]:
             "status": fu.get("status"),
             "result": result,
         })
+
+        _safe_sql_followup_log(
+            followup_id=str(fu.get("followup_id") or ""),
+            source=str(fu.get("source") or "followup_runner"),
+            mode=str((fu.get("meta") or {}).get("mode") or ""),
+            created_by="system",
+            followup_status=str(fu.get("status") or ""),
+            followup_kind=str(fu.get("type") or ""),
+            linked_log_type="followup",
+            linked_log_id=str(fu.get("followup_id") or ""),
+            linked_action_key=fu.get("action_key"),
+            linked_entity_id=fu.get("entity_id") or fu.get("target_entity"),
+            linked_target_role=(fu.get("meta") or {}).get("target_role"),
+            reason=str((result or {}).get("reason") or (result or {}).get("error") or ""),
+            expected_check=(f"state={fu.get('expected_state')}" if fu.get("expected_state") else f"effect_check:{fu.get('target_entity')}" if fu.get("target_entity") else None),
+            actual_result=str(result),
+            decision=("completed" if result.get("ok") else "failed"),
+            scheduled_for=fu.get("created_at"),
+            started_at=None,
+            completed_at=fu.get("completed_at"),
+            canceled_at=None,
+            execution_ok=None,
+            verify_ok=bool(result.get("ok")),
+            verify_v2_ok=bool(result.get("ok")),
+            verify_v2_status=("ok" if result.get("ok") else "failed"),
+            confidence=0.85 if result.get("ok") else 0.75,
+            source_text=(fu.get("meta") or {}).get("source_text"),
+            note="auto from run_due_followups_once",
+        )
 
         observation = _observation_from_followup(fu, result)
         if observation:

@@ -12,6 +12,76 @@ from greenhouse_v17.services.ai_schedule_service import create_ai_schedule
 from greenhouse_v17.services.webadmin_execution_service import create_pending_ask, execute_action, load_ask_state
 from greenhouse_v17.services.ai_schedule_service import create_ai_schedule
 from greenhouse_v17.services.decision_logger import log_decision
+from greenhouse_v17.services.ai_decision_log_service import insert_ai_decision_run
+
+
+
+
+def _safe_log_ai_decision(
+    *,
+    decision_id: str,
+    source: str,
+    mode: str,
+    decision_status: str,
+    decision_kind: str,
+    user_message: str,
+    normalized_intent: str,
+    decision_summary: str,
+    decision_reasoning: str,
+    proposed_action_key: str | None = None,
+    proposed_target_role: str | None = None,
+    proposed_entity_id: str | None = None,
+    proposed_operation: str | None = None,
+    proposed_expected_state: str | None = None,
+    ask_required: bool | None = None,
+    ask_created: bool | None = None,
+    ask_confirmed: bool | None = None,
+    ask_canceled: bool | None = None,
+    execution_linked: bool | None = None,
+    execution_ok: bool | None = None,
+    verify_ok: bool | None = None,
+    verify_v2_ok: bool | None = None,
+    verify_v2_status: str | None = None,
+    confidence: float | None = None,
+    risk_level: str | None = None,
+    context_types: str | None = None,
+    note: str | None = None,
+) -> None:
+    try:
+        insert_ai_decision_run(
+            decision_id=decision_id,
+            source=source,
+            mode=mode,
+            created_by="system",
+            decision_status=decision_status,
+            decision_kind=decision_kind,
+            provider="local_router",
+            model="chat_router_v1",
+            user_message=user_message,
+            normalized_intent=normalized_intent,
+            decision_summary=decision_summary,
+            decision_reasoning=decision_reasoning,
+            proposed_action_key=proposed_action_key,
+            proposed_target_role=proposed_target_role,
+            proposed_entity_id=proposed_entity_id,
+            proposed_operation=proposed_operation,
+            proposed_expected_state=proposed_expected_state,
+            ask_required=ask_required,
+            ask_created=ask_created,
+            ask_confirmed=ask_confirmed,
+            ask_canceled=ask_canceled,
+            execution_linked=execution_linked,
+            execution_ok=execution_ok,
+            verify_ok=verify_ok,
+            verify_v2_ok=verify_v2_ok,
+            verify_v2_status=verify_v2_status,
+            confidence=confidence,
+            risk_level=risk_level,
+            context_types=context_types,
+            note=note,
+        )
+    except Exception:
+        pass
 
 
 @dataclass
@@ -144,6 +214,35 @@ def _build_device_action_reply(parsed: ParsedIntent) -> ChatResponse:
             title=f"Chat: {human_action} {human_target}",
             source="chat",
         )
+        _safe_log_ai_decision(
+            decision_id=f"ai_chat_ask_{action_key}",
+            source="chat",
+            mode=mode_name,
+            decision_status="proposed",
+            decision_kind="nl_control",
+            user_message=text,
+            normalized_intent=parsed.intent_type,
+            decision_summary=f"Создан ASK для {action_key}",
+            decision_reasoning="device_action распознан и отправлен в ASK",
+            proposed_action_key=action_key,
+            proposed_target_role=target,
+            proposed_entity_id=None,
+            proposed_operation=action,
+            proposed_expected_state=("on" if action == "turn_on" else "off"),
+            ask_required=True,
+            ask_created=True,
+            ask_confirmed=False,
+            ask_canceled=False,
+            execution_linked=False,
+            execution_ok=None,
+            verify_ok=None,
+            verify_v2_ok=None,
+            verify_v2_status=None,
+            confidence=0.95,
+            risk_level="low",
+            context_types="mode,chat_intent",
+            note="auto from device_action ask path",
+        )
         log_decision(
             mode=mode_name,
             source="chat",
@@ -164,6 +263,35 @@ def _build_device_action_reply(parsed: ParsedIntent) -> ChatResponse:
 
     reply += "Выполняю действие через общий execution pipeline."
     result = execute_action(action_key=action_key, dry_run=False, source="chat")
+    _safe_log_ai_decision(
+        decision_id=f"ai_chat_exec_{action_key}",
+        source="chat",
+        mode=mode_name,
+        decision_status="executed",
+        decision_kind="nl_control",
+        user_message=text,
+        normalized_intent=parsed.intent_type,
+        decision_summary=f"Выполнено действие {action_key} через execution pipeline",
+        decision_reasoning="device_action распознан и отправлен в execution",
+        proposed_action_key=action_key,
+        proposed_target_role=target,
+        proposed_entity_id=str(result.get("entity_id") or ""),
+        proposed_operation=action,
+        proposed_expected_state=("on" if action == "turn_on" else "off"),
+        ask_required=False,
+        ask_created=False,
+        ask_confirmed=False,
+        ask_canceled=False,
+        execution_linked=True,
+        execution_ok=bool(result.get("ok")),
+        verify_ok=result.get("verified"),
+        verify_v2_ok=(str(result.get("verify_v2_status") or "") == "ok"),
+        verify_v2_status=str(result.get("verify_v2_status") or ""),
+        confidence=0.95,
+        risk_level="low",
+        context_types="mode,chat_intent,execution_result",
+        note="auto from device_action execution path",
+    )
     log_decision(
         mode=mode_name,
         source="chat",
@@ -184,6 +312,7 @@ def _build_device_action_reply(parsed: ParsedIntent) -> ChatResponse:
 
 def handle_chat_message(text: str) -> ChatResponse:
     # === AI ROUTER DEBUG HOOK ===
+    ai_debug = None
     try:
         ai_debug = route_ai_message(text)
         print("\n=== AI ROUTER DEBUG ===")
@@ -192,6 +321,39 @@ def handle_chat_message(text: str) -> ChatResponse:
         print("AI ROUTER ERROR:", e)
 
     parsed = parse_intent(text)
+
+    try:
+        _safe_log_ai_decision(
+            decision_id=f"ai_router_{parsed.intent_type}",
+            source="chat",
+            mode=(get_mode_flags().get("title") or get_mode_flags().get("name") or "UNKNOWN"),
+            decision_status="routed",
+            decision_kind=str((ai_debug or {}).get("task_type") or parsed.intent_type),
+            user_message=text,
+            normalized_intent=parsed.intent_type,
+            decision_summary=str((ai_debug or {}).get("response_text") or "route_ai_message processed"),
+            decision_reasoning="auto from chat router before final branch",
+            proposed_action_key=((ai_debug or {}).get("proposed_action") or {}).get("action_key"),
+            proposed_target_role=((ai_debug or {}).get("proposed_action") or {}).get("target"),
+            proposed_entity_id=None,
+            proposed_operation=((ai_debug or {}).get("proposed_action") or {}).get("action"),
+            proposed_expected_state=None,
+            ask_required=None,
+            ask_created=None,
+            ask_confirmed=None,
+            ask_canceled=None,
+            execution_linked=False,
+            execution_ok=None,
+            verify_ok=None,
+            verify_v2_ok=None,
+            verify_v2_status=None,
+            confidence=0.8,
+            risk_level="low",
+            context_types="runtime,mode,router_context",
+            note="auto from handle_chat_message entry",
+        )
+    except Exception:
+        pass
 
     if parsed.intent_type == "empty":
         return ChatResponse(

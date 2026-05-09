@@ -1,4 +1,5 @@
 from __future__ import annotations
+from greenhouse_v17.services.schedule_log_service import insert_schedule_run
 
 import json
 import threading
@@ -34,6 +35,90 @@ RU_DAYS = {
     "sat": "Сб",
     "sun": "Вс",
 }
+
+
+
+
+def _safe_sql_schedule_log(
+    *,
+    schedule_id: str,
+    source: str,
+    mode: str | None,
+    created_by: str,
+    schedule_kind: str,
+    schedule_status: str,
+    enabled: bool | None = None,
+    ask_required: bool | None = None,
+    ask_created: bool | None = None,
+    ask_confirmed: bool | None = None,
+    ask_canceled: bool | None = None,
+    target_role: str | None = None,
+    zone: str | None = None,
+    entity_id: str | None = None,
+    action_key: str | None = None,
+    off_action_key: str | None = None,
+    operation: str | None = None,
+    expected_state: str | None = None,
+    cron_expr: str | None = None,
+    timezone: str | None = None,
+    requested_at: str | None = None,
+    next_run_at: str | None = None,
+    last_run_at: str | None = None,
+    completed_at: str | None = None,
+    canceled_at: str | None = None,
+    execution_ok: bool | None = None,
+    execution_message: str | None = None,
+    verify_ok: bool | None = None,
+    verify_actual_state: str | None = None,
+    verify_v2_ok: bool | None = None,
+    verify_v2_status: str | None = None,
+    verify_v2_reason: str | None = None,
+    duration_ms: int | None = None,
+    latency_ms: int | None = None,
+    source_text: str | None = None,
+    note: str | None = None,
+) -> None:
+    try:
+        insert_schedule_run(
+            schedule_id=schedule_id,
+            source=source,
+            mode=mode,
+            created_by=created_by,
+            schedule_kind=schedule_kind,
+            schedule_status=schedule_status,
+            enabled=enabled,
+            ask_required=ask_required,
+            ask_created=ask_created,
+            ask_confirmed=ask_confirmed,
+            ask_canceled=ask_canceled,
+            target_role=target_role,
+            zone=zone,
+            entity_id=entity_id,
+            action_key=action_key,
+            off_action_key=off_action_key,
+            operation=operation,
+            expected_state=expected_state,
+            cron_expr=cron_expr,
+            timezone=timezone,
+            requested_at=requested_at,
+            next_run_at=next_run_at,
+            last_run_at=last_run_at,
+            completed_at=completed_at,
+            canceled_at=canceled_at,
+            execution_ok=execution_ok,
+            execution_message=execution_message,
+            verify_ok=verify_ok,
+            verify_actual_state=verify_actual_state,
+            verify_v2_ok=verify_v2_ok,
+            verify_v2_status=verify_v2_status,
+            verify_v2_reason=verify_v2_reason,
+            duration_ms=duration_ms,
+            latency_ms=latency_ms,
+            source_text=source_text,
+            note=note,
+        )
+    except Exception:
+        pass
 
 
 def _ensure_files() -> None:

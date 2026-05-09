@@ -7,6 +7,8 @@ import time
 from dataclasses import asdict, dataclass, field
 from greenhouse_v17.services.verify_debug_service import run_state_verify_debug
 from greenhouse_v17.services.unified_log_service import append_execution_log
+from greenhouse_v17.services.timer_log_service import insert_timer_run
+from greenhouse_v17.services.error_safety_log_service import insert_error_safety_run
 
 
 import threading
@@ -551,6 +553,149 @@ def _append_log(record: Dict[str, Any]) -> None:
         f.write(json.dumps(record, ensure_ascii=False) + "\n")
 
 
+
+
+def _maybe_log_error_safety_from_execution_result(
+    *,
+    result: dict,
+    source: str,
+    mode: str | None,
+    action_key: str | None,
+    entity_id: str | None,
+    target_role: str | None,
+) -> None:
+    try:
+        ok = bool(result.get("ok"))
+        verify_v2_status = str(result.get("verify_v2_status") or "")
+        details = result.get("details") or {}
+        message = str(result.get("message") or result.get("error") or "")
+        safety_like = any(
+            s in (message + " " + str(details)).lower()
+            for s in ["safety", "blocked", "forbidden", "reject", "validation", "mode"]
+        )
+        should_log = (not ok) or (verify_v2_status not in ("", "ok"))
+        if not should_log:
+            return
+
+        severity = "warning" if safety_like or verify_v2_status in ("failed", "stale") else "error"
+        decision = "blocked" if safety_like else ("failed" if not ok else verify_v2_status or "attention")
+        insert_error_safety_run(
+            error_id=f"exec_{action_key or 'unknown'}_{result.get('ts') or result.get('time') or ''}",
+            source=source,
+            mode=mode,
+            created_by="system",
+            layer="execution",
+            event_type="execution_result",
+            severity=severity,
+            status="open",
+            safety_related=safety_like,
+            blocked=safety_like,
+            auto_followup_created=False,
+            case_candidate_created=False,
+            action_key=action_key,
+            entity_id=entity_id,
+            target_role=target_role,
+            rule_name=None,
+            error_code=str(result.get("error") or ""),
+            message=message or str(result),
+            details_text=str(details),
+            decision=decision,
+            resolution=str(result.get("verify_v2_reason") or ""),
+            confidence=0.9 if safety_like else 0.8,
+            note="auto from execution pipeline",
+        )
+    except Exception:
+        pass
+
+
+
+
+def _safe_sql_timer_log(
+    *,
+    timer_id: str,
+    source: str,
+    mode: str | None,
+    created_by: str,
+    timer_kind: str,
+    timer_status: str,
+    ask_required: bool | None = None,
+    ask_created: bool | None = None,
+    ask_confirmed: bool | None = None,
+    ask_canceled: bool | None = None,
+    target_role: str | None = None,
+    zone: str | None = None,
+    entity_id: str | None = None,
+    action_key: str | None = None,
+    off_action_key: str | None = None,
+    operation: str | None = None,
+    expected_state: str | None = None,
+    delay_seconds: int | None = None,
+    duration_seconds: int | None = None,
+    requested_at: str | None = None,
+    scheduled_for: str | None = None,
+    fired_at: str | None = None,
+    completed_at: str | None = None,
+    canceled_at: str | None = None,
+    execution_ok: bool | None = None,
+    execution_message: str | None = None,
+    verify_ok: bool | None = None,
+    verify_actual_state: str | None = None,
+    verify_v2_ok: bool | None = None,
+    verify_v2_status: str | None = None,
+    verify_v2_reason: str | None = None,
+    rollback_planned: bool | None = None,
+    rollback_ok: bool | None = None,
+    rollback_message: str | None = None,
+    duration_ms: int | None = None,
+    latency_ms: int | None = None,
+    source_text: str | None = None,
+    note: str | None = None,
+) -> None:
+    try:
+        insert_timer_run(
+            timer_id=timer_id,
+            source=source,
+            mode=mode,
+            created_by=created_by,
+            timer_kind=timer_kind,
+            timer_status=timer_status,
+            ask_required=ask_required,
+            ask_created=ask_created,
+            ask_confirmed=ask_confirmed,
+            ask_canceled=ask_canceled,
+            target_role=target_role,
+            zone=zone,
+            entity_id=entity_id,
+            action_key=action_key,
+            off_action_key=off_action_key,
+            operation=operation,
+            expected_state=expected_state,
+            delay_seconds=delay_seconds,
+            duration_seconds=duration_seconds,
+            requested_at=requested_at,
+            scheduled_for=scheduled_for,
+            fired_at=fired_at,
+            completed_at=completed_at,
+            canceled_at=canceled_at,
+            execution_ok=execution_ok,
+            execution_message=execution_message,
+            verify_ok=verify_ok,
+            verify_actual_state=verify_actual_state,
+            verify_v2_ok=verify_v2_ok,
+            verify_v2_status=verify_v2_status,
+            verify_v2_reason=verify_v2_reason,
+            rollback_planned=rollback_planned,
+            rollback_ok=rollback_ok,
+            rollback_message=rollback_message,
+            duration_ms=duration_ms,
+            latency_ms=latency_ms,
+            source_text=source_text,
+            note=note,
+        )
+    except Exception:
+        pass
+
+
 def execute_action(
     action_key: str,
     dry_run: bool = False,
@@ -721,8 +866,19 @@ def execute_action(
     except Exception as exc:
         result.details["unified_log_error"] = type(exc).__name__
 
-    _append_log(result.to_dict())
-    return result.to_dict()
+    result_dict = result.to_dict()
+
+    _maybe_log_error_safety_from_execution_result(
+        result=result_dict,
+        source=source,
+        mode=requested_mode,
+        action_key=action_key,
+        entity_id=entity_id,
+        target_role=(meta or {}).get("target_role"),
+    )
+
+    _append_log(result_dict)
+    return result_dict
 
 
 def load_ask_state() -> Dict[str, Any]:

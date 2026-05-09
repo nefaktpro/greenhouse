@@ -7,8 +7,41 @@ from greenhouse_v17.services.decision_logger import log_decision
 
 from greenhouse_v17.services.webadmin_execution_service import execute_action, create_pending_ask, debug_action_map_full, load_action_map, resolve_action, _read_state_value, load_ask_state
 from greenhouse_v17.services.unified_log_service import read_last_log_for_entity
+from greenhouse_v17.services.validation_rejection_log_service import insert_validation_rejection_run
 
 router = APIRouter(prefix="/api/actions", tags=["actions"])
+
+
+def _log_validation_rejection(
+    *,
+    mode_name: str,
+    action_key: str,
+    payload_dict: dict,
+) -> None:
+    try:
+        insert_validation_rejection_run(
+            validation_id=f"validation_{action_key}_{mode_name}",
+            source="web_admin",
+            mode=mode_name,
+            created_by="system",
+            layer="validation",
+            candidate_type="action_execution",
+            action_key=action_key,
+            entity_id=str(payload_dict.get("entity_id") or ""),
+            target_role=str(payload_dict.get("target_role") or ""),
+            status="rejected",
+            rejection_reason=str(payload_dict.get("error") or payload_dict.get("message") or "validation_reject"),
+            rule_name=str(payload_dict.get("details") or ""),
+            safety_blocked=("safety" in str(payload_dict).lower() or "blocked" in str(payload_dict).lower()),
+            message=str(payload_dict.get("message") or payload_dict.get("details") or ""),
+            suggested_resolution="Проверить mode / ask / safety / capability и повторить через допустимый маршрут.",
+            confidence=0.95,
+            note="auto from actions route",
+        )
+    except Exception:
+        pass
+
+
 
 
 class ExecuteActionIn(BaseModel):
@@ -27,7 +60,7 @@ def execute_action_route(payload: ExecuteActionIn):
     if payload.ask or mode.get("ask"):
         current = load_ask_state()
         if current.get("has_pending"):
-            return {
+            reject_payload = {
                 "ok": False,
                 "mode": mode_name,
                 "routed_to": "ASK",
@@ -35,6 +68,12 @@ def execute_action_route(payload: ExecuteActionIn):
                 "message": "Сначала подтвердите или отмените текущее ASK-действие.",
                 "pending": current,
             }
+            _log_validation_rejection(
+                mode_name=mode_name,
+                action_key=payload.action_key,
+                payload_dict=reject_payload,
+            )
+            return reject_payload
 
         state = create_pending_ask(
             action_key=payload.action_key,
@@ -67,12 +106,27 @@ def execute_action_route(payload: ExecuteActionIn):
         result=result.get("status") or result.get("message"),
         details={"execution_result": result},
     )
-    return {
+    response_payload = {
         "ok": bool(result.get("ok")),
         "mode": mode_name,
         "routed_to": "EXECUTION",
         "result": result
     }
+
+    if not bool(result.get("ok")):
+        _log_validation_rejection(
+            mode_name=mode_name,
+            action_key=payload.action_key,
+            payload_dict={
+                "error": result.get("error"),
+                "message": result.get("message"),
+                "details": result.get("details"),
+                "entity_id": result.get("entity_id"),
+                "target_role": result.get("target_role"),
+            },
+        )
+
+    return response_payload
 
 
 @router.get("/debug/action-map")
