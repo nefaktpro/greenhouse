@@ -204,6 +204,45 @@ def create_ai_schedule(
     items.append(item)
     _write_json(SCHEDULES_PATH, items)
     append_schedule_log("schedule_created", item)
+
+    _safe_sql_schedule_log(
+        schedule_id=str(item.get("schedule_id") or ""),
+        source="web_admin",
+        mode=None,
+        created_by="system",
+        schedule_kind="weekly_time",
+        schedule_status="created",
+        enabled=bool(item.get("enabled")),
+        ask_required=False,
+        ask_created=False,
+        ask_confirmed=False,
+        ask_canceled=False,
+        target_role=None,
+        zone=None,
+        entity_id=None,
+        action_key=item.get("action_key"),
+        off_action_key=None,
+        operation=None,
+        expected_state=None,
+        cron_expr=f"{','.join(item.get('days', []))} {item.get('time')}",
+        timezone="local",
+        requested_at=None,
+        next_run_at=None,
+        last_run_at=None,
+        completed_at=None,
+        canceled_at=None,
+        execution_ok=None,
+        execution_message=None,
+        verify_ok=None,
+        verify_actual_state=None,
+        verify_v2_ok=None,
+        verify_v2_status=None,
+        verify_v2_reason=None,
+        duration_ms=None,
+        latency_ms=None,
+        source_text=item.get("source_text"),
+        note="auto from create_ai_schedule",
+    )
     return {"ok": True, "item": item}
 
 
@@ -220,6 +259,45 @@ def set_ai_schedule_enabled(schedule_id: str, enabled: bool) -> Dict[str, Any]:
         return {"ok": False, "error": "not_found"}
     _write_json(SCHEDULES_PATH, items)
     append_schedule_log("schedule_enabled_changed", found, {"enabled": enabled})
+
+    _safe_sql_schedule_log(
+        schedule_id=str(found.get("schedule_id") or ""),
+        source="web_admin",
+        mode=None,
+        created_by="system",
+        schedule_kind="weekly_time",
+        schedule_status=("enabled" if enabled else "disabled"),
+        enabled=bool(found.get("enabled")),
+        ask_required=False,
+        ask_created=False,
+        ask_confirmed=False,
+        ask_canceled=False,
+        target_role=None,
+        zone=None,
+        entity_id=None,
+        action_key=found.get("action_key"),
+        off_action_key=None,
+        operation=None,
+        expected_state=None,
+        cron_expr=f"{','.join(found.get('days', []))} {found.get('time')}",
+        timezone="local",
+        requested_at=None,
+        next_run_at=None,
+        last_run_at=None,
+        completed_at=None,
+        canceled_at=(datetime.now().isoformat() if not enabled else None),
+        execution_ok=None,
+        execution_message=None,
+        verify_ok=None,
+        verify_actual_state=None,
+        verify_v2_ok=None,
+        verify_v2_status=None,
+        verify_v2_reason=None,
+        duration_ms=None,
+        latency_ms=None,
+        source_text=found.get("source_text"),
+        note="auto from set_ai_schedule_enabled",
+    )
     return {"ok": True, "item": found}
 
 
@@ -263,6 +341,46 @@ def run_due_schedules_once() -> Dict[str, Any]:
             item["last_result"] = result
             item["updated_at"] = time.time()
             append_schedule_log("schedule_executed", item, {"result": result})
+
+            _safe_sql_schedule_log(
+                schedule_id=str(item.get("schedule_id") or ""),
+                source="ai_schedule",
+                mode=None,
+                created_by="system",
+                schedule_kind="weekly_time",
+                schedule_status=("done" if result.get("ok") else "failed"),
+                enabled=bool(item.get("enabled")),
+                ask_required=False,
+                ask_created=False,
+                ask_confirmed=False,
+                ask_canceled=False,
+                target_role=None,
+                zone=None,
+                entity_id=None,
+                action_key=item.get("action_key"),
+                off_action_key=None,
+                operation=None,
+                expected_state=None,
+                cron_expr=f"{','.join(item.get('days', []))} {item.get('time')}",
+                timezone="local",
+                requested_at=None,
+                next_run_at=None,
+                last_run_at=str(item.get("last_run_at")),
+                completed_at=datetime.now().isoformat(),
+                canceled_at=None,
+                execution_ok=bool(result.get("ok")),
+                execution_message=None,
+                verify_ok=bool(result.get("ok")),
+                verify_actual_state=None,
+                verify_v2_ok=bool(result.get("ok")),
+                verify_v2_status=("ok" if result.get("ok") else "failed"),
+                verify_v2_reason=None,
+                duration_ms=None,
+                latency_ms=None,
+                source_text=item.get("source_text"),
+                note="auto from run_due_schedules_once success",
+            )
+
             executed.append({"schedule_id": item.get("schedule_id"), "action_keys": action_keys, "result": result})
         except Exception as e:
             item["last_run_key"] = run_key
@@ -270,6 +388,46 @@ def run_due_schedules_once() -> Dict[str, Any]:
             item["last_result"] = {"ok": False, "error": str(e)}
             item["updated_at"] = time.time()
             append_schedule_log("schedule_error", item, {"error": str(e)})
+
+            _safe_sql_schedule_log(
+                schedule_id=str(item.get("schedule_id") or ""),
+                source="ai_schedule",
+                mode=None,
+                created_by="system",
+                schedule_kind="weekly_time",
+                schedule_status="error",
+                enabled=bool(item.get("enabled")),
+                ask_required=False,
+                ask_created=False,
+                ask_confirmed=False,
+                ask_canceled=False,
+                target_role=None,
+                zone=None,
+                entity_id=None,
+                action_key=item.get("action_key"),
+                off_action_key=None,
+                operation=None,
+                expected_state=None,
+                cron_expr=f"{','.join(item.get('days', []))} {item.get('time')}",
+                timezone="local",
+                requested_at=None,
+                next_run_at=None,
+                last_run_at=str(item.get("last_run_at")),
+                completed_at=datetime.now().isoformat(),
+                canceled_at=None,
+                execution_ok=False,
+                execution_message=str(e),
+                verify_ok=False,
+                verify_actual_state=None,
+                verify_v2_ok=False,
+                verify_v2_status="failed",
+                verify_v2_reason=str(e),
+                duration_ms=None,
+                latency_ms=None,
+                source_text=item.get("source_text"),
+                note="auto from run_due_schedules_once error",
+            )
+
             executed.append({"schedule_id": item.get("schedule_id"), "action_key": action_key, "error": str(e)})
 
     _write_json(SCHEDULES_PATH, items)
@@ -318,4 +476,43 @@ def delete_ai_schedule(schedule_id: str) -> Dict[str, Any]:
 
     _write_json(SCHEDULES_PATH, kept)
     append_schedule_log("schedule_deleted", deleted)
+
+    _safe_sql_schedule_log(
+        schedule_id=str(deleted.get("schedule_id") or ""),
+        source="web_admin",
+        mode=None,
+        created_by="system",
+        schedule_kind="weekly_time",
+        schedule_status="deleted",
+        enabled=False,
+        ask_required=False,
+        ask_created=False,
+        ask_confirmed=False,
+        ask_canceled=False,
+        target_role=None,
+        zone=None,
+        entity_id=None,
+        action_key=deleted.get("action_key"),
+        off_action_key=None,
+        operation=None,
+        expected_state=None,
+        cron_expr=f"{','.join(deleted.get('days', []))} {deleted.get('time')}",
+        timezone="local",
+        requested_at=None,
+        next_run_at=None,
+        last_run_at=None,
+        completed_at=None,
+        canceled_at=datetime.now().isoformat(),
+        execution_ok=None,
+        execution_message=None,
+        verify_ok=None,
+        verify_actual_state=None,
+        verify_v2_ok=None,
+        verify_v2_status=None,
+        verify_v2_reason=None,
+        duration_ms=None,
+        latency_ms=None,
+        source_text=deleted.get("source_text"),
+        note="auto from delete_ai_schedule",
+    )
     return {"ok": True, "item": deleted}

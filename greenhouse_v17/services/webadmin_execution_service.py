@@ -64,6 +64,47 @@ def _register_ai_timer(action_key, followup_action_key, duration_seconds, source
         items.append(timer)
         p.write_text(json.dumps(items[-300:], ensure_ascii=False, indent=2), encoding="utf-8")
         append_timer_log("timer_created", timer)
+
+        _safe_sql_timer_log(
+            timer_id=str(timer.get("timer_id") or ""),
+            source=str(timer.get("source") or "ai_chat_ask_timer"),
+            mode=None,
+            created_by="system",
+            timer_kind=("duration_followup" if followup_action_key else "delay"),
+            timer_status=str(timer.get("status") or "running"),
+            ask_required=True,
+            ask_created=True,
+            ask_confirmed=False,
+            ask_canceled=False,
+            target_role=None,
+            zone=None,
+            entity_id=None,
+            action_key=action_key,
+            off_action_key=followup_action_key,
+            operation="turn_on",
+            expected_state="on",
+            delay_seconds=int(duration_seconds),
+            duration_seconds=int(duration_seconds),
+            requested_at=None,
+            scheduled_for=None,
+            fired_at=None,
+            completed_at=None,
+            canceled_at=None,
+            execution_ok=None,
+            execution_message=None,
+            verify_ok=None,
+            verify_actual_state=None,
+            verify_v2_ok=None,
+            verify_v2_status=None,
+            verify_v2_reason=None,
+            rollback_planned=bool(followup_action_key),
+            rollback_ok=None,
+            rollback_message=None,
+            duration_ms=None,
+            latency_ms=None,
+            source_text=source_text,
+            note="auto from _register_ai_timer",
+        )
     except Exception as e:
         print("[TIMER REGISTER ERROR]", e)
     return timer
@@ -85,6 +126,47 @@ def _run_followup_timer(duration, action_key, timer_id=None):
             _update_ai_timer(timer_id, status="executing")
 
         result = execute_action(action_key=action_key, source="timer_followup")
+
+        _safe_sql_timer_log(
+            timer_id=str(timer_id or f"followup_{action_key}"),
+            source="timer_followup",
+            mode=None,
+            created_by="system",
+            timer_kind="followup",
+            timer_status=("done" if bool(result.get("ok")) else "failed"),
+            ask_required=False,
+            ask_created=False,
+            ask_confirmed=False,
+            ask_canceled=False,
+            target_role=None,
+            zone=None,
+            entity_id=str(result.get("entity_id") or ""),
+            action_key=action_key,
+            off_action_key=None,
+            operation=str(result.get("operation") or ""),
+            expected_state=str(result.get("expected_state") or ""),
+            delay_seconds=int(duration),
+            duration_seconds=None,
+            requested_at=None,
+            scheduled_for=None,
+            fired_at=None,
+            completed_at=None,
+            canceled_at=None,
+            execution_ok=bool(result.get("ok")),
+            execution_message=str(result.get("message") or result.get("error") or ""),
+            verify_ok=result.get("verified"),
+            verify_actual_state=str(result.get("actual_state") or ""),
+            verify_v2_ok=(str(result.get("details", {}).get("verify_v2_debug", {}).get("status") or "") == "ok"),
+            verify_v2_status=str(result.get("details", {}).get("verify_v2_debug", {}).get("status") or ""),
+            verify_v2_reason=str(result.get("details", {}).get("verify_v2_debug", {}).get("reason") or ""),
+            rollback_planned=False,
+            rollback_ok=None,
+            rollback_message=None,
+            duration_ms=result.get("details", {}).get("duration_ms"),
+            latency_ms=None,
+            source_text=None,
+            note="auto from _run_followup_timer",
+        )
 
         if timer_id:
             _update_ai_timer(timer_id, status="done", result=result)
@@ -112,6 +194,47 @@ def _run_delayed_action(delay, action_key, timer_id=None):
             _update_ai_timer(timer_id, status="executing")
 
         result = execute_action(action_key=action_key, source="timer_delayed")
+
+        _safe_sql_timer_log(
+            timer_id=str(timer_id or f"delayed_{action_key}"),
+            source="timer_delayed",
+            mode=None,
+            created_by="system",
+            timer_kind="delay",
+            timer_status=("done" if bool(result.get("ok")) else "failed"),
+            ask_required=False,
+            ask_created=False,
+            ask_confirmed=False,
+            ask_canceled=False,
+            target_role=None,
+            zone=None,
+            entity_id=str(result.get("entity_id") or ""),
+            action_key=action_key,
+            off_action_key=None,
+            operation=str(result.get("operation") or ""),
+            expected_state=str(result.get("expected_state") or ""),
+            delay_seconds=int(delay),
+            duration_seconds=None,
+            requested_at=None,
+            scheduled_for=None,
+            fired_at=None,
+            completed_at=None,
+            canceled_at=None,
+            execution_ok=bool(result.get("ok")),
+            execution_message=str(result.get("message") or result.get("error") or ""),
+            verify_ok=result.get("verified"),
+            verify_actual_state=str(result.get("actual_state") or ""),
+            verify_v2_ok=(str(result.get("details", {}).get("verify_v2_debug", {}).get("status") or "") == "ok"),
+            verify_v2_status=str(result.get("details", {}).get("verify_v2_debug", {}).get("status") or ""),
+            verify_v2_reason=str(result.get("details", {}).get("verify_v2_debug", {}).get("reason") or ""),
+            rollback_planned=False,
+            rollback_ok=None,
+            rollback_message=None,
+            duration_ms=result.get("details", {}).get("duration_ms"),
+            latency_ms=None,
+            source_text=None,
+            note="auto from _run_delayed_action",
+        )
 
         if timer_id:
             _update_ai_timer(timer_id, status="done", result=result)
@@ -165,6 +288,47 @@ def _run_delayed_duration_action(delay, duration, action_key, followup_action_ke
 
         print(f"[TIMER] delayed duration followup {followup_action_key} timer_id={timer_id}")
         result_off = execute_action(action_key=followup_action_key, source="timer_delayed_duration_followup")
+
+        _safe_sql_timer_log(
+            timer_id=str(timer_id or f"delay_duration_{action_key}"),
+            source="timer_delayed_duration",
+            mode=None,
+            created_by="system",
+            timer_kind="delay_duration",
+            timer_status=("done" if bool(result_off.get("ok")) else "failed"),
+            ask_required=False,
+            ask_created=False,
+            ask_confirmed=False,
+            ask_canceled=False,
+            target_role=None,
+            zone=None,
+            entity_id=str(result_off.get("entity_id") or result_on.get("entity_id") or ""),
+            action_key=action_key,
+            off_action_key=followup_action_key,
+            operation=str(result_on.get("operation") or ""),
+            expected_state=str(result_on.get("expected_state") or ""),
+            delay_seconds=int(delay),
+            duration_seconds=int(duration),
+            requested_at=None,
+            scheduled_for=None,
+            fired_at=None,
+            completed_at=None,
+            canceled_at=None,
+            execution_ok=bool(result_off.get("ok")),
+            execution_message=str(result_off.get("message") or result_off.get("error") or ""),
+            verify_ok=result_off.get("verified"),
+            verify_actual_state=str(result_off.get("actual_state") or ""),
+            verify_v2_ok=(str(result_off.get("details", {}).get("verify_v2_debug", {}).get("status") or "") == "ok"),
+            verify_v2_status=str(result_off.get("details", {}).get("verify_v2_debug", {}).get("status") or ""),
+            verify_v2_reason=str(result_off.get("details", {}).get("verify_v2_debug", {}).get("reason") or ""),
+            rollback_planned=True,
+            rollback_ok=bool(result_off.get("ok")),
+            rollback_message=str(result_off.get("message") or ""),
+            duration_ms=result_off.get("details", {}).get("duration_ms"),
+            latency_ms=None,
+            source_text=None,
+            note="auto from _run_delayed_duration_action",
+        )
 
         if timer_id:
             _update_ai_timer(timer_id, status="done", result=result_off)
@@ -604,8 +768,8 @@ def _maybe_log_error_safety_from_execution_result(
             confidence=0.9 if safety_like else 0.8,
             note="auto from execution pipeline",
         )
-    except Exception:
-        pass
+    except Exception as e:
+        print("[SQL TIMER LOG ERROR]", repr(e))
 
 
 
