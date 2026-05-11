@@ -141,9 +141,13 @@ device_id,parent_id,name,type,entity_id,unit,zone,location,logical_role,is_enabl
 38.102,38,Питание датчика 24,socket,switch.setevoi_filtr_Novyi_socket_2,on/off,utility_power,Нижний ярус,low_general_sensor_power,true,false,normal,devices_source_full,Питание T/H датчика
 38.103,38,Питание датчика 4,socket,switch.setevoi_filtr_novyi_socket_3,on/off,utility_power,Верхний ярус,top_air_quality_sensor_power,true,false,normal,devices_source_full,Питание CO₂ датчика
 38.104,38,Свет нижний,light,switch.setevoi_filtr_novyi_socket_4,on/off,utility_power,Нижний ярус,light_bottom_main,true,false,normal,devices_source_full,300 ватт
-
 100,0,Вентиляторы верх,device,,,top_rack,Верхний ярус,device_100,true,true,low,manual_patch,Верхние вентиляторы
 100.1,100,Реле верх,switch,switch.setevoi_filtr_novyi_socket_1,on/off,top_rack,Верхний ярус,top_air_circulation,true,false,normal,manual_patch,Управление верхними вентиляторами
-
 101,0,Вентиляторы низ,device,,,low_rack,Нижний ярус,device_101,true,true,low,manual_patch,Нижние вентиляторы
 101.1,101,Реле низ,switch,switch.setevoi_filtr_novyi_socket_2,on/off,low_rack,Нижний ярус,bottom_air_circulation,true,false,normal,manual_patch,Управление нижними вентиляторами
+200,0,Наружная погодная станция,outside_weather_station,,,outside,Улица,environment_outside,true,true,normal,manual_weather_patch,Внешний погодный контекст: факт + прогноз
+200.1,200,Наружная температура,sensor,sensor.vlazhnost_nizhnii_gorshok_belyi_temperature,°C,outside,Улица,outside_temperature,true,false,normal,manual_weather_patch,Фактическая наружная температура
+200.2,200,Наружная влажность,sensor,sensor.vlazhnost_nizhnii_gorshok_belyi_humidity,%,outside,Улица,outside_humidity,true,false,normal,manual_weather_patch,Фактическая наружная влажность
+200.3,200,Прогноз погоды HA,weather,weather.home_assistant,,outside,Home Assistant,outside_weather_forecast,true,false,normal,manual_weather_patch,Hourly forecast через HA weather.get_forecasts
+200.4,200,Наружная освещённость 1,sensor,,lx,outside,Улица,outside_lux_1,false,true,normal,manual_weather_patch,Planned: первый датчик освещённости
+200.5,200,Наружная освещённость 2,sensor,,lx,outside,Улица,outside_lux_2,false,true,normal,manual_weather_patch,Planned: второй датчик освещённости

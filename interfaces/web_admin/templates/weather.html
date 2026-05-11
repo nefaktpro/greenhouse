@@ -1,0 +1,204 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+.weather-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin:22px 0}
+.weather-card{background:linear-gradient(135deg,rgba(20,35,60,.92),rgba(10,15,30,.9));border:1px solid rgba(90,130,255,.28);border-radius:20px;padding:20px;box-shadow:0 0 30px rgba(0,0,0,.22)}
+.weather-card.big{grid-column:span 2}
+.weather-num{font-size:42px;font-weight:800;margin:8px 0}
+.weather-label{color:#aeb8d0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+.weather-ok{color:#5ee27a}.weather-warn{color:#f6bd4b}.weather-bad{color:#ff6868}
+.weather-panel{background:rgba(5,12,25,.78);border:1px solid rgba(90,130,255,.25);border-radius:22px;padding:22px;margin-top:18px}
+.weather-table{width:100%;border-collapse:collapse}
+.weather-table td,.weather-table th{padding:10px;border-bottom:1px solid rgba(255,255,255,.08);text-align:left}
+.weather-chart{
+  overflow:hidden;height:220px;display:flex;align-items:end;gap:6px;padding:12px;border-radius:16px;background:rgba(255,255,255,.04)}
+.bar{flex:1;min-width:8px;border-radius:8px 8px 0 0;background:linear-gradient(180deg,#6f5cff,#25c2ff);position:relative}
+.bar span{position:absolute;left:50%;transform:translateX(-50%);top:-20px;font-size:11px;color:#cbd5ff;white-space:nowrap}
+.weather-chart.real .bar{max-width:44px}
+.weather-axis{display:flex;justify-content:space-between;gap:6px;margin-top:8px;color:#8f9bb7;font-size:12px;overflow:hidden}
+.weather-axis span{white-space:nowrap}
+</style>
+
+<div class="page-head">
+  <div>
+    <h1>🌦 Центр погоды</h1>
+    <p>Фактические наружные датчики + прогноз Home Assistant + будущие датчики освещённости + контекст для ИИ.</p>
+  </div>
+  <button class="primary-btn" onclick="loadWeather()">↻ Обновить</button>
+  <button id="recorderToggleBtn" class="primary-btn" onclick="toggleRecorder()">⏸ Писать / не писать</button>
+</div>
+
+
+<div class="weather-grid">
+  <div class="weather-card">
+    <div class="weather-label">Запись погоды</div>
+    <div id="recorderStatus" class="weather-num weather-ok">LIVE</div>
+    <div id="recorderTime" class="weather-label">—</div>
+  </div>
+  <div class="weather-card">
+    <div class="weather-label">Запись факта</div>
+    <div class="weather-num">1ч</div>
+    <div class="weather-label">наружные датчики</div>
+  </div>
+  <div class="weather-card">
+    <div class="weather-label">Запись прогноза</div>
+    <div class="weather-num">1ч</div>
+    <div class="weather-label">снимки прогноза HA</div>
+  </div>
+  <div class="weather-card">
+    <div class="weather-label">Доверие прогнозу</div>
+    <div id="trustScore" class="weather-num">—</div>
+    <div class="weather-label">прогноз vs факт</div>
+  </div>
+</div>
+
+<div class="weather-grid">
+  <div class="weather-card">
+    <div class="weather-label">Наружная температура</div>
+    <div id="wTemp" class="weather-num">—</div>
+    <div id="wTempEntity" class="weather-label">—</div>
+  </div>
+  <div class="weather-card">
+    <div class="weather-label">Наружная влажность</div>
+    <div id="wHum" class="weather-num">—</div>
+    <div id="wHumEntity" class="weather-label">—</div>
+  </div>
+  <div class="weather-card">
+    <div class="weather-label">Прогноз HA</div>
+    <div id="wState" class="weather-num">—</div>
+    <div id="wForecastEntity" class="weather-label">—</div>
+  </div>
+  <div class="weather-card">
+    <div class="weather-label">Прогноз vs факт</div>
+    <div id="wDelta" class="weather-num">—</div>
+    <div class="weather-label">разница сейчас</div>
+  </div>
+</div>
+
+<div class="weather-grid">
+  <div class="weather-card big">
+    <div class="weather-label">Прогноз температуры 24ч по времени</div>
+    <div id="tempChart" class="weather-chart"></div>
+    <div id="tempAxis" class="weather-axis"></div>
+  </div>
+  <div class="weather-card big">
+    <div class="weather-label">Осадки 24ч по времени</div>
+    <div id="rainChart" class="weather-chart"></div>
+    <div id="rainAxis" class="weather-axis"></div>
+  </div>
+</div>
+
+<div class="weather-grid">
+  <div class="weather-card big">
+    <div class="weather-label">Факт наружной температуры</div>
+    <div id="realTempChart" class="weather-chart real"></div>
+    <div id="realTempAxis" class="weather-axis"></div>
+    <div class="weather-axis">История за 24ч из SQLite weather_history.</div>
+  </div>
+  <div class="weather-card big">
+    <div class="weather-label">Факт наружной влажности</div>
+    <div id="realHumChart" class="weather-chart real"></div>
+    <div id="realHumAxis" class="weather-axis"></div>
+    <div class="weather-axis">История за 24ч из SQLite weather_history.</div>
+  </div>
+</div>
+
+<div class="weather-panel">
+  <h2>☀️ Датчики освещённости</h2>
+  <p class="muted">Заложены два наружных датчика освещённости. Сейчас статус: <b>запланировано</b>.</p>
+  <table class="weather-table">
+    <tr><th>Сенсор</th><th>Entity</th><th>Статус</th></tr>
+    <tr><td>outside_lux_1</td><td>pending</td><td>запланировано</td></tr>
+    <tr><td>outside_lux_2</td><td>pending</td><td>запланировано</td></tr>
+  </table>
+</div>
+
+<div class="weather-panel">
+  <h2>🧠 Контекст ИИ / Автопилота</h2>
+  <pre id="weatherContext" style="white-space:pre-wrap"></pre>
+</div>
+
+<script>
+function esc(x){return String(x ?? "—").replace(/[&<>]/g,s=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[s]))}
+function renderBars(id, values, maxV, labels, suffix=""){
+  const el=document.getElementById(id);
+  el.innerHTML=(values||[]).map((v,i)=>{
+    const h=Math.max(4, Math.min(100, (Number(v)||0)/(maxV||1)*100));
+    const label = labels && labels[i] ? labels[i] : "";
+    const shown = Number(v);
+    const valueText = Number.isFinite(shown) ? shown.toFixed(shown % 1 ? 1 : 0) + suffix : "—";
+    const showText = (i === 0 || i === values.length - 1 || i % 6 === 0);
+    return `<div class="bar" title="${esc(label)} ${esc(valueText)}" style="height:${h}%">${showText ? `<span>${esc(valueText)}</span>` : ""}</div>`;
+  }).join("");
+}
+function renderAxis(id, labels){
+  const el=document.getElementById(id);
+  if(!labels || !labels.length){ el.innerHTML=""; return; }
+  const pick = [0, 6, 12, 18, 23].filter(i => labels[i]);
+  el.innerHTML = pick.map(i => `<span>${esc(labels[i])}</span>`).join("");
+}
+function hh(dt){
+  try { return new Date(dt).toLocaleTimeString("ru-RU",{hour:"2-digit",minute:"2-digit"}); }
+  catch(e){ return dt; }
+}
+async function toggleRecorder(){
+  await fetch("/api/weather/recorder-toggle", {method:"POST"});
+  await loadWeather();
+}
+async function loadWeather(){
+  const data = await (await fetch("/api/weather/overview")).json();
+  if(!data.ok){ document.getElementById("weatherContext").textContent=JSON.stringify(data,null,2); return; }
+
+  document.getElementById("wTemp").textContent = data.fact.temperature + "°C";
+  document.getElementById("wHum").textContent = data.fact.humidity + "%";
+  document.getElementById("wState").textContent = data.forecast.state || "—";
+  document.getElementById("wDelta").textContent = data.comparison.delta_temp === null ? "—" : data.comparison.delta_temp + "°C";
+  document.getElementById("wTempEntity").textContent = data.fact.temperature_entity;
+  document.getElementById("wHumEntity").textContent = data.fact.humidity_entity;
+  document.getElementById("wForecastEntity").textContent = data.forecast.entity_id;
+  const runtime = data.runtime || {};
+  const st = runtime.status || "unknown";
+  const ruStatus = st === "live" ? "ПИШЕТ" : st === "paused" ? "ПАУЗА" : st === "starting" ? "ЗАПУСК" : "НЕИЗВЕСТНО";
+  document.getElementById("recorderStatus").textContent = ruStatus;
+  document.getElementById("recorderTime").textContent = runtime.last_write || "—";
+
+  const btn = document.getElementById("recorderToggleBtn");
+  if(btn){
+    btn.textContent = st === "paused" ? "▶ Включить запись" : "⏸ Остановить запись";
+  }
+  document.getElementById("trustScore").textContent =
+    data.comparison?.trust_score == null
+      ? "—"
+      : Math.round(data.comparison.trust_score * 100) + "%";
+
+  const hourly = data.forecast.next_24h || [];
+  const temps = hourly.map(x=>x.temperature);
+  const rains = hourly.map(x=>x.precipitation || 0);
+  const labels = hourly.map(x=>hh(x.datetime));
+  renderBars("tempChart", temps, Math.max(...temps, 1), labels, "°");
+  renderBars("rainChart", rains, Math.max(...rains, 1), labels, "мм");
+  renderAxis("tempAxis", labels);
+  renderAxis("rainAxis", labels);
+
+  const realTemp = (data.history?.outside_temperature || []).map(x=>x.value);
+  const realHum = (data.history?.outside_humidity || []).map(x=>x.value);
+  const realTempLabels = (data.history?.outside_temperature || []).map(x=>hh(x.ts));
+  const realHumLabels = (data.history?.outside_humidity || []).map(x=>hh(x.ts));
+
+  renderBars("realTempChart", realTemp.length ? realTemp : [data.fact.temperature], Math.max(...realTemp, data.fact.temperature, 1), realTempLabels.length ? realTempLabels : ["сейчас"], "°");
+  renderBars("realHumChart", realHum.length ? realHum : [data.fact.humidity], 100, realHumLabels.length ? realHumLabels : ["сейчас"], "%");
+  renderAxis("realTempAxis", realTempLabels.length ? realTempLabels : ["сейчас"]);
+  renderAxis("realHumAxis", realHumLabels.length ? realHumLabels : ["сейчас"]);
+
+  document.getElementById("weatherContext").textContent = JSON.stringify({
+    type:"weather_context",
+    fact:data.fact,
+    forecast_next_6h:data.forecast.next_6h,
+    light:data.light,
+    comparison:data.comparison,
+    greenhouse_impact:data.greenhouse_impact
+  }, null, 2);
+}
+loadWeather();
+</script>
+{% endblock %}

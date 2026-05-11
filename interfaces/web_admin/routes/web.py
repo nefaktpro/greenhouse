@@ -115,6 +115,11 @@ def devices_page(request: Request):
     return render(request, "devices.html", "Greenhouse v17 — Devices")
 
 
+
+@router.get("/weather", response_class=HTMLResponse)
+def weather_page(request: Request):
+    return render(request, "weather.html", "Greenhouse v17 — Weather Center")
+
 @router.get("/passports", response_class=HTMLResponse)
 def passports_page(request: Request):
     return render(request, "passports.html", "Greenhouse v17 — Device Passports")

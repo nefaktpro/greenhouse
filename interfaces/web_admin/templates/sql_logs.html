@@ -1,6 +1,29 @@
 {% extends "base.html" %}
 
 {% block content %}
+
+<style>
+.sql-source-card{
+  margin:18px 0;
+  padding:18px 22px;
+  border:1px solid rgba(90,130,255,.28);
+  border-radius:20px;
+  background:rgba(5,12,25,.72);
+}
+.sql-source-card summary{
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  gap:12px;
+}
+.sql-source-card pre{
+  white-space:pre-wrap;
+  overflow:auto;
+  margin-top:14px;
+}
+</style>
+
+
 <style>
 .sql-page{
   width:100%;
@@ -146,7 +169,111 @@
     <h2>SQL Log Sources</h2>
     <div class="sql-muted">Здесь живут SQL-логи для ИИ и системы. Сверху — уже рабочие SQL-журналы. Ниже — legacy/planned источники, которые пока остаются file-based или будут реализованы позже.</div>
 
-    <details class="sql-source">
+    
+
+
+
+<details class="sql-source" id="weatherSqlSource">
+  <summary>
+    <div class="sql-source-head">
+      <div class="sql-source-badge live">LIVE</div>
+      <div class="sql-source-title">🌦 Weather SQL</div>
+      <div class="sql-source-sub">Погодные SQL-таблицы: факт, прогноз, сравнение и доверие.</div>
+    </div>
+    <div class="sql-source-sub">раскрыть / свернуть</div>
+  </summary>
+
+  <div class="sql-source-body">
+    <div id="weatherSqlSummary" class="sql-empty">loading...</div>
+
+    <div class="sql-toolbar">
+      <button type="button" class="btn-primary" onclick="window.loadWeatherTable('weather_readings')">🌡 Реальные погодные данные</button>
+      <button type="button" class="btn-primary" onclick="window.loadWeatherTable('weather_forecasts')">☁️ Прогноз погоды</button>
+      <button type="button" class="btn-primary" onclick="window.loadWeatherTable('weather_comparison')">📊 Сравнение прогноз vs факт</button>
+
+      <label class="sql-source-sub">Количество строк:</label>
+      <select id="weatherSqlLimit" onchange="window.loadWeatherTable(window.currentWeatherTable || 'weather_readings')">
+        <option value="20">20</option>
+        <option value="50">50</option>
+        <option value="100">100</option>
+        <option value="200">200</option>
+      </select>
+
+      <button type="button" class="btn-primary" onclick="window.loadWeatherSummary()">Обновить статус</button>
+    </div>
+
+    <div class="sql-table-wrap">
+      <table class="sql-table" id="weatherSqlTable"></table>
+    </div>
+
+    <details style="margin-top:14px">
+      <summary>Raw JSON</summary>
+      <pre id="weatherSqlRaw" style="white-space:pre-wrap;overflow:auto;margin-top:14px"></pre>
+    </details>
+  </div>
+</details>
+
+<script>
+window.weatherEscape = function(v){
+  return String(v ?? "").replace(/[&<>]/g, function(s){
+    return {"&":"&amp;","<":"&lt;",">":"&gt;"}[s];
+  });
+};
+
+window.loadWeatherSummary = function(){
+  fetch("/api/weather/db-summary")
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      var el = document.getElementById("weatherSqlSummary");
+      var raw = document.getElementById("weatherSqlRaw");
+      var tables = d.tables || {};
+      if(el){
+        el.innerHTML =
+          "<b>DB:</b> " + window.weatherEscape(d.db_path) + "<br>" +
+          "<b>weather_readings:</b> " + ((tables.weather_readings || {}).c || 0) + " записей<br>" +
+          "<b>weather_forecasts:</b> " + ((tables.weather_forecasts || {}).c || 0) + " записей<br>" +
+          "<b>weather_comparison:</b> " + ((tables.weather_comparison || {}).c || 0) + " записей";
+      }
+      if(raw) raw.textContent = JSON.stringify(d, null, 2);
+    });
+};
+
+window.loadWeatherTable = function(table){
+  window.currentWeatherTable = table;
+  var limitEl = document.getElementById("weatherSqlLimit");
+  var limit = limitEl ? limitEl.value : "20";
+  fetch("/api/weather/db-preview?table=" + encodeURIComponent(table) + "&limit=" + encodeURIComponent(limit))
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      var tbl = document.getElementById("weatherSqlTable");
+      if(!tbl) return;
+
+      if(!d.ok){
+        tbl.innerHTML = "<tr><td>" + window.weatherEscape(d.error || "error") + "</td></tr>";
+        return;
+      }
+
+      var head = "<thead><tr>" + d.columns.map(function(c){
+        return "<th>" + window.weatherEscape(c) + "</th>";
+      }).join("") + "</tr></thead>";
+
+      var body = "<tbody>" + d.rows.map(function(row){
+        return "<tr>" + d.columns.map(function(c){
+          return "<td>" + window.weatherEscape(row[c]) + "</td>";
+        }).join("") + "</tr>";
+      }).join("") + "</tbody>";
+
+      tbl.innerHTML = head + body;
+    });
+};
+
+document.addEventListener("DOMContentLoaded", function(){
+  window.loadWeatherSummary();
+  window.loadWeatherTable("weather_readings");
+});
+</script>
+
+<details class="sql-source">
       <summary>
         <div class="sql-source-head">
           <div class="sql-source-badge live">🟢 LIVE</div>
@@ -197,7 +324,7 @@
     <details class="sql-source">
       <summary>
         <div class="sql-source-head">
-          <div class="sql-source-badge ready">🟡 READY</div>
+          <div class="sql-source-badge live">🟢 LIVE</div>
           <div class="sql-source-title">Журнал таймеров</div>
           <div class="sql-source-sub">Отложенные действия, delay/duration, ASK и статусы таймеров.</div>
         </div>
@@ -245,7 +372,7 @@
     <details class="sql-source">
       <summary>
         <div class="sql-source-head">
-          <div class="sql-source-badge ready">🟡 READY</div>
+          <div class="sql-source-badge live">🟢 LIVE</div>
           <div class="sql-source-title">Журнал расписаний</div>
           <div class="sql-source-sub">Расписания, enable/disable, ближайший запуск и ASK-статусы.</div>
         </div>
@@ -931,3 +1058,37 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 </script>
 {% endblock %}
+
+
+<script>
+function loadWeatherTable(table){
+  window.currentWeatherTable = table;
+  var limitEl = document.getElementById("weatherSqlLimit");
+  var limit = limitEl ? limitEl.value : "20";
+  fetch("/api/weather/db-preview?table=" + encodeURIComponent(table) + "&limit=" + encodeURIComponent(limit))
+    .then(r=>r.json())
+    .then(d=>{
+      const tbl=document.getElementById("weatherSqlTable");
+      if(!tbl) return;
+      if(!d.ok){
+        tbl.innerHTML="<tr><td>"+(d.error||"error")+"</td></tr>";
+        return;
+      }
+      const head="<thead><tr>"+d.columns.map(c=>"<th>"+c+"</th>").join("")+"</tr></thead>";
+      const body="<tbody>"+d.rows.map(row=>{
+        return "<tr>"+d.columns.map(c=>{
+          const v=row[c] ?? "";
+          return "<td>"+String(v).replace(/[&<>]/g,s=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[s]))+"</td>";
+        }).join("")+"</tr>";
+      }).join("")+"</tbody>";
+      tbl.innerHTML=head+body;
+    })
+    .catch(e=>{
+      const tbl=document.getElementById("weatherSqlTable");
+      if(tbl) tbl.innerHTML="<tr><td>"+String(e)+"</td></tr>";
+    });
+}
+document.addEventListener("DOMContentLoaded",()=>loadWeatherTable("weather_readings"));
+</script>
+
+
