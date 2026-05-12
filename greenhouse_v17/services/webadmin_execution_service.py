@@ -7,6 +7,7 @@ import time
 from dataclasses import asdict, dataclass, field
 from greenhouse_v17.services.verify_debug_service import run_state_verify_debug
 from greenhouse_v17.services.unified_log_service import append_execution_log
+from greenhouse_v17.services.test_run_log_service import insert_test_run
 from greenhouse_v17.services.timer_log_service import insert_timer_run
 from greenhouse_v17.services.error_safety_log_service import insert_error_safety_run
 
@@ -860,6 +861,66 @@ def _safe_sql_timer_log(
         pass
 
 
+
+
+def _safe_sql_test_run(
+    *,
+    test_id: str,
+    source: str,
+    mode: str | None,
+    created_by: str,
+    test_status: str,
+    test_kind: str,
+    title: str | None = None,
+    hypothesis: str | None = None,
+    goal: str | None = None,
+    target_role: str | None = None,
+    zone: str | None = None,
+    entity_id: str | None = None,
+    action_key: str | None = None,
+    started_at: str | None = None,
+    ended_at: str | None = None,
+    execution_ok: bool | None = None,
+    verify_ok: bool | None = None,
+    verify_v2_ok: bool | None = None,
+    verify_v2_status: str | None = None,
+    confidence: float | None = None,
+    result_summary: str | None = None,
+    learning: str | None = None,
+    source_text: str | None = None,
+    note: str | None = None,
+) -> None:
+    try:
+        insert_test_run(
+            test_id=test_id,
+            source=source,
+            mode=mode,
+            created_by=created_by,
+            test_status=test_status,
+            test_kind=test_kind,
+            title=title,
+            hypothesis=hypothesis,
+            goal=goal,
+            target_role=target_role,
+            zone=zone,
+            entity_id=entity_id,
+            action_key=action_key,
+            started_at=started_at,
+            ended_at=ended_at,
+            execution_ok=execution_ok,
+            verify_ok=verify_ok,
+            verify_v2_ok=verify_v2_ok,
+            verify_v2_status=verify_v2_status,
+            confidence=confidence,
+            result_summary=result_summary,
+            learning=learning,
+            source_text=source_text,
+            note=note,
+        )
+    except Exception as e:
+        print("[SQL TEST LOG ERROR]", repr(e))
+
+
 def execute_action(
     action_key: str,
     dry_run: bool = False,
@@ -868,9 +929,40 @@ def execute_action(
 ) -> Dict[str, Any]:
     requested_mode = (requested_mode or _read_current_mode()).upper()
 
-    entity_id, operation, meta = resolve_action(action_key)
-    expected_state = _expected_state_for(operation)
-    service_domain, service_name = _service_for(entity_id, operation)
+    try:
+        entity_id, operation, meta = resolve_action(action_key)
+        expected_state = _expected_state_for(operation)
+        service_domain, service_name = _service_for(entity_id, operation)
+    except Exception as e:
+        try:
+            insert_error_safety_run(
+                error_id=f"exec_exception_{action_key}",
+                source=source,
+                mode=requested_mode,
+                created_by="system",
+                layer="execution",
+                event_type="exception",
+                severity="error",
+                status="open",
+                safety_related=False,
+                blocked=False,
+                auto_followup_created=False,
+                case_candidate_created=False,
+                action_key=action_key,
+                entity_id=None,
+                target_role=None,
+                rule_name=None,
+                error_code=type(e).__name__,
+                message=str(e),
+                details_text=repr(e),
+                decision="failed",
+                resolution="exception before execution result",
+                confidence=0.9,
+                note="auto from execute_action early exception",
+            )
+        except Exception as log_e:
+            print("[ERROR SAFETY LOG EXCEPTION]", repr(log_e))
+        raise
 
     if requested_mode == "TEST":
         result = ExecutionResult(
@@ -888,6 +980,34 @@ def execute_action(
             message="TEST mode: dry-run only",
             details={"source": source, "meta": meta},
         )
+
+        _safe_sql_test_run(
+            test_id=f"test_{action_key}_TEST",
+            source=source,
+            mode=requested_mode,
+            created_by="system",
+            test_status="completed",
+            test_kind="dry_run_execution",
+            title=f"TEST dry-run: {action_key}",
+            hypothesis=f"В TEST режиме действие {action_key} должно пройти как dry-run без реального исполнения.",
+            goal="Зафиксировать TEST/dry-run маршрут в SQL log.",
+            target_role=(meta or {}).get("target_role"),
+            zone=(meta or {}).get("zone"),
+            entity_id=entity_id,
+            action_key=action_key,
+            started_at=None,
+            ended_at=None,
+            execution_ok=True,
+            verify_ok=False,
+            verify_v2_ok=False,
+            verify_v2_status="dry_run",
+            confidence=0.9,
+            result_summary="TEST mode: dry-run only",
+            learning="Маршрут TEST зафиксирован без реального исполнения.",
+            source_text=((meta or {}).get("source_text") or ""),
+            note="auto from execute_action TEST mode",
+        )
+
         _append_log(result.to_dict())
         return result.to_dict()
 
@@ -907,6 +1027,34 @@ def execute_action(
             message="Dry-run only",
             details={"source": source, "meta": meta},
         )
+
+        _safe_sql_test_run(
+            test_id=f"test_{action_key}_DRYRUN",
+            source=source,
+            mode=requested_mode,
+            created_by="system",
+            test_status="completed",
+            test_kind="dry_run_execution",
+            title=f"Dry-run: {action_key}",
+            hypothesis=f"Dry-run для {action_key} должен записаться в TEST log без реального исполнения.",
+            goal="Зафиксировать dry_run маршрут в SQL log.",
+            target_role=(meta or {}).get("target_role"),
+            zone=(meta or {}).get("zone"),
+            entity_id=entity_id,
+            action_key=action_key,
+            started_at=None,
+            ended_at=None,
+            execution_ok=True,
+            verify_ok=False,
+            verify_v2_ok=False,
+            verify_v2_status="dry_run",
+            confidence=0.85,
+            result_summary="Dry-run only",
+            learning="Dry-run маршрут зафиксирован.",
+            source_text=((meta or {}).get("source_text") or ""),
+            note="auto from execute_action dry_run",
+        )
+
         _append_log(result.to_dict())
         return result.to_dict()
 
