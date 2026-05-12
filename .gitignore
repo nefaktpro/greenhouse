@@ -33,3 +33,5 @@ __pycache__/
 data/runtime/*.tmp
 data/registry/registry.db
 data/registry/registry.db
+data/weather/*.db
+data/weather/weather_runtime.json
