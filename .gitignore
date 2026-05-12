@@ -35,3 +35,4 @@ data/registry/registry.db
 data/registry/registry.db
 data/weather/*.db
 data/weather/weather_runtime.json
+!data/weather/weather_recorder_settings.json

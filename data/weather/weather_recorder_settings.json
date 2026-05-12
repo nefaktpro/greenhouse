@@ -1,0 +1,5 @@
+{
+  "enabled": false,
+  "fact_interval_sec": 3600,
+  "forecast_interval_sec": 3600
+}
