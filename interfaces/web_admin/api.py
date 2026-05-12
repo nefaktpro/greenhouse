@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from interfaces.web_admin.routes.cameras import router as cameras_router
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -102,3 +103,12 @@ app.include_router(observations.router)
 app.include_router(cases.router)
 app.include_router(devices_registry.router)
 app.include_router(weather.router)
+app.include_router(cameras_router)
+
+
+# Camera daily snapshot worker startup
+from greenhouse_v17.services.camera_snapshot_service import start_camera_daily_worker
+
+@app.on_event("startup")
+async def _start_camera_daily_worker():
+    start_camera_daily_worker()

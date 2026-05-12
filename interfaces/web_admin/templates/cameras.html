@@ -1,0 +1,453 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+  .cam-wrap{display:grid;gap:18px}
+  .cam-hero{display:grid;grid-template-columns:1.6fr .8fr;gap:18px}
+  .cam-card{background:linear-gradient(180deg,rgba(18,28,46,.96),rgba(10,15,27,.96));border:1px solid rgba(97,218,251,.14);border-radius:22px;box-shadow:0 18px 60px rgba(0,0,0,.28);padding:18px}
+  .cam-title{font-size:26px;font-weight:800;letter-spacing:.2px;margin:0 0 6px}
+  .cam-sub{color:#9fb3c8;font-size:13px}
+  .cam-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-items:start}
+  .cam-tile{position:relative;overflow:hidden;border-radius:20px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.035);padding:14px}
+  .cam-preview{aspect-ratio:16/9;height:auto;min-height:0;border-radius:16px;background:radial-gradient(circle at 40% 20%,rgba(97,218,251,.20),transparent 35%),linear-gradient(135deg,#101827,#060a12);display:flex;align-items:center;justify-content:center;color:#9fb3c8;margin-bottom:12px;border:1px solid rgba(255,255,255,.06)}
+  .cam-name{font-weight:800}
+  .cam-meta{font-size:12px;color:#91a4b8;margin-top:3px;word-break:break-all}
+  .cam-row{display:flex;gap:8px;align-items:center;justify-content:space-between}
+  .cam-btn{border:0;border-radius:12px;padding:10px 12px;background:#1f8cff;color:white;font-weight:800;cursor:pointer}
+  .cam-btn.secondary{background:rgba(255,255,255,.09);color:#dbeafe}
+  .cam-btn.good{background:#10b981}
+  .cam-btn:disabled{opacity:.55;cursor:not-allowed}
+  .cam-pill{font-size:11px;padding:5px 9px;border-radius:999px;background:rgba(148,163,184,.14);color:#cbd5e1}
+  .cam-pill.ok{background:rgba(16,185,129,.17);color:#86efac}
+  .cam-pill.bad{background:rgba(239,68,68,.15);color:#fca5a5}
+  .cam-settings{display:grid;gap:14px}
+  .cam-input{width:100%;box-sizing:border-box;border-radius:12px;border:1px solid rgba(255,255,255,.12);background:rgba(0,0,0,.22);color:#fff;padding:11px}
+  .cam-toggle{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px;border-radius:16px;background:rgba(255,255,255,.045)}
+  .cam-log{max-height:360px;overflow:auto;display:grid;gap:8px}
+  .cam-log-item{padding:10px;border-radius:14px;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.06)}
+  .cam-log-top{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:#9fb3c8}
+  .cam-last-img{max-width:100%;border-radius:14px;border:1px solid rgba(255,255,255,.08);margin-top:10px}
+  @media(max-width:1000px){.cam-hero{grid-template-columns:1fr}.cam-grid{grid-template-columns:1fr}}
+</style>
+
+<div class="cam-wrap">
+  <section class="cam-card">
+    <div class="cam-row">
+      <div>
+        <h1 class="cam-title">📷 Камеры</h1>
+        <div class="cam-sub">Реальное время, ручные снимки, ежедневный фото-loop, SQL-лог и будущие photo observations.</div>
+      </div>
+      <div class="cam-row">
+        <button class="cam-btn secondary" onclick="loadCameras()">↻ Обновить</button>
+        <button class="cam-btn good" onclick="snapshotAll()">📸 Снять все</button>
+      </div>
+    </div>
+  </section>
+
+  <div class="cam-hero">
+    <section class="cam-card">
+      <div class="cam-row" style="margin-bottom:12px">
+        <div>
+          <h2 style="margin:0">Камеры в реальном времени</h2>
+          <div class="cam-sub">5 паспортных камер из registry</div>
+        </div>
+        <span id="camStatus" class="cam-pill">загрузка</span>
+      </div>
+      <div id="camGrid" class="cam-grid"></div>
+    </section>
+
+    <aside class="cam-card cam-settings">
+      <div>
+        <h2 style="margin:0 0 6px">Ежедневные фото</h2>
+        <div class="cam-sub">Писать / не писать и время запуска</div>
+      </div>
+
+      <label class="cam-toggle">
+        <span>Писать ежедневные фото</span>
+        <input id="dailyEnabled" type="checkbox">
+      </label>
+
+      <label>
+        <div class="cam-sub" style="margin-bottom:6px">Во сколько</div>
+        <input id="dailyTime" class="cam-input" type="time" value="10:00">
+      </label>
+
+      <button class="cam-btn" onclick="saveSettings()">💾 Сохранить комментарий настройки</button>
+      <button class="cam-btn good" onclick="runDailyNow()">🌅 Проверить расписание daily</button>
+      <div id="dailyStatus" class="cam-sub">daily status: —</div>
+      <a class="cam-btn secondary" href="/web/sql-logs" style="text-align:center;text-decoration:none">📜 Открыть SQL логи</a>
+
+      <div>
+        <h3>Последние события</h3>
+        <div id="camLogs" class="cam-log"></div>
+      </div>
+    </aside>
+  </div>
+
+  <section class="cam-card">
+    <div class="cam-row" style="margin-bottom:12px">
+      <div>
+        <h2 style="margin:0">🖼 История фото</h2>
+        <div class="cam-sub">Последние сохранённые снимки из SQL camera_photo_log</div>
+      </div>
+      <div class="cam-row">
+        <select id="historySource" class="cam-input" style="width:150px" onchange="loadPhotos()">
+          <option value="">источник: все</option>
+          <option value="manual">manual</option>
+          <option value="manual_all">manual_all</option>
+          <option value="daily_snapshot">daily</option>
+        </select>
+        <select id="historyCamera" class="cam-input" style="width:210px" onchange="loadPhotos()">
+          <option value="">камера: все</option>
+          <option value="cam_overview">общий план</option>
+          <option value="cam_lower_right">нижний ряд справа</option>
+          <option value="cam_lower_left">нижний ярус слева</option>
+          <option value="cam_upper_right">верхний ярус справа</option>
+          <option value="cam_upper_left">верхний слева / огурцы</option>
+        </select>
+        <select id="historyLimit" class="cam-input" style="width:130px" onchange="loadPhotos()">
+          <option value="20">20 фото</option>
+          <option value="50" selected>50 фото</option>
+          <option value="100">100 фото</option>
+          <option value="200">200 фото</option>
+        </select>
+        <button class="cam-btn secondary" onclick="loadPhotos()">↻ Обновить</button>
+      </div>
+    </div>
+    <div id="photoHistory" class="cam-grid"></div>
+  </section>
+
+  <section class="cam-card">
+    <div class="cam-row" style="margin-bottom:12px">
+      <div>
+        <h2 style="margin:0">💬 Комментарии к фото</h2>
+        <div class="cam-sub">Фото, где добавлен комментарий / photo observation</div>
+      </div>
+      <div class="cam-row">
+        <select id="obsCameraFilter" class="cam-input" style="width:210px" onchange="loadObservations()">
+          <option value="">камера: все</option>
+          <option value="cam_overview">общий план</option>
+          <option value="cam_lower_right">нижний ряд справа</option>
+          <option value="cam_lower_left">нижний ярус слева</option>
+          <option value="cam_upper_right">верхний ярус справа</option>
+          <option value="cam_upper_left">верхний слева / огурцы</option>
+        </select>
+
+        <select id="obsLimit" class="cam-input" style="width:130px" onchange="loadObservations()">
+          <option value="10">10</option>
+          <option value="20" selected>20</option>
+          <option value="50">50</option>
+          <option value="100">100</option>
+        </select>
+
+        <button class="cam-btn secondary" onclick="loadObservations()">↻ Обновить</button>
+      </div>
+    </div>
+    <div id="observationsBox" class="cam-log"></div>
+  </section>
+</div>
+
+<div id="obsModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:9999;align-items:center;justify-content:center;padding:20px">
+  <div class="cam-card" style="width:min(640px,96vw)">
+    <h2 style="margin-top:0">💬 Комментарий к фото</h2>
+    <div class="cam-sub" id="obsPhotoInfo">—</div>
+    <label>
+      <div class="cam-sub" style="margin:12px 0 6px">Категория</div>
+      <select id="obsCategory" class="cam-input">
+        <option value="leaves">листья</option>
+        <option value="berries">ягоды</option>
+        <option value="disease">болезнь</option>
+        <option value="dry">сухо</option>
+        <option value="overwater">перелив</option>
+        <option value="light">свет</option>
+        <option value="equipment">оборудование</option>
+        <option value="growth">рост</option>
+        <option value="other">другое</option>
+      </select>
+    </label>
+    <label>
+      <div class="cam-sub" style="margin:12px 0 6px">Важность</div>
+      <select id="obsImportance" class="cam-input">
+        <option value="low">low</option>
+        <option value="medium" selected>medium</option>
+        <option value="high">high</option>
+      </select>
+    </label>
+    <label>
+      <div class="cam-sub" style="margin:12px 0 6px">Комментарий</div>
+      <textarea id="obsText" class="cam-input" rows="4" placeholder="Например: листья выглядят вялыми, проверить после полива..."></textarea>
+    </label>
+    <div class="cam-row" style="margin-top:14px">
+      <button class="cam-btn good" onclick="saveObservation()">💾 Сохранить комментарий</button>
+      <button class="cam-btn secondary" onclick="closeObsModal()">Отмена</button>
+    </div>
+  </div>
+</div>
+
+<script>
+async function jget(url){ const r = await fetch(url); return await r.json(); }
+async function jpost(url, body){
+  const r = await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body||{})});
+  return await r.json();
+}
+function esc(s){return String(s ?? '').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
+function fmtDateTime(s){
+  if(!s) return '—';
+  try{
+    const d = new Date(s);
+    if(isNaN(d.getTime())) return s;
+    return d.toLocaleString('ru-RU', {
+      day:'2-digit', month:'2-digit',
+      hour:'2-digit', minute:'2-digit'
+    });
+  }catch(e){ return s; }
+}
+
+function camStateLabel(s){
+  if(s === 'recording') return 'активна';
+  if(s === 'idle') return 'ожидание';
+  if(s === 'unavailable') return 'недоступна';
+  if(s === 'unknown') return 'неизвестно';
+  return s || '—';
+}
+
+async function loadCameras(){
+  const data = await jget('/api/cameras/status');
+  const grid = document.getElementById('camGrid');
+  document.getElementById('camStatus').textContent = data.ok ? 'online' : 'error';
+  document.getElementById('camStatus').className = 'cam-pill ' + (data.ok ? 'ok' : 'bad');
+
+  if(data.settings){
+    document.getElementById('dailyEnabled').checked = !!data.settings.daily_enabled;
+    document.getElementById('dailyTime').value = data.settings.daily_time || '10:00';
+    const ds = document.getElementById('dailyStatus');
+    if(ds) ds.textContent = `daily: ${data.settings.daily_enabled ? 'включено' : 'выключено'} · время ${data.settings.daily_time || '10:00'} · последний запуск ${fmtDateTime(data.settings.last_daily_run_at)}`;
+  }
+
+  grid.innerHTML = (data.items || []).map(cam => `
+    <div class="cam-tile" id="tile-${esc(cam.camera_id)}">
+      <div class="cam-preview" id="preview-${esc(cam.camera_id)}">
+        <img class="cam-last-img" style="margin-top:0;object-fit:cover;width:100%;height:100%;display:block" src="/api/cameras/live-image?camera_id=${encodeURIComponent(cam.camera_id)}&ts=${Date.now()}">
+      </div>
+      <div class="cam-row">
+        <div>
+          <div class="cam-name">${esc(cam.name)}</div>
+          <div class="cam-meta">${esc(cam.entity_id)}</div>
+          <div class="cam-meta">зона: ${esc(cam.zone)}</div>
+        </div>
+        <span class="cam-pill ${cam.ok ? 'ok' : 'bad'}">${esc(camStateLabel(cam.state))}</span>
+      </div>
+      <div class="cam-row" style="margin-top:12px">
+        <button class="cam-btn" onclick="snapshotOne('${esc(cam.camera_id)}')">📸 Снять сейчас</button>
+        <button class="cam-btn secondary" onclick="refreshOne(\'${esc(cam.camera_id)}\')">Обновить кадр</button>
+      </div>
+      <div class="cam-meta" id="result-${esc(cam.camera_id)}"></div>
+    </div>
+  `).join('');
+  loadLogs();
+}
+
+function refreshOne(cameraId){
+  const preview = document.getElementById('preview-'+cameraId);
+  if(preview){
+    preview.innerHTML = `<img class="cam-last-img" style="margin-top:0;object-fit:cover;width:100%;height:100%;display:block" src="/api/cameras/live-image?camera_id=${encodeURIComponent(cameraId)}&ts=${Date.now()}">`;
+  }
+}
+
+async function snapshotOne(cameraId){
+  const box = document.getElementById('result-'+cameraId);
+  box.textContent = 'снимаю...';
+  const res = await jpost('/api/cameras/snapshot',{camera_id: cameraId, source:'manual'});
+  box.textContent = res.ok ? `ok · ${res.file_size || 0} bytes` : `error: ${res.error}`;
+  if(!res.ok){ alert('Ошибка снимка: ' + res.error); }
+  if(res.ok && res.file_path){
+    document.getElementById('preview-'+cameraId).innerHTML = `<img class="cam-last-img" style="margin-top:0;object-fit:cover;width:100%;height:100%;display:block" src="/api/cameras/file?path=${encodeURIComponent(res.file_path)}">`;
+  }
+  loadLogs();
+}
+
+async function snapshotAll(){
+  document.getElementById('camStatus').textContent = 'снимаю все...';
+  const res = await jpost('/api/cameras/snapshot-all',{});
+  document.getElementById('camStatus').textContent = res.ok ? 'все снято' : 'часть с ошибкой';
+  document.getElementById('camStatus').className = 'cam-pill ' + (res.ok ? 'ok' : 'bad');
+  loadLogs();
+}
+
+async function saveSettings(){
+  const res = await jpost('/api/cameras/settings',{
+    daily_enabled: document.getElementById('dailyEnabled').checked,
+    daily_time: document.getElementById('dailyTime').value || '10:00'
+  });
+  alert(res.ok ? 'Настройки камер сохранены' : 'Ошибка сохранения');
+}
+
+async function runDailyNow(){
+  const res = await jpost('/api/cameras/daily/run-if-due',{});
+  const ds = document.getElementById('dailyStatus');
+  if(ds) ds.textContent = res.ran ? 'daily snapshot выполнен' : 'daily ещё не пора или уже выполнен сегодня: ' + (res.reason || 'not_due');
+  loadLogs();
+  loadPhotos();
+}
+
+async function loadPhotos(){
+  const source = document.getElementById('historySource')?.value || '';
+  const camera = document.getElementById('historyCamera')?.value || '';
+  const limit = document.getElementById('historyLimit')?.value || '50';
+
+  let url = '/api/cameras/photos?limit=' + encodeURIComponent(limit);
+  if(source) url += '&source=' + encodeURIComponent(source);
+  if(camera) url += '&camera_id=' + encodeURIComponent(camera);
+
+  const data = await jget(url);
+  const el = document.getElementById('photoHistory');
+  if(!el) return;
+
+  el.innerHTML = (data.items || []).map(x => `
+    <div class="cam-tile">
+      <div class="cam-preview">
+        <a href="/api/cameras/file?path=${encodeURIComponent(x.file_path)}" target="_blank" style="display:block;width:100%;height:100%">
+          <img class="cam-last-img" style="object-fit:cover;width:100%;height:100%;display:block;margin-top:0" src="/api/cameras/file?path=${encodeURIComponent(x.file_path)}">
+        </a>
+      </div>
+
+      <div class="cam-row">
+        <div class="cam-name">${esc(x.camera_name || x.camera_id)}</div>
+        <button class="cam-btn secondary" onclick='openObsModal(${JSON.stringify(x)})'>💬 Коммент</button>
+      </div>
+
+      <div class="cam-meta">${esc(x.ts)} · ${esc(x.source)} · ${esc(x.camera_id)}</div>
+
+      ${x.observation_text ? `
+        <div style="margin-top:8px;padding:10px;border-radius:12px;background:rgba(16,185,129,.10);border:1px solid rgba(16,185,129,.18)">
+          <b>${esc(x.observation_category || 'comment')}</b> · ${esc(x.observation_importance || '')}<br>
+          ${esc(x.observation_text)}
+        </div>
+      ` : ''}
+
+      <div class="cam-row" style="margin-top:10px">
+        <a class="cam-btn secondary" style="text-decoration:none;text-align:center" target="_blank" href="/api/cameras/file?path=${encodeURIComponent(x.file_path)}">Открыть</a>
+      </div>
+    </div>
+  `).join('') || '<div class="cam-sub">По фильтрам фото нет</div>';
+}
+
+let currentObsPhoto = null;
+
+function openObsModal(photo){
+  currentObsPhoto = photo;
+  document.getElementById('obsPhotoInfo').textContent = `${photo.camera_name || photo.camera_id} · ${photo.ts || ''}`;
+  document.getElementById('obsText').value = '';
+  document.getElementById('obsModal').style.display = 'flex';
+}
+
+function closeObsModal(){
+  document.getElementById('obsModal').style.display = 'none';
+  currentObsPhoto = null;
+}
+
+async function saveObservation(){
+  if(!currentObsPhoto) return;
+  const payload = {
+    photo_log_id: currentObsPhoto.id,
+    camera_id: currentObsPhoto.camera_id,
+    camera_name: currentObsPhoto.camera_name,
+    entity_id: currentObsPhoto.entity_id,
+    zone: currentObsPhoto.zone,
+    file_path: currentObsPhoto.file_path,
+    category: document.getElementById('obsCategory').value,
+    importance: document.getElementById('obsImportance').value,
+    text: document.getElementById('obsText').value,
+    source: 'user'
+  };
+  const res = await jpost('/api/cameras/observations', payload);
+  if(!res.ok){ alert('Ошибка сохранения observation'); return; }
+  closeObsModal();
+  loadObservations();
+}
+
+async function loadObservations(){
+  const limit = document.getElementById('obsLimit')?.value || '20';
+  const camera = document.getElementById('obsCameraFilter')?.value || '';
+
+  let url = '/api/cameras/observations?limit=' + encodeURIComponent(limit);
+  if(camera){
+    url += '&camera_id=' + encodeURIComponent(camera);
+  }
+
+  const data = await jget(url);
+  const el = document.getElementById('observationsBox');
+  if(!el) return;
+
+  el.innerHTML = (data.items || []).map(x => `
+    <div class="cam-card" style="margin-bottom:16px;padding:16px">
+      <div class="cam-row">
+        <div>
+          <div style="font-weight:800;font-size:18px">
+            ${esc(x.camera_name || x.camera_id)}
+          </div>
+          <div class="cam-meta">
+            ${esc(x.ts || '')}
+            · ${esc(x.observation_category || 'comment')}
+            · ${esc(x.observation_importance || '')}
+          </div>
+        </div>
+
+        <div class="cam-pill ok">
+          ${esc(x.camera_id || '')}
+        </div>
+      </div>
+
+      ${x.file_path ? `
+        <a target="_blank"
+           href="/api/cameras/file?path=${encodeURIComponent(x.file_path)}"
+           style="display:block;margin-top:14px;max-width:540px">
+          <img src="/api/cameras/file?path=${encodeURIComponent(x.file_path)}"
+               style="width:100%;border-radius:16px;border:1px solid rgba(255,255,255,.12)">
+        </a>
+      ` : ''}
+
+      <div style="
+        margin-top:14px;
+        padding:14px;
+        border-radius:14px;
+        background:rgba(16,185,129,.10);
+        border:1px solid rgba(16,185,129,.16);
+        line-height:1.5;
+      ">
+        ${esc(x.observation_text || '')}
+      </div>
+
+      <div class="cam-row" style="margin-top:12px">
+        <a class="cam-btn secondary"
+           target="_blank"
+           style="text-decoration:none"
+           href="/api/cameras/file?path=${encodeURIComponent(x.file_path)}">
+           Открыть фото
+        </a>
+      </div>
+    </div>
+  `).join('') || '<div class="cam-sub">Комментариев к фото пока нет</div>';
+}
+
+async function loadLogs(){
+  const data = await jget('/api/cameras/logs?limit=30');
+  const el = document.getElementById('camLogs');
+  el.innerHTML = (data.items || []).map(x => `
+    <div class="cam-log-item">
+      <div class="cam-log-top">
+        <span>${esc(x.ts)}</span>
+        <span class="cam-pill ${x.status === 'ok' ? 'ok' : 'bad'}">${esc(x.status)}</span>
+      </div>
+      <div style="font-weight:800;margin-top:5px">${esc(x.camera_name || x.camera_id)}</div>
+      <div class="cam-meta">${esc(x.event)} · ${esc(x.source)}</div>
+      ${x.error ? `<div class="cam-meta" style="color:#fca5a5">${esc(x.error)}</div>` : ''}
+    </div>
+  `).join('') || '<div class="cam-sub">Лог пока пуст</div>';
+}
+
+loadCameras();
+loadPhotos();
+loadObservations();
+setInterval(loadCameras, 60000);
+</script>
+{% endblock %}

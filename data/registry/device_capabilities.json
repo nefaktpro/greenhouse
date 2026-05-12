@@ -113,5 +113,29 @@
       "critical_power_cutoff"
     ],
     "fallback_behavior": "notify_only"
+  },
+  "camera": {
+    "type": "camera",
+    "capabilities": [
+      "live_view",
+      "snapshot",
+      "daily_snapshot",
+      "photo_observation",
+      "photo_verify",
+      "before_after"
+    ],
+    "reliability": "monitor-only",
+    "verify": {
+      "type": "photo_file",
+      "expected": "file_created",
+      "delay_sec": 2
+    },
+    "logs": [
+      "camera_photo_log"
+    ],
+    "storage": {
+      "files": "data/photos/YYYY/MM/DD/",
+      "sql_metadata": "data/logs/unified_logs.db:camera_photo_log"
+    }
   }
 }

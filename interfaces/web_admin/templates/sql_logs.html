@@ -777,14 +777,14 @@ document.addEventListener("DOMContentLoaded", function(){
     <details class="sql-source">
       <summary>
         <div class="sql-source-head">
-          <div class="sql-source-badge planned">⚪ PLANNED</div>
+          <div class="sql-source-badge ready">🟢 SQL</div>
           <div class="sql-source-title">Журнал фото с камер</div>
-          <div class="sql-source-sub">Снимки с камер, визуальные подтверждения, состояние растений и устройств, before/after.</div>
+          <div class="sql-source-sub">Снимки с камер, ручные фото, ежедневные фото, ошибки HA proxy и пути файлов.</div>
         </div>
-        <div class="sql-muted">planned</div>
+        <div class="sql-muted" id="cameraLogsCount">загрузка</div>
       </summary>
       <div class="sql-source-body">
-        <div class="sql-empty">Пока только заготовка. Подключаем, когда будет реальный loop камер, снимков и визуальных проверок.</div>
+        <div id="cameraLogsBox" class="sql-empty">Загружаю журнал камер...</div>
       </div>
     </details>
 
@@ -818,6 +818,76 @@ document.addEventListener("DOMContentLoaded", function(){
 
   </section>
 </div>
+
+<script>
+(function(){
+  async function loadCameraPhotoSqlLogs(){
+    const box = document.getElementById('cameraLogsBox');
+    const cnt = document.getElementById('cameraLogsCount');
+    if(!box) return;
+
+    try{
+      const r = await fetch('/api/sql-logs/cameras/recent?limit=100');
+      const data = await r.json();
+      const items = data.items || [];
+      if(cnt) cnt.textContent = items.length + ' записей';
+
+      if(!items.length){
+        box.innerHTML = '<div class="sql-empty">Пока нет записей camera_photo_log.</div>';
+        return;
+      }
+
+      box.innerHTML = `
+        <div style="overflow:auto">
+          <table class="sql-table">
+            <thead>
+              <tr>
+                <th>Время</th>
+                <th>Камера</th>
+                <th>Событие</th>
+                <th>Статус</th>
+                <th>Источник</th>
+                <th>Файл</th>
+                <th>Ошибка</th><th>Observation</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${items.map(x => `
+                <tr>
+                  <td>${x.ts || ''}</td>
+                  <td>${x.camera_name || x.camera_id || ''}<br><span class="sql-muted">${x.entity_id || ''}</span></td>
+                  <td>${x.event || ''}</td>
+                  <td>${x.status === 'ok' ? '🟢 ok' : '🔴 ' + (x.status || '')}</td>
+                  <td>${x.source || ''}</td>
+                  <td style="max-width:360px;word-break:break-all">${x.file_path ? `
+  <a class="sql-btn" href="/api/cameras/file?path=${encodeURIComponent(x.file_path)}" target="_blank">Открыть</a>
+  <div style="margin-top:6px;max-width:180px">
+    <img src="/api/cameras/file?path=${encodeURIComponent(x.file_path)}" style="width:160px;border-radius:10px;border:1px solid rgba(255,255,255,.12)">
+  </div>
+  <div class="sql-muted" style="word-break:break-all">${x.file_path}</div>
+` : ''}</td>
+                  <td style="max-width:320px;word-break:break-word">${x.error || ''}</td>
+                <td style="max-width:320px;word-break:break-word">
+                  ${x.observation_text ? `<b>${x.observation_category || 'observation'}</b> · ${x.observation_importance || ''}<br>${x.observation_text}` : ''}
+                </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>`;
+    }catch(e){
+      box.innerHTML = '<div class="sql-empty">Ошибка загрузки camera logs: '+e+'</div>';
+    }
+  }
+
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', loadCameraPhotoSqlLogs);
+  } else {
+    loadCameraPhotoSqlLogs();
+  }
+})();
+</script>
+
 {% endblock %}
 
 {% block scripts %}
@@ -1057,6 +1127,76 @@ document.addEventListener("DOMContentLoaded", () => {
   loadCaseLogs();
 });
 </script>
+
+<script>
+(function(){
+  async function loadCameraPhotoSqlLogs(){
+    const box = document.getElementById('cameraLogsBox');
+    const cnt = document.getElementById('cameraLogsCount');
+    if(!box) return;
+
+    try{
+      const r = await fetch('/api/sql-logs/cameras/recent?limit=100');
+      const data = await r.json();
+      const items = data.items || [];
+      if(cnt) cnt.textContent = items.length + ' записей';
+
+      if(!items.length){
+        box.innerHTML = '<div class="sql-empty">Пока нет записей camera_photo_log.</div>';
+        return;
+      }
+
+      box.innerHTML = `
+        <div style="overflow:auto">
+          <table class="sql-table">
+            <thead>
+              <tr>
+                <th>Время</th>
+                <th>Камера</th>
+                <th>Событие</th>
+                <th>Статус</th>
+                <th>Источник</th>
+                <th>Файл</th>
+                <th>Ошибка</th><th>Observation</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${items.map(x => `
+                <tr>
+                  <td>${x.ts || ''}</td>
+                  <td>${x.camera_name || x.camera_id || ''}<br><span class="sql-muted">${x.entity_id || ''}</span></td>
+                  <td>${x.event || ''}</td>
+                  <td>${x.status === 'ok' ? '🟢 ok' : '🔴 ' + (x.status || '')}</td>
+                  <td>${x.source || ''}</td>
+                  <td style="max-width:360px;word-break:break-all">${x.file_path ? `
+  <a class="sql-btn" href="/api/cameras/file?path=${encodeURIComponent(x.file_path)}" target="_blank">Открыть</a>
+  <div style="margin-top:6px;max-width:180px">
+    <img src="/api/cameras/file?path=${encodeURIComponent(x.file_path)}" style="width:160px;border-radius:10px;border:1px solid rgba(255,255,255,.12)">
+  </div>
+  <div class="sql-muted" style="word-break:break-all">${x.file_path}</div>
+` : ''}</td>
+                  <td style="max-width:320px;word-break:break-word">${x.error || ''}</td>
+                <td style="max-width:320px;word-break:break-word">
+                  ${x.observation_text ? `<b>${x.observation_category || 'observation'}</b> · ${x.observation_importance || ''}<br>${x.observation_text}` : ''}
+                </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>`;
+    }catch(e){
+      box.innerHTML = '<div class="sql-empty">Ошибка загрузки camera logs: '+e+'</div>';
+    }
+  }
+
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', loadCameraPhotoSqlLogs);
+  } else {
+    loadCameraPhotoSqlLogs();
+  }
+})();
+</script>
+
 {% endblock %}
 
 
@@ -1090,5 +1230,7 @@ function loadWeatherTable(table){
 }
 document.addEventListener("DOMContentLoaded",()=>loadWeatherTable("weather_readings"));
 </script>
+
+
 
 
