@@ -106,9 +106,10 @@ app.include_router(weather.router)
 app.include_router(cameras_router)
 
 
-# Camera daily snapshot worker startup
-from greenhouse_v17.services.camera_snapshot_service import start_camera_daily_worker
+
+# Background workers startup
+from greenhouse_v17.services.startup_workers import start_background_workers
 
 @app.on_event("startup")
-async def _start_camera_daily_worker():
-    start_camera_daily_worker()
+async def _start_background_workers():
+    start_background_workers()
