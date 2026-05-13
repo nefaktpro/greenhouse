@@ -898,13 +898,25 @@ def handle_chat_message(text: str) -> Dict[str, Any]:
 
         catalog = get_context_catalog()
 
-        history_tail = _load_ai_chat_history_tail()
+        history_tail = _load_ai_chat_history_tail(20)
+
+        try:
+            from greenhouse_v17.services.memory_summary_service import build_ai_memory_context
+            memory_context = build_ai_memory_context(recent_tail_count=20)
+        except Exception as _mem_err:
+            memory_context = {
+                "ok": False,
+                "text": "",
+                "meta": {"error": str(_mem_err)},
+            }
 
         prompt = f"""
 {system_prompt}
 
 CURRENT_CONTEXT:
 {{}}
+
+{memory_context.get("text", "")}
 
 RECENT_DIALOG_HISTORY:
 {json.dumps(history_tail, ensure_ascii=False, indent=2)}
@@ -929,6 +941,7 @@ USER_MESSAGE:
             "source": "llm",
             "message": first_answer,
             "ai": ai,
+            "memory_context_meta": memory_context.get("meta"),
         }
     except Exception as e:
         return {"ok": False, "kind": "error", "error": str(e)}

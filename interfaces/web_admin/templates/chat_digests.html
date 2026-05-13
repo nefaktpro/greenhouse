@@ -1,0 +1,250 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+.mem-wrap{max-width:1180px;margin:0 auto}
+.card{background:#11182b;border:1px solid #24314f;border-radius:16px;padding:16px;margin:12px 0}
+.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.metric{font-size:28px;font-weight:900}
+.muted{color:#93a4c4}
+.good{color:#3ddc97}.warn{color:#ffd166}.bad{color:#ff6b6b}
+button{background:#6ea8fe;color:#08111f;border:0;border-radius:12px;padding:10px 14px;font-weight:900;cursor:pointer}
+button.secondary{background:#151f36;color:#e8eefc;border:1px solid #24314f}
+code{background:#081020;border:1px solid #24314f;border-radius:8px;padding:2px 6px;overflow-wrap:anywhere}
+.row{display:flex;justify-content:space-between;gap:12px;border-bottom:1px solid #24314f;padding:12px 0;align-items:flex-start}
+.row:last-child{border-bottom:0}
+.preview{background:#071020;border:1px solid #24314f;border-radius:14px;padding:14px;margin-top:14px;max-height:640px;overflow:auto}
+.preview pre{white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;margin:0;line-height:1.42;font-size:13px}
+.toast{position:fixed;top:24px;left:50%;transform:translateX(-50%);background:#101a30;border:1px solid #6ea8fe;border-radius:16px;padding:14px 18px;display:none;z-index:10000;font-weight:900}
+.toast.active{display:block}
+.badge{display:inline-block;border:1px solid #24314f;border-radius:999px;padding:4px 9px;background:#071020;margin:2px 4px 2px 0}
+@media(max-width:900px){.grid{grid-template-columns:repeat(2,1fr)}.row{display:block}}
+</style>
+
+<div class="mem-wrap">
+  <h1>🧠 ИИ-память теплицы</h1>
+  <p class="muted">
+    Главная схема памяти: raw chat/logs остаются источником правды → технический источник скрыт → DeepSeek/OpenAI создаёт ИИ-конспект. В будущий AI-контекст должны попадать только ИИ-конспекты: день + 7 дней + 28 дней.
+  </p>
+
+  <div class="card">
+    <h2>Движок ИИ-памяти</h2>
+    <div class="grid">
+      <div><div class="muted">День</div><div id="mAiDaily" class="metric">—</div></div>
+      <div><div class="muted">7 дней</div><div id="mWeekly" class="metric">—</div></div>
+      <div><div class="muted">28 дней</div><div id="mMonthly" class="metric">—</div></div>
+      <div><div class="muted">ИИ</div><div class="metric">DeepSeek</div></div>
+    </div>
+
+    <div id="engineStatus" style="margin-top:14px;padding:12px 14px;border:1px solid #24314f;border-radius:14px;background:#071020;">
+      Загружаю статус…
+    </div>
+
+    <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
+      <button onclick="runLatestAi()">🧠 Обновить конспект дня</button>
+      <button class="secondary" onclick="runYesterdayCycle()">▶ Полный цикл за вчера</button>
+      <button class="secondary" onclick="runWeekly()">📚 Обновить память 7 дней</button>
+      <button class="secondary" onclick="runMonthly()">🗓 Обновить память 28 дней</button>
+      <button class="secondary" onclick="loadStatus()">↻ Обновить страницу</button>
+    </div>
+
+    <div class="muted" style="margin-top:10px">
+      Автоматически: каждый день в 07:00 создаётся технический источник за вчера, затем ИИ-конспект дня. После этого пересобирается память последних до 7 дней и последних до 28 дней. Raw chat не удаляется.
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Последние День summaries</h2>
+    <div id="aiDailyList" class="muted">Загрузка…</div>
+  </div>
+
+  <div class="card">
+    <h2>7 дней summaries</h2>
+    <div id="aiWeeklyList" class="muted">Загрузка…</div>
+  </div>
+
+  <div class="card">
+    <h2>28 дней summaries</h2>
+    <div id="aiMonthlyList" class="muted">Загрузка…</div>
+  </div>
+
+  <details class="card">
+    <summary style="cursor:pointer;font-weight:900">Технические дневные источники</summary>
+    <p class="muted">Это технический промежуточный слой. Его не надо читать каждый день.</p>
+    <div id="localDailyList" class="muted">Загрузка…</div>
+  </details>
+
+  <details class="card">
+    <summary style="cursor:pointer;font-weight:900">Технические старые weekly/monthly</summary>
+    <p class="muted">Старые/технические weekly/monthly без AI. Основной слой теперь AI weekly/monthly.</p>
+    <h3>Technical weekly</h3>
+    <div id="technicalWeeklyList" class="muted">Загрузка…</div>
+    <h3>Technical monthly</h3>
+    <div id="technicalMonthlyList" class="muted">Загрузка…</div>
+  </details>
+
+  <div class="card">
+    <h2>Просмотр конспекта</h2>
+    <div id="summaryPreview" class="preview muted">Выбери конспект и нажми “Просмотреть”.</div>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+function toast(msg){
+  const t=document.getElementById('toast');
+  if(!t){ alert(msg); return; }
+  t.textContent=msg;
+  t.classList.add('active');
+  setTimeout(()=>t.classList.remove('active'),2800);
+}
+
+function renderList(id, items, emptyText='Пока нет файлов.'){
+  const box=document.getElementById(id);
+  if(!box){
+    console.warn('missing element', id);
+    return;
+  }
+  if(!items || !items.length){
+    box.innerHTML=emptyText;
+    return;
+  }
+  box.innerHTML = items.map(f=>`
+    <div class="row">
+      <div>
+        <b>${f.name}</b><br>
+        <code>${f.path}</code><br>
+        <span class="muted">${Math.round((f.size||0)/1024)} KB</span>
+      </div>
+      <div>
+        <button class="secondary" onclick='readSummary(${JSON.stringify(f.path)})'>👁 Просмотреть</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function loadStatus(){
+  const box=document.getElementById('engineStatus');
+  if(box) box.innerHTML='<b>Обновляю…</b>';
+
+  try{
+    const r=await fetch('/api/memory/summaries/status', {cache:'no-store'});
+    const j=await r.json();
+
+    const setText=(id,val)=>{
+      const el=document.getElementById(id);
+      if(el) el.textContent = val ?? 0;
+      else console.warn('missing metric', id);
+    };
+
+    setText('mAiDaily', j.counts?.ai_daily ?? 0);
+    setText('mWeekly', j.counts?.rolling_week ?? 0);
+    setText('mMonthly', j.counts?.rolling_month ?? 0);
+
+    renderList('aiDailyList', j.latest?.ai_daily || []);
+    renderList('aiWeeklyList', j.latest?.rolling_week || []);
+    renderList('aiMonthlyList', j.latest?.rolling_month || []);
+    renderList('localDailyList', j.latest?.local_daily || []);
+    renderList('technicalWeeklyList', j.latest?.technical_weekly || []);
+    renderList('technicalMonthlyList', j.latest?.technical_monthly || []);
+
+    const ev=j.latest_event || {};
+    const lastRun=j.state?.last_daily_worker_at || j.state?.last_cycle_at || '—';
+
+    if(box){
+      box.innerHTML=`
+        <div><span class="badge good">Рабочий режим ИИ-памяти</span><span class="badge">ИИ: ${j.provider_priority || 'DeepSeek → OpenAI'}</span></div>
+        <div style="margin-top:8px">Ежедневный ИИ-конспект: <b>каждый день в 07:00</b></div>
+        <div>Последнее обновление памяти: <b>${lastRun}</b></div>
+        <div>Следующее автообновление: <b>завтра 07:00</b></div>
+        <div>Последнее событие: <b>${ev.event || '—'}</b> / ${ev.status || '—'}</div>
+        <div class="muted">${ev.details ? JSON.stringify(ev.details) : ''}</div>
+      `;
+    }
+  }catch(e){
+    if(box) box.innerHTML='<b class="bad">Ошибка загрузки:</b> '+e;
+    console.error(e);
+  }
+}
+
+async function runYesterdayCycle(){
+  toast('Запускаю daily cycle за вчера: local source → AI summary…');
+  const r=await fetch('/api/memory/summaries/run',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({force:true})});
+  const j=await r.json();
+  toast(j.ok ? '✅ Daily cycle завершён' : 'Ошибка daily cycle');
+  await loadStatus();
+}
+
+async function runLatestAi(){
+  toast('Создаю AI summary из latest local daily…');
+  const r=await fetch('/api/memory/summaries/ai_latest',{method:'POST'});
+  const j=await r.json();
+  toast(j.ok ? '✅ AI summary создан: '+(j.provider||'AI') : 'Ошибка AI summary: '+JSON.stringify(j));
+  await loadStatus();
+}
+
+async function runWeekly(){
+  toast('Создаю AI weekly…');
+  const r=await fetch('/api/memory/summaries/weekly',{method:'POST'});
+  const j=await r.json();
+  toast(j.ok ? (j.skipped ? 'AI weekly: '+j.reason : '✅ AI weekly создан') : 'Ошибка AI weekly');
+  await loadStatus();
+}
+
+async function runMonthly(){
+  toast('Создаю AI monthly…');
+  const r=await fetch('/api/memory/summaries/monthly',{method:'POST'});
+  const j=await r.json();
+  toast(j.ok ? (j.skipped ? 'AI monthly: '+j.reason : '✅ AI monthly создан') : 'Ошибка AI monthly');
+  await loadStatus();
+}
+
+
+async function runWeeklyMemory(){
+  toast('Обновляю память 7 дней…');
+  const r=await fetch('/api/memory/summaries/weekly',{method:'POST'});
+  const j=await r.json();
+  toast(j.ok ? (j.skipped ? '7 дней: '+j.reason : '✅ Память 7 дней обновлена') : 'Ошибка 7 дней: '+JSON.stringify(j));
+  await loadStatus();
+}
+
+async function runMonthlyMemory(){
+  toast('Обновляю память 28 дней…');
+  const r=await fetch('/api/memory/summaries/monthly',{method:'POST'});
+  const j=await r.json();
+  toast(j.ok ? (j.skipped ? '28 дней: '+j.reason : '✅ Память 28 дней обновлена') : 'Ошибка 28 дней: '+JSON.stringify(j));
+  await loadStatus();
+}
+
+async function readSummary(path){
+  toast('Открываю summary…');
+  const r=await fetch('/api/memory/summaries/read',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({path:path})});
+  const j=await r.json();
+  const box=document.getElementById('summaryPreview');
+  if(!j.ok){
+    box.innerHTML='Ошибка: '+JSON.stringify(j);
+    return;
+  }
+  box.innerHTML=`<div class="muted" style="margin-bottom:10px"><b>${j.name}</b> · <code>${j.path}</code></div><pre></pre>`;
+  box.querySelector('pre').textContent=j.content || '';
+  toast('✅ Summary открыт');
+}
+
+document.addEventListener('DOMContentLoaded', loadStatus);
+window.addEventListener('load', loadStatus);
+setTimeout(loadStatus, 500);
+
+</script>
+{% endblock %}
+
+
+<script>
+window.addEventListener('load', () => {
+  setTimeout(() => {
+    if(typeof loadStatus === 'function'){
+      loadStatus();
+    }
+  }, 200);
+});
+
+</script>
