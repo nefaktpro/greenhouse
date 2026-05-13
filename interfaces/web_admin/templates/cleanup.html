@@ -1,0 +1,1172 @@
+{% extends "base.html" %}
+{% block content %}
+
+<style>
+
+    :root{
+      --bg:#0b1020; --panel:#11182b; --panel2:#151f36; --text:#e8eefc; --muted:#93a4c4;
+      --line:#24314f; --good:#3ddc97; --warn:#ffd166; --bad:#ff6b6b; --blue:#6ea8fe;
+      --critical:#ff477e;
+    }
+    *{box-sizing:border-box}
+    .cleanup-page{color:var(--text);font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Arial}
+    a{color:var(--blue)}
+    .wrap{max-width:1380px;margin:0 auto;padding:22px}
+    .top{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px}
+    h1{margin:0;font-size:28px;letter-spacing:.2px}
+    .subtitle{color:var(--muted);margin-top:5px}
+    .actions{display:flex;gap:10px;flex-wrap:wrap}
+    button{background:var(--blue);color:#08111f;border:0;border-radius:12px;padding:10px 14px;font-weight:700;cursor:pointer}
+    button.secondary{background:var(--panel2);color:var(--text);border:1px solid var(--line)}
+    .notice{border:1px solid var(--line);background:linear-gradient(180deg,#121b30,#0f1729);border-radius:16px;padding:14px 16px;margin:14px 0;color:var(--muted)}
+    .notice b{color:var(--text)}
+    .grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:16px 0}
+    .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:15px}
+    .metric{font-size:25px;font-weight:800;margin-top:4px}
+    .label{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.08em}
+    .tabs{display:flex;gap:8px;flex-wrap:wrap;margin:18px 0 12px}
+    .tab{background:var(--panel);border:1px solid var(--line);color:var(--text);padding:9px 12px;border-radius:999px;cursor:pointer}
+    .tab.active{background:var(--blue);color:#07101f;border-color:var(--blue);font-weight:800}
+    .section{display:none}
+    .section.active{display:block}
+    table{width:100%;border-collapse:separate;border-spacing:0 8px}
+    th{color:var(--muted);font-size:12px;text-align:left;font-weight:700;padding:0 10px}
+    td{background:var(--panel);border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:10px;vertical-align:top}
+    td:first-child{border-left:1px solid var(--line);border-radius:12px 0 0 12px}
+    td:last-child{border-right:1px solid var(--line);border-radius:0 12px 12px 0}
+    .pill{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line);background:var(--panel2);border-radius:999px;padding:4px 8px;color:var(--muted);font-size:12px;white-space:nowrap}
+    .risk-safe{color:var(--good)} .risk-medium{color:var(--warn)} .risk-high{color:var(--bad)} .risk-critical{color:var(--critical)}
+    .yes{color:var(--good);font-weight:800}.no{color:var(--bad);font-weight:800}
+    .muted{color:var(--muted)}
+    .bar{height:8px;background:#0a0f1f;border-radius:999px;overflow:hidden;border:1px solid var(--line)}
+    .bar > div{height:100%;background:var(--blue);width:0%}
+    .groups{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+    .group-card{cursor:pointer;transition:.12s transform,.12s border-color}
+    .group-card:hover{transform:translateY(-1px);border-color:var(--blue)}
+    .details{margin-top:14px}
+    .details-grid{display:grid;grid-template-columns:minmax(320px, 0.8fr) minmax(0, 1.2fr);gap:12px}
+    .file-row{display:flex;justify-content:space-between;gap:10px;border-bottom:1px solid var(--line);padding:7px 0}
+    .file-row:last-child{border-bottom:0}
+    .path{word-break:break-all}
+
+    .group-title{font-size:18px;font-weight:800;margin-bottom:8px}
+    .small{font-size:12px;color:var(--muted)}
+    .candidate{display:grid;grid-template-columns:120px 80px minmax(0,1fr) 105px;gap:10px;align-items:start;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px;margin:8px 0;max-width:100%}
+    code{background:#081020;border:1px solid var(--line);padding:2px 5px;border-radius:7px;color:#cfe1ff}
+    .loader{display:none;color:var(--warn);font-weight:800}
+    .loader.active{display:inline}
+    @media(max-width:1000px){.grid{grid-template-columns:repeat(2,1fr)}.groups{grid-template-columns:1fr}.candidate{grid-template-columns:1fr}}
+  
+
+    .cleanup-page *{min-width:0}
+    .cleanup-page .wrap{max-width:100%;padding:18px}
+    .cleanup-page code{
+      display:inline-block;
+      max-width:100%;
+      white-space:normal;
+      overflow-wrap:anywhere;
+      word-break:break-word;
+      line-height:1.25;
+    }
+    .cleanup-page .details-grid{
+      display:grid;
+      grid-template-columns:minmax(320px, 0.8fr) minmax(0, 1.2fr);
+      gap:12px;
+      align-items:start;
+    }
+    .cleanup-page .file-row{
+      display:grid;
+      grid-template-columns:minmax(0,1fr) auto;
+      gap:10px;
+      align-items:start;
+    }
+    .cleanup-page .candidate{
+      display:grid;
+      grid-template-columns:120px 80px minmax(0,1fr) 105px;
+      gap:10px;
+      max-width:100%;
+    }
+    .cleanup-page .candidate .path,
+    .cleanup-page .path{
+      min-width:0;
+      max-width:100%;
+      overflow-wrap:anywhere;
+      word-break:break-word;
+    }
+    @media(max-width:1200px){
+      .cleanup-page .details-grid{grid-template-columns:1fr}
+      .cleanup-page .candidate{grid-template-columns:1fr}
+    }
+
+
+    .decision-badge{display:inline-flex;border-radius:999px;padding:4px 8px;font-size:12px;border:1px solid var(--line);background:#0c1324;margin-top:6px}
+    .decision-new{color:var(--muted)}
+    .decision-keep{color:var(--good)}
+    .decision-archive_later{color:var(--warn)}
+    .decision-ai_review{color:var(--blue)}
+    .decision-protect{color:var(--critical)}
+    .decision-ignore{color:var(--muted)}
+    .review-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+    .review-actions button{padding:7px 9px;border-radius:10px;font-size:12px}
+    .review-grid{display:grid;grid-template-columns:1fr;gap:10px}
+
+
+    .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.65);display:none;align-items:center;justify-content:center;z-index:9999;padding:24px}
+    .modal-backdrop.active{display:flex}
+    .modal-card{width:min(900px,96vw);max-height:88vh;overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:0 20px 80px rgba(0,0,0,.45)}
+    .modal-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:12px}
+    .kv{display:grid;grid-template-columns:180px minmax(0,1fr);gap:8px 12px;margin-top:12px}
+    .kv div{padding:8px;border-bottom:1px solid var(--line)}
+
+
+    .preview-box{
+      margin-top:14px;
+      background:#070d1a;
+      border:1px solid var(--line);
+      border-radius:14px;
+      padding:12px;
+      max-height:420px;
+      overflow:auto;
+    }
+    .preview-box pre{
+      white-space:pre-wrap;
+      overflow-wrap:anywhere;
+      word-break:break-word;
+      margin:0;
+      color:#dbe8ff;
+      font-size:12px;
+      line-height:1.35;
+    }
+
+
+    .toast{
+      position:fixed;
+      left:50%;
+      top:24px;
+      transform:translateX(-50%);
+      z-index:10000;
+      background:#101a30;
+      border:1px solid var(--blue);
+      border-radius:16px;
+      padding:14px 18px;
+      color:var(--text);
+      box-shadow:0 18px 80px rgba(0,0,0,.55);
+      display:none;
+      width:min(620px, calc(100vw - 48px));
+      text-align:center;
+      font-weight:800;
+      font-size:15px;
+    }
+    .toast.active{display:block}
+
+
+    @media(max-width:1100px){
+      #candidateReview .card > div[style*="grid-template-columns:repeat(4"]{grid-template-columns:repeat(2,minmax(0,1fr)) !important}
+    }
+    @media(max-width:650px){
+      #candidateReview .card > div[style*="grid-template-columns:repeat(4"]{grid-template-columns:1fr !important}
+    }
+
+
+    .photo-preview{
+      display:block;
+      max-width:100%;
+      max-height:520px;
+      margin-top:10px;
+      border-radius:14px;
+      border:1px solid var(--line);
+      object-fit:contain;
+      background:#050912;
+    }
+
+</style>
+
+<div class="cleanup-page">
+<div class="wrap">
+  <div class="top">
+    <div>
+      <h1>Центр очистки</h1>
+      <div class="subtitle">Единый центр уборки данных: scan-only foundation. Удаление выключено.</div>
+    </div>
+    <div class="actions">
+      <button onclick="runScan()">🧹 Сканировать сейчас</button>
+      <button class="secondary" onclick="loadStatus()">↻ Обновить статус</button>
+    </div>
+  </div>
+
+  <div class="notice">
+    <b>Безопасный режим:</b> сейчас Cleanup ничего не удаляет и не архивирует. Только находит источники, размеры,
+    backup-storm, крупные логи, SQLite-файлы и кандидатов для будущих правил. AI может быть включён только как анализатор/инспектор.
+    <span id="loader" class="loader">Идёт сканирование…</span>
+  </div>
+
+  
+  <div class="card" style="margin-bottom:16px">
+    <div class="group-title">Статус Cleanup Layer</div>
+
+    <table style="margin-top:10px">
+      <thead>
+        <tr>
+          <th>Подсистема</th>
+          <th>Статус</th>
+          <th>Комментарий</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Сканирование</td><td class="yes">✅ Работает</td><td>Inventory / scan / stats активны.</td></tr>
+        <tr><td>Инвентаризация</td><td class="yes">✅ Работает</td><td>Источники, размеры, группы, кандидаты.</td></tr>
+        <tr><td>Политики</td><td class="yes">✅ Работает</td><td>Policies сохраняются в cleanup_registry.json.</td></tr>
+        <tr><td>AI-флаги</td><td class="yes">✅ Работает</td><td>AI permissions/config уже сохраняются.</td></tr>
+        <tr><td>Архивация</td><td class="risk-medium"><b>🚧 Ещё не активна</b></td><td>Archive engine ещё не подключён.</td></tr>
+        <tr><td>Retention engine</td><td class="risk-medium"><b>🚧 Ещё не активен</b></td><td>TTL/retention пока только в policy.</td></tr>
+        <tr><td>AI Cleanup</td><td class="risk-medium"><b>🚧 Только foundation</b></td><td>AI пока не архивирует и не удаляет.</td></tr>
+        <tr><td>Auto cleanup</td><td class="risk-medium"><b>🚧 Выключено</b></td><td>Автоочистка ещё не реализована.</td></tr>
+        <tr><td>Удаление</td><td class="risk-high"><b>❌ Выключено</b></td><td>Delete engine отсутствует намеренно.</td></tr>
+        <tr><td>Rollback</td><td class="risk-medium"><b>🚧 Planned</b></td><td>История cleanup-операций будет позже.</td></tr>
+      </tbody>
+    </table>
+
+    <div class="notice" style="margin-top:14px">
+      <b>Текущий режим:</b> OBSERVE / POLICY ONLY.<br>
+      Cleanup Layer пока только анализирует данные и сохраняет политики.
+      Реальные cleanup/archive/delete действия ещё не выполняются.
+    </div>
+  </div>
+
+<div class="grid">
+    <div class="card"><div class="label">Источники</div><div id="mИсточники" class="metric">—</div></div>
+    <div class="card"><div class="label">Файлы</div><div id="mFiles" class="metric">—</div></div>
+    <div class="card"><div class="label">Размер</div><div id="mSize" class="metric">—</div></div>
+    <div class="card"><div class="label">Кандидаты</div><div id="mКандидаты" class="metric">—</div></div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="showTab('overview')">Обзор</button>
+    <button class="tab" onclick="showTab('sources')">Источники</button>
+    <button class="tab" onclick="showTab('candidates')">Кандидаты</button>
+    <button class="tab" onclick="showTab('candidateReview')">Проверка кандидатов</button>
+    <button class="tab" onclick="showTab('policies')">Политики</button>
+    <button class="tab" onclick="showTab('rules')">Правила AI / защиты</button>
+  </div>
+
+  <div id="overview" class="section active">
+    <div class="groups" id="groups"></div>
+    <div id="groupDetails" class="details"></div>
+  </div>
+
+  <div id="sources" class="section">
+    <table>
+      <thead>
+        <tr>
+          <th>Источник</th><th>Группа</th><th>Risk</th><th>Файлы</th><th>Размер</th><th>AI</th><th>Protected</th><th>Schedule</th><th>Описание</th>
+        </tr>
+      </thead>
+      <tbody id="sourcesBody"></tbody>
+    </table>
+  </div>
+
+  <div id="candidates" class="section">
+    <div class="notice">Это не список удаления. Это список “надо рассмотреть”: archive/compress/summary/VACUUM/review.</div>
+    <div id="candidatesList"></div>
+  </div>
+
+
+  
+  <div id="candidateReview" class="section">
+    <div class="notice">
+      <b>Проверка кандидатов:</b> здесь мы принимаем решения по найденным кандидатам.
+      Это ещё не архивирует и не удаляет файлы. Решения только сохраняются в cleanup.db.
+    </div>
+
+    <div class="grid">
+      <div class="card"><div class="label">Новые</div><div id="dNew" class="metric">—</div></div>
+      <div class="card"><div class="label">Архив позже</div><div id="dArchive" class="metric">—</div></div>
+      <div class="card"><div class="label">AI review</div><div id="dAi" class="metric">—</div></div>
+      <div class="card"><div class="label">Protected/Ignore</div><div id="dProtected" class="metric">—</div></div>
+    </div>
+
+    <div class="card" style="margin-bottom:14px">
+      <div class="group-title">Фильтры кандидатов</div>
+      <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:12px">
+        <input id="reviewFilterText" placeholder="Поиск path/source/type..." style="padding:10px 12px;border-radius:10px;border:1px solid #24314f;background:#11182b;color:#fff">
+
+        <select id="reviewGroupFilter" style="padding:10px;border-radius:10px;background:#11182b;color:#fff;border:1px solid #24314f">
+          <option value="">Все группы</option>
+        </select>
+
+        <select id="reviewSourceFilter" style="padding:10px;border-radius:10px;background:#11182b;color:#fff;border:1px solid #24314f">
+          <option value="">Все источники</option>
+        </select>
+
+        <select id="reviewTypeFilter" style="padding:10px;border-radius:10px;background:#11182b;color:#fff;border:1px solid #24314f">
+          <option value="">Все типы кандидатов</option>
+        </select>
+
+        <select id="reviewRiskFilter" style="padding:10px;border-radius:10px;background:#11182b;color:#fff;border:1px solid #24314f">
+          <option value="">Все риски</option>
+          <option value="safe">safe</option>
+          <option value="medium">medium</option>
+          <option value="high">high</option>
+          <option value="critical">critical</option>
+        </select>
+
+        <select id="reviewDecisionFilter" style="padding:10px;border-radius:10px;background:#11182b;color:#fff;border:1px solid #24314f">
+          <option value="">Все решения</option>
+          <option value="new">новые</option>
+          <option value="keep">оставить</option>
+          <option value="archive_later">архив позже</option>
+          <option value="ai_review">AI review</option>
+          <option value="protect">protect</option>
+          <option value="ignore">ignore</option>
+        </select>
+
+        <select id="reviewAiFilter" style="padding:10px;border-radius:10px;background:#11182b;color:#fff;border:1px solid #24314f">
+          <option value="">AI: все</option>
+          <option value="yes">AI разрешён</option>
+          <option value="no">AI запрещён</option>
+        </select>
+
+        <select id="reviewProtectedFilter" style="padding:10px;border-radius:10px;background:#11182b;color:#fff;border:1px solid #24314f">
+          <option value="">Protected: все</option>
+          <option value="yes">защищённые source</option>
+          <option value="no">не защищённые source</option>
+        </select>
+
+        <select id="reviewArchiveFilter" style="padding:10px;border-radius:10px;background:#11182b;color:#fff;border:1px solid #24314f">
+          <option value="">Archive: все</option>
+          <option value="yes">архив разрешён</option>
+          <option value="no">архив запрещён</option>
+        </select>
+
+        <select id="reviewDeleteFilter" style="padding:10px;border-radius:10px;background:#11182b;color:#fff;border:1px solid #24314f">
+          <option value="">Auto delete: все</option>
+          <option value="yes">auto delete разрешён</option>
+          <option value="no">auto delete запрещён</option>
+        </select>
+
+        <button class="secondary" onclick="renderCandidateReview()">Применить фильтры</button>
+        <button class="secondary" onclick="resetCandidateFilters()">Сбросить фильтры</button>
+      </div>
+
+      <div class="small" id="candidateFilterSummary" style="margin-top:10px">Фильтры не применены.</div>
+
+      <div class="notice" style="margin-top:12px">
+        <b>Массовая разметка видимых кандидатов</b><br>
+        Работает только с тем, что сейчас видно после фильтров. Файлы не удаляются и не архивируются — только ставится метка.
+        <div class="review-actions" style="margin-top:10px">
+          <button class="secondary" onclick='batchSetDecision("archive_later")'>📦 Видимые → Архив позже</button>
+          <button class="secondary" onclick='batchSetDecision("ai_review")'>🧠 Видимые → AI review</button>
+          <button class="secondary" onclick='batchSetDecision("protect")'>🛡 Видимые → Защитить</button>
+          <button class="secondary" onclick='batchSetDecision("ignore")'>🚫 Видимые → Игнор</button>
+          <button class="secondary" onclick='batchSetDecision("reset")'>↩ Видимые → Сброс</button>
+        </div>
+      </div>
+
+    </div>
+
+    <div id="candidateReviewList" class="review-grid"></div>
+  </div>
+
+  <div id="policies" class="section">
+    <div class="notice">
+      Здесь задаются политики Cleanup Layer. Пока это только настройка поведения —
+      никакие auto-delete действия ещё не выполняются.
+    </div>
+
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">
+      <input id="filterText" placeholder="Фильтр source/group..." style="padding:10px 12px;border-radius:10px;border:1px solid #24314f;background:#11182b;color:#fff;min-width:240px">
+      <select id="riskFilter" style="padding:10px;border-radius:10px;background:#11182b;color:#fff;border:1px solid #24314f">
+        <option value="">Все risk</option>
+        <option value="safe">safe</option>
+        <option value="medium">medium</option>
+        <option value="high">high</option>
+        <option value="critical">critical</option>
+      </select>
+      <button class="secondary" onclick="renderPolicies()">Применить фильтр</button>
+    </div>
+
+    <div id="policyCards"></div>
+  </div>
+
+  <div id="rules" class="section">
+    <div class="card">
+      <h2 style="margin-top:0">AI Cleanup Guard</h2>
+      <p class="muted">AI включаем широко для анализа, но узко для действий.</p>
+      <table>
+        <tbody>
+          <tr><td>AI scan</td><td class="yes">можно для memory/logs/context/backups/photos/registry review</td></tr>
+          <tr><td>AI summary</td><td class="yes">можно для raw chat, logs, observations, cases drafts</td></tr>
+          <tr><td>AI archive suggestion</td><td class="yes">можно, но через candidates</td></tr>
+          <tr><td>AI auto archive</td><td class="no">позже, только low-risk и после policy</td></tr>
+          <tr><td>AI delete</td><td class="no">запрещено</td></tr>
+          <tr><td>Registry / passports / safety / rules</td><td class="no">только предложения, без автоправок</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+let lastScan = null;
+
+function showTab(id){
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.section').forEach(x=>x.classList.remove('active'));
+  const section = document.getElementById(id);
+  if(section) section.classList.add('active');
+  document.querySelectorAll('.tab').forEach(btn=>{
+    const onclick = btn.getAttribute('onclick') || '';
+    if(onclick.includes("'" + id + "'")) btn.classList.add('active');
+  });
+}
+
+function riskClass(r){ return 'risk-' + (r || 'medium'); }
+function yn(v){ return v ? '<span class="yes">да</span>' : '<span class="no">нет</span>'; }
+
+async function loadStatus(){
+  const r = await fetch('/api/cleanup/status');
+  const j = await r.json();
+  document.getElementById('mИсточники').textContent = j.source_count ?? '—';
+  if(j.latest_scan){
+    document.getElementById('mFiles').textContent = j.latest_scan.total_files;
+    document.getElementById('mSize').textContent = j.latest_scan.total_size_human;
+    document.getElementById('mКандидаты').textContent = j.latest_scan.total_candidates;
+  }
+}
+
+async function runScan(){
+  document.getElementById('loader').classList.add('active');
+  try{
+    const r = await fetch('/api/cleanup/scan', {method:'POST'});
+    const j = await r.json();
+    lastScan = j;
+    renderScan(j); renderPolicies(); populateCandidateFilters(); renderCandidateReview();
+  }catch(e){
+    alert('Ошибка scan: ' + e);
+  }finally{
+    document.getElementById('loader').classList.remove('active');
+  }
+}
+
+function showGroupDetails(group){
+  if(!lastScan) return;
+  const box = document.getElementById('groupDetails');
+  const sources = (lastScan.sources || []).filter(s => s.group === group);
+  const candidates = (lastScan.candidates || []).filter(c => c.group === group).slice(0,80);
+  const filesHtml = sources.map(s => {
+    const big = (s.biggest_files || []).slice(0,8).map(f => `
+      <div class="file-row">
+        <span class="path"><code>${f.path}</code></span>
+        <b>${f.size_human}</b>
+      </div>
+    `).join('') || '<div class="muted">Нет файлов</div>';
+    return `
+      <div class="card">
+        <div class="group-title">${s.title || s.source_id}</div>
+        <div class="small">${s.file_count} файлов · ${s.total_size_human} · risk: <span class="${riskClass(s.risk)}">${s.risk}</span> · AI: ${s.ai_scan_allowed ? 'да' : 'нет'} · protected: ${s.protected ? 'да' : 'нет'}</div>
+        <div style="margin-top:10px">${big}</div>
+      </div>
+    `;
+  }).join('');
+
+  const candHtml = candidates.map(c => `
+    <div class="candidate">
+      <div><span class="pill">${c.source_id}</span><br><span class="${riskClass(c.risk)}"><b>${c.risk}</b></span><br>${decisionBadge(c.decision)}</div>
+      <div>${c.size_human || ''}</div>
+      <div><b>${c.candidate_type}</b><br><code>${c.path}</code><br><span class="muted">${c.reason}</span></div>
+      <div>AI: ${c.ai_allowed ? '<span class="yes">да</span>' : '<span class="no">нет</span>'}<br>delete: ${c.auto_delete_allowed ? '<span class="yes">да</span>' : '<span class="no">нет</span>'}</div>
+    </div>
+  `).join('') || '<div class="notice">Кандидатов в этой группе пока нет.</div>';
+
+  box.innerHTML = `
+    <div class="notice"><b>Группа: ${group}</b> · источники: ${sources.length} · кандидаты: ${candidates.length}</div>
+    <div class="details-grid">
+      <div>${filesHtml}</div>
+      <div>
+        <div class="card">
+          <div class="group-title">Кандидаты группы</div>
+          ${candHtml}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function decisionLabel(d){
+  const map = {
+    new: 'новый',
+    keep: 'оставить',
+    archive_later: 'архив позже',
+    ai_review: 'AI review',
+    protect: 'защитить',
+    ignore: 'игнор',
+    reset: 'сброс'
+  };
+  return map[d || 'new'] || d || 'new';
+}
+
+function decisionBadge(d){
+  const v = d || 'new';
+  return `<span class="decision-badge decision-${v}">${decisionLabel(v)}</span>`;
+}
+
+async function setCandidateDecision(c, decision){
+  if(!c || !c.path){
+    showToast('Ошибка: пустой кандидат');
+    return;
+  }
+
+  showToast('Сохраняю решение…');
+
+  const payload = {
+    path: c.path,
+    source_id: c.source_id,
+    group: c.group,
+    candidate_type: c.candidate_type,
+    decision: decision,
+    actor: 'user',
+    reason: 'manual_review_from_cleanup_ui'
+  };
+
+  try{
+    const r = await fetch('/api/cleanup/candidate/decision', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    });
+    const j = await r.json();
+
+    if(!j.ok){
+      showToast('Ошибка: ' + JSON.stringify(j));
+      return;
+    }
+
+    c.decision = decision;
+    currentCandidate = c;
+
+    showToast('✅ Решение сохранено: ' + decisionLabel(decision));
+
+    await runScan();
+    renderCandidateReview();
+    showTabById('candidateReview');
+
+  }catch(e){
+    showToast('Ошибка запроса: ' + e);
+  }
+}
+
+function showTabById(id){
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.section').forEach(x=>x.classList.remove('active'));
+  const section = document.getElementById(id);
+  if(section) section.classList.add('active');
+  document.querySelectorAll('.tab').forEach(btn=>{
+    if(btn.getAttribute('onclick') && btn.getAttribute('onclick').includes("'" + id + "'")){
+      btn.classList.add('active');
+    }
+  });
+}
+
+function renderDecisionCounters(){
+  if(!lastScan) return;
+  const cs = lastScan.candidates || [];
+  const count = (d) => cs.filter(c => (c.decision || 'new') === d).length;
+  const newCount = count('new');
+  const arch = count('archive_later');
+  const ai = count('ai_review');
+  const prot = count('protect') + count('ignore');
+  const a = document.getElementById('dNew'); if(a) a.textContent = newCount;
+  const b = document.getElementById('dArchive'); if(b) b.textContent = arch;
+  const c = document.getElementById('dAi'); if(c) c.textContent = ai;
+  const d = document.getElementById('dProtected'); if(d) d.textContent = prot;
+}
+
+function uniqueSorted(values){
+  return [...new Set(values.filter(Boolean))].sort((a,b)=>String(a).localeCompare(String(b)));
+}
+
+function sourceById(id){
+  return (lastScan?.sources || []).find(s => s.source_id === id) || {};
+}
+
+function fillSelectOptions(selectId, values, keepFirst=true){
+  const el = document.getElementById(selectId);
+  if(!el) return;
+  const current = el.value;
+  const first = keepFirst ? el.querySelector('option')?.outerHTML : '';
+  el.innerHTML = first || '';
+  values.forEach(v => {
+    const opt = document.createElement('option');
+    opt.value = v;
+    opt.textContent = v;
+    el.appendChild(opt);
+  });
+  if([...el.options].some(o => o.value === current)) el.value = current;
+}
+
+function populateCandidateFilters(){
+  if(!lastScan) return;
+  const cs = lastScan.candidates || [];
+  fillSelectOptions('reviewGroupFilter', uniqueSorted(cs.map(c => c.group)));
+  fillSelectOptions('reviewSourceFilter', uniqueSorted(cs.map(c => c.source_id)));
+  fillSelectOptions('reviewTypeFilter', uniqueSorted(cs.map(c => c.candidate_type)));
+}
+
+function resetCandidateFilters(){
+  [
+    'reviewFilterText',
+    'reviewGroupFilter',
+    'reviewSourceFilter',
+    'reviewTypeFilter',
+    'reviewRiskFilter',
+    'reviewDecisionFilter',
+    'reviewAiFilter',
+    'reviewProtectedFilter',
+    'reviewArchiveFilter',
+    'reviewDeleteFilter'
+  ].forEach(id => {
+    const el = document.getElementById(id);
+    if(!el) return;
+    el.value = '';
+  });
+  renderCandidateReview();
+}
+
+function boolFilterMatch(value, filterValue){
+  if(!filterValue) return true;
+  return filterValue === 'yes' ? !!value : !value;
+}
+
+async function batchSetDecision(decision){
+  if(!currentReviewItems || currentReviewItems.length === 0){
+    showToast('Нет видимых кандидатов для массовой разметки');
+    return;
+  }
+
+  const count = currentReviewItems.length;
+  const label = decisionLabel(decision);
+
+  if(!confirm(`Поставить метку “${label}” всем видимым кандидатам? Количество: ${count}. Файлы НЕ будут удалены и НЕ будут архивированы.`)){
+    return;
+  }
+
+  showToast(`Сохраняю массовую метку: ${label}…`);
+
+  try{
+    const r = await fetch('/api/cleanup/candidate/decisions/batch', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        items: currentReviewItems,
+        decision: decision,
+        actor: 'user',
+        reason: 'batch_review_visible_candidates'
+      })
+    });
+
+    const j = await r.json();
+
+    if(!j.ok){
+      showToast('Ошибка batch: ' + JSON.stringify(j));
+      return;
+    }
+
+    showToast(`✅ Массовая метка сохранена: ${label}. Записей: ${j.saved}`);
+
+    // локально обновим видимые карточки, затем пересканируем для consistency
+    currentReviewItems.forEach(c => c.decision = decision);
+    await runScan();
+    showTabById('candidateReview');
+
+  }catch(e){
+    showToast('Ошибка batch-запроса: ' + e);
+  }
+}
+
+function renderCandidateReview(){
+  if(!lastScan) return;
+  renderDecisionCounters();
+
+  const box = document.getElementById('candidateReviewList');
+  if(!box) return;
+
+  populateCandidateFilters();
+
+  const text = (document.getElementById('reviewFilterText')?.value || '').toLowerCase();
+  const groupFilter = document.getElementById('reviewGroupFilter')?.value || '';
+  const sourceFilter = document.getElementById('reviewSourceFilter')?.value || '';
+  const typeFilter = document.getElementById('reviewTypeFilter')?.value || '';
+  const riskFilter = document.getElementById('reviewRiskFilter')?.value || '';
+  const decisionFilter = document.getElementById('reviewDecisionFilter')?.value || '';
+  const aiFilter = document.getElementById('reviewAiFilter')?.value || '';
+  const protectedFilter = document.getElementById('reviewProtectedFilter')?.value || '';
+  const archiveFilter = document.getElementById('reviewArchiveFilter')?.value || '';
+  const deleteFilter = document.getElementById('reviewDeleteFilter')?.value || '';
+
+  let items = (lastScan.candidates || []).slice();
+
+  items = items.filter(c => {
+    const src = sourceById(c.source_id);
+    if(text){
+      const hay = (
+        (c.path || '') + ' ' +
+        (c.source_id || '') + ' ' +
+        (c.group || '') + ' ' +
+        (c.candidate_type || '') + ' ' +
+        (c.reason || '')
+      ).toLowerCase();
+      if(!hay.includes(text)) return false;
+    }
+
+    if(groupFilter && c.group !== groupFilter) return false;
+    if(sourceFilter && c.source_id !== sourceFilter) return false;
+    if(typeFilter && c.candidate_type !== typeFilter) return false;
+    if(riskFilter && c.risk !== riskFilter) return false;
+    if(decisionFilter && (c.decision || 'new') !== decisionFilter) return false;
+
+    if(!boolFilterMatch(src.ai_scan_allowed || c.ai_allowed, aiFilter)) return false;
+    if(!boolFilterMatch(src.protected, protectedFilter)) return false;
+    if(!boolFilterMatch(src.archive_allowed, archiveFilter)) return false;
+    if(!boolFilterMatch(src.auto_delete_allowed || c.auto_delete_allowed, deleteFilter)) return false;
+
+    return true;
+  });
+
+  const summary = document.getElementById('candidateFilterSummary');
+  if(summary){
+    summary.textContent = `Показано ${items.length} из ${(lastScan.candidates || []).length} кандидатов`;
+  }
+
+  items = items.slice(0, 500);
+  currentReviewItems = items;
+
+  box.innerHTML = items.map((c, idx) => `
+    <div class="card">
+      <div style="display:grid;grid-template-columns:150px minmax(0,1fr) 170px;gap:12px;align-items:start">
+        <div>
+          <span class="pill">${c.source_id}</span><br>
+          <span class="${riskClass(c.risk)}"><b>${c.risk}</b></span><br>
+          ${decisionBadge(c.decision)}
+        </div>
+
+        <div>
+          <b>${c.candidate_type}</b><br>
+          <code>${c.path}</code><br>
+          <span class="muted">${c.reason}</span>
+          <div class="small" style="margin-top:6px">Размер: ${c.size_human || ''} · группа: ${c.group || ''}</div>
+        </div>
+
+        <div class="review-actions">
+          <button class="secondary" onclick='openCandidateModalByIndex(${idx})'>👁 Просмотреть</button>
+          <button class="secondary" onclick='setCandidateDecisionByIndex(${idx}, "keep")'>✅ Оставить</button>
+          <button class="secondary" onclick='setCandidateDecisionByIndex(${idx}, "archive_later")'>📦 Архив позже</button>
+          <button class="secondary" onclick='setCandidateDecisionByIndex(${idx}, "ai_review")'>🧠 AI review</button>
+          <button class="secondary" onclick='setCandidateDecisionByIndex(${idx}, "protect")'>🛡 Защитить</button>
+          <button class="secondary" onclick='setCandidateDecisionByIndex(${idx}, "ignore")'>🚫 Игнор</button>
+          <button class="secondary" onclick='setCandidateDecisionByIndex(${idx}, "reset")'>↩ Сброс</button>
+        </div>
+      </div>
+    </div>
+  `).join('') || '<div class="notice">Кандидатов не найдено.</div>';
+}
+
+let currentCandidate = null;
+let currentReviewItems = [];
+
+function showToast(msg){
+  const t = document.getElementById('cleanupToast');
+  if(!t) return;
+  t.innerHTML = msg;
+  t.classList.add('active');
+  setTimeout(()=>t.classList.remove('active'), 2600);
+}
+
+function setCurrentCandidateDecision(decision){
+  if(!currentCandidate){
+    showToast('Кандидат не выбран');
+    return;
+  }
+  setCandidateDecision(currentCandidate, decision);
+}
+
+function loadCurrentCandidatePreview(){
+  if(!currentCandidate){
+    showToast('Кандидат не выбран');
+    return;
+  }
+  loadCandidatePreview(currentCandidate.path);
+}
+
+async function loadCandidatePreview(path){
+  const box = document.getElementById('candidatePreviewBox');
+  if(!box){
+    showToast('Preview box не найден');
+    return;
+  }
+  if(!path){
+    box.innerHTML = '<div class="risk-high"><b>Нет path для предпросмотра</b></div>';
+    return;
+  }
+
+  box.innerHTML = '<span class="risk-medium"><b>Загружаю предпросмотр…</b></span>';
+  showToast('Загружаю содержимое…');
+
+  let j;
+  try{
+    const r = await fetch('/api/cleanup/file/preview', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({path:path, max_bytes:24000})
+    });
+    j = await r.json();
+  }catch(e){
+    box.innerHTML = `<div class="risk-high"><b>Ошибка запроса preview:</b> ${e}</div>`;
+    showToast('Ошибка preview');
+    return;
+  }
+
+  if(!j.ok){
+    box.innerHTML = `<div class="risk-high"><b>Ошибка предпросмотра:</b> ${j.error || ''}<br>${j.details || ''}</div>`;
+    showToast('Ошибка предпросмотра');
+    return;
+  }
+
+  showToast('✅ Предпросмотр загружен');
+
+  if(j.kind === 'sqlite'){
+    const rows = (j.tables || []).map(t => `
+      <tr>
+        <td><code>${t.name}</code></td>
+        <td>${t.type}</td>
+        <td>${t.rows === null || t.rows === undefined ? '—' : t.rows}</td>
+      </tr>
+    `).join('');
+
+    box.innerHTML = `
+      <div class="small">SQLite DB · ${j.size_human}</div>
+      <table style="margin-top:10px">
+        <thead><tr><th>Имя</th><th>Тип</th><th>Строк</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    `;
+    return;
+  }
+
+  if(j.kind === 'image'){
+    box.innerHTML = `
+      <div class="small">Фото / изображение · ${j.size_human}</div>
+      <img class="photo-preview" src="${j.view_url}" alt="${j.path}">
+      <div style="margin-top:10px"><code>${j.path}</code></div>
+    `;
+    return;
+  }
+
+  if(j.kind === 'binary'){
+    box.innerHTML = `
+      <div class="small">Бинарный файл · ${j.size_human}</div>
+      <div class="notice">${j.message}</div>
+      <code>${j.path}</code>
+    `;
+    return;
+  }
+
+  box.innerHTML = `
+    <div class="small">Текстовый предпросмотр · ${j.size_human}${j.truncated ? ' · показан только фрагмент' : ''}</div>
+    <pre></pre>
+  `;
+  box.querySelector('pre').textContent = j.content || '';
+}
+
+function candidateByIndex(idx){
+  idx = parseInt(idx);
+  if(!currentReviewItems || !currentReviewItems[idx]){
+    alert('Кандидат не найден в текущем фильтре. Нажми “Применить фильтры” или “Сканировать сейчас”.');
+    return null;
+  }
+  return currentReviewItems[idx];
+}
+
+function openCandidateModalByIndex(idx){
+  const c = candidateByIndex(idx);
+  if(!c) return;
+  openCandidateModal(c);
+}
+
+function setCandidateDecisionByIndex(idx, decision){
+  const c = candidateByIndex(idx);
+  if(!c) return;
+  setCandidateDecision(c, decision);
+}
+
+function openCandidateModal(c){
+  currentCandidate = c;
+  const src = (lastScan?.sources || []).find(s => s.source_id === c.source_id) || {};
+  const body = document.getElementById('candidateModalBody');
+  body.innerHTML = `
+    <div>
+      <span class="pill">${c.source_id || ''}</span>
+      <span class="pill">${c.group || ''}</span>
+      <span class="${riskClass(c.risk)}"><b>${c.risk || ''}</b></span>
+      ${decisionBadge(c.decision)}
+    </div>
+
+    <div class="kv">
+      <div class="muted">Путь</div><div><code>${c.path || ''}</code></div>
+      <div class="muted">Тип кандидата</div><div><b>${c.candidate_type || ''}</b></div>
+      <div class="muted">Размер</div><div>${c.size_human || c.size || ''}</div>
+      <div class="muted">Причина</div><div>${c.reason || ''}</div>
+      <div class="muted">Источник</div><div>${src.title || c.source_id || ''}</div>
+      <div class="muted">Описание источника</div><div>${src.description || ''}</div>
+      <div class="muted">AI-анализ</div><div>${src.ai_scan_allowed ? 'разрешён' : 'запрещён'}</div>
+      <div class="muted">Локальная очистка</div><div>${src.local_cleanup_allowed ? 'разрешена' : 'запрещена'}</div>
+      <div class="muted">Архив</div><div>${src.archive_allowed ? 'разрешён' : 'запрещён'}</div>
+      <div class="muted">Автоудаление</div><div>${src.auto_delete_allowed ? 'разрешено' : 'запрещено'}</div>
+      <div class="muted">Защищённый source</div><div>${src.protected ? 'да' : 'нет'}</div>
+      <div class="muted">Расписание</div><div>${src.default_schedule || 'manual'}</div>
+      <div class="muted">Текущее решение</div><div>${decisionLabel(c.decision)}</div>
+    </div>
+
+    <div class="review-actions" style="margin-top:16px">
+      <button class="secondary" onclick='loadCurrentCandidatePreview()'>📄 Показать содержимое</button>
+      <button class="secondary" onclick='setCurrentCandidateDecision("keep")'>✅ Оставить</button>
+      <button class="secondary" onclick='setCurrentCandidateDecision("archive_later")'>📦 Архив позже</button>
+      <button class="secondary" onclick='setCurrentCandidateDecision("ai_review")'>🧠 AI review</button>
+      <button class="secondary" onclick='setCurrentCandidateDecision("protect")'>🛡 Защитить</button>
+      <button class="secondary" onclick='setCurrentCandidateDecision("ignore")'>🚫 Игнор</button>
+    </div>
+
+    <div id="candidatePreviewBox" class="preview-box">
+      <span class="muted">Нажми “Показать содержимое”, чтобы посмотреть внутренности файла.</span>
+    </div>
+  `;
+  document.getElementById('candidateModal').classList.add('active');
+}
+
+function closeCandidateModal(ev){
+  if(ev && ev.target && ev.target.id !== 'candidateModal') return;
+  const m = document.getElementById('candidateModal');
+  if(m) m.classList.remove('active');
+}
+
+function renderScan(j){
+  document.getElementById('mИсточники').textContent = j.total_sources;
+  document.getElementById('mFiles').textContent = j.total_files;
+  document.getElementById('mSize').textContent = j.total_size_human;
+  document.getElementById('mКандидаты').textContent = j.total_candidates;
+
+  const groups = document.getElementById('groups');
+  groups.innerHTML = '';
+  (j.groups || []).forEach(g=>{
+    const pct = j.total_size ? Math.min(100, Math.round(g.size / j.total_size * 100)) : 0;
+    groups.insertAdjacentHTML('beforeend', `
+      <div class="card group-card" onclick="showGroupDetails('${g.group}')">
+        <div class="group-title">${g.group}</div>
+        <div class="small">sources: ${g.sources} · files: ${g.files} · candidates: ${g.candidates}</div>
+        <div class="metric">${g.size_human}</div>
+        <div class="bar"><div style="width:${pct}%"></div></div>
+        <div class="small" style="margin-top:8px">нажми, чтобы раскрыть</div>
+      </div>
+    `);
+  });
+  if ((j.groups || []).length) showGroupDetails(j.groups[0].group);
+
+  const body = document.getElementById('sourcesBody');
+  body.innerHTML = '';
+  (j.sources || []).forEach(s=>{
+    body.insertAdjacentHTML('beforeend', `
+      <tr>
+        <td><b>${s.title || s.source_id}</b><br><code>${s.path}</code></td>
+        <td><span class="pill">${s.group}</span></td>
+        <td class="${riskClass(s.risk)}"><b>${s.risk}</b></td>
+        <td>${s.file_count}<br><span class="small">candidates: ${s.candidate_count}</span></td>
+        <td>${s.total_size_human}</td>
+        <td>${yn(s.ai_scan_allowed)}</td>
+        <td>${yn(s.protected)}</td>
+        <td>${s.default_schedule || 'manual'}</td>
+        <td class="muted">${s.description || ''}</td>
+      </tr>
+    `);
+  });
+
+  const list = document.getElementById('candidatesList');
+  list.innerHTML = '';
+  (j.candidates || []).slice(0,200).forEach(c=>{
+    list.insertAdjacentHTML('beforeend', `
+      <div class="candidate">
+        <div><span class="pill">${c.source_id}</span><br><span class="${riskClass(c.risk)}"><b>${c.risk}</b></span><br>${decisionBadge(c.decision)}</div>
+        <div>${c.size_human || ''}</div>
+        <div><b>${c.candidate_type}</b><br><code>${c.path}</code><br><span class="muted">${c.reason}</span></div>
+        <div>AI: ${yn(c.ai_allowed)}<br>auto delete: ${yn(c.auto_delete_allowed)}</div>
+      </div>
+    `);
+  });
+  if((j.candidates || []).length === 0){
+    list.innerHTML = '<div class="notice">Кандидатов пока нет.</div>';
+  }
+}
+
+
+
+async function savePolicy(sourceId){
+  const card = document.getElementById('policy_' + sourceId);
+  if(!card) return;
+
+  const payload = {
+    source_id: sourceId,
+    ai_scan_allowed: card.querySelector('[data-k="ai"]').checked,
+    local_cleanup_allowed: card.querySelector('[data-k="local"]').checked,
+    archive_allowed: card.querySelector('[data-k="archive"]').checked,
+    auto_delete_allowed: card.querySelector('[data-k="delete"]').checked,
+    protected: card.querySelector('[data-k="protected"]').checked,
+    default_schedule: card.querySelector('[data-k="schedule"]').value,
+    retention_days: parseInt(card.querySelector('[data-k="retention"]').value || '0')
+  };
+
+  const r = await fetch('/api/cleanup/policy', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(payload)
+  });
+
+  const j = await r.json();
+
+  if(j.ok){
+    alert('Policy updated: ' + sourceId);
+    await runScan();
+  }else{
+    alert('Ошибка: ' + JSON.stringify(j));
+  }
+}
+
+function renderPolicies(){
+  if(!lastScan) return;
+
+  const box = document.getElementById('policyCards');
+  const text = (document.getElementById('filterText')?.value || '').toLowerCase();
+  const risk = document.getElementById('riskFilter')?.value || '';
+
+  let html = '';
+
+  (lastScan.sources || []).forEach(s => {
+
+    if(text){
+      const hay = (
+        (s.source_id || '') + ' ' +
+        (s.group || '') + ' ' +
+        (s.title || '')
+      ).toLowerCase();
+
+      if(!hay.includes(text)) return;
+    }
+
+    if(risk && s.risk !== risk) return;
+
+    html += `
+      <div class="card" id="policy_${s.source_id}" style="margin-bottom:14px">
+        <div style="display:flex;justify-content:space-between;gap:20px;align-items:flex-start;flex-wrap:wrap">
+          <div>
+            <div class="group-title">${s.title || s.source_id}</div>
+            <div class="small">
+              group: ${s.group}
+              · risk: <span class="${riskClass(s.risk)}">${s.risk}</span>
+              · files: ${s.file_count}
+              · size: ${s.total_size_human}
+              · candidates: ${s.candidate_count}
+            </div>
+
+            <div style="margin-top:10px">
+              <code>${s.path}</code>
+            </div>
+
+            <div class="muted" style="margin-top:10px">
+              ${s.description || ''}
+            </div>
+          </div>
+
+          <div style="min-width:360px">
+            <table style="width:100%">
+              <tr>
+                <td>AI scan</td>
+                <td><input type="checkbox" data-k="ai" ${s.ai_scan_allowed ? 'checked' : ''}></td>
+              </tr>
+
+              <tr>
+                <td>Local cleanup</td>
+                <td><input type="checkbox" data-k="local" ${s.local_cleanup_allowed ? 'checked' : ''}></td>
+              </tr>
+
+              <tr>
+                <td>Archive allowed</td>
+                <td><input type="checkbox" data-k="archive" ${s.archive_allowed ? 'checked' : ''}></td>
+              </tr>
+
+              <tr>
+                <td>Auto delete</td>
+                <td><input type="checkbox" data-k="delete" ${s.auto_delete_allowed ? 'checked' : ''}></td>
+              </tr>
+
+              <tr>
+                <td>Protected</td>
+                <td><input type="checkbox" data-k="protected" ${s.protected ? 'checked' : ''}></td>
+              </tr>
+
+              <tr>
+                <td>Schedule</td>
+                <td>
+                  <select data-k="schedule">
+                    <option value="manual" ${s.default_schedule === 'manual' ? 'selected' : ''}>manual</option>
+                    <option value="daily" ${s.default_schedule === 'daily' ? 'selected' : ''}>daily</option>
+                    <option value="weekly" ${s.default_schedule === 'weekly' ? 'selected' : ''}>weekly</option>
+                    <option value="monthly" ${s.default_schedule === 'monthly' ? 'selected' : ''}>monthly</option>
+                  </select>
+                </td>
+              </tr>
+
+              <tr>
+                <td>Retention days</td>
+                <td>
+                  <input
+                    data-k="retention"
+                    type="number"
+                    value="${s.retention_days || ''}"
+                    style="width:100px"
+                  >
+                </td>
+              </tr>
+            </table>
+
+            <div style="margin-top:12px">
+              <button onclick="savePolicy('${s.source_id}')">
+                💾 Сохранить policy
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  });
+
+  box.innerHTML = html || '<div class="notice">Ничего не найдено.</div>';
+}
+
+loadStatus();
+runScan();
+</script>
+</div>
+
+
+<div id="candidateModal" class="modal-backdrop" onclick="closeCandidateModal(event)">
+  <div class="modal-card" onclick="event.stopPropagation()">
+    <div class="modal-head">
+      <div>
+        <div class="group-title">Карточка кандидата</div>
+        <div class="small">Просмотр без действий: ничего не архивируется и не удаляется.</div>
+      </div>
+      <button class="secondary" onclick="closeCandidateModal()">✕ Закрыть</button>
+    </div>
+    <div id="candidateModalBody"></div>
+  </div>
+</div>
+
+<div id="cleanupToast" class="toast"></div>
+{% endblock %}
