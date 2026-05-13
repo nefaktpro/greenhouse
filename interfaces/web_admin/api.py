@@ -97,6 +97,9 @@ from interfaces.web_admin.routes import automation_recipes as automation_recipes
 app.include_router(automation_recipes_router.router)
 
 from interfaces.web_admin.routes import automation_recipes_v2 as automation_recipes_v2_router
+from interfaces.web_admin.routes import cleanup as cleanup_routes
+from interfaces.web_admin.routes import chat_digests as chat_digests_routes
+from interfaces.web_admin.routes import memory_summaries as memory_summaries_routes
 
 app.include_router(automation_recipes_v2_router.router)
 app.include_router(observations.router)
@@ -104,6 +107,9 @@ app.include_router(cases.router)
 app.include_router(devices_registry.router)
 app.include_router(weather.router)
 app.include_router(cameras_router)
+app.include_router(cleanup_routes.router)
+app.include_router(chat_digests_routes.router)
+app.include_router(memory_summaries_routes.router)
 
 
 
@@ -113,3 +119,14 @@ from greenhouse_v17.services.startup_workers import start_background_workers
 @app.on_event("startup")
 async def _start_background_workers():
     start_background_workers()
+
+
+# GREENHOUSE v17 — production memory summary worker
+try:
+    from greenhouse_v17.services.memory_summary_service import start_memory_summary_worker
+
+    @app.on_event("startup")
+    async def _start_memory_summary_worker():
+        start_memory_summary_worker()
+except Exception as _memory_summary_worker_import_error:
+    print("[memory_summary_worker] import/startup registration failed:", _memory_summary_worker_import_error)

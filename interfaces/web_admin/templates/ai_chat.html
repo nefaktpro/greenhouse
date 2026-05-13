@@ -5,6 +5,41 @@
   <div class="ai-chat-head">
     <div class="ai-chat-kicker">AI CHAT / CONTEXT</div>
     <h1>Чат с ИИ</h1>
+
+<div id="memorySummaryBanner" style="margin:10px 0 14px 0;padding:12px 14px;border:1px solid #24314f;border-radius:14px;background:#11182b;color:#e8eefc;">
+  <b>🧠 Memory Summary:</b>
+  <span id="memorySummaryBannerText">загрузка…</span>
+  <a href="/web/ai/digests" style="margin-left:10px;color:#6ea8fe;font-weight:800;">Открыть конспекты</a>
+</div>
+<script>
+async function loadMemorySummaryBanner(){
+  try{
+    const r = await fetch('/api/memory/summaries/status');
+    const j = await r.json();
+    const el = document.getElementById('memorySummaryBannerText');
+    if(!el) return;
+    const ev = j.latest_event;
+    if(ev && ev.event){
+      el.textContent = `${ev.event} · ${ev.status} · daily:${j.counts?.daily || 0} weekly:${j.counts?.weekly || 0} monthly:${j.counts?.monthly || 0}`;
+    }else{
+      el.textContent = `daily:${j.counts?.daily || 0} weekly:${j.counts?.weekly || 0} monthly:${j.counts?.monthly || 0}`;
+    }
+  }catch(e){
+    const el = document.getElementById('memorySummaryBannerText');
+    if(el) el.textContent = 'summary status недоступен';
+  }
+}
+loadMemorySummaryBanner();
+setInterval(loadMemorySummaryBanner, 60000);
+</script>
+
+
+<div style="margin: 10px 0 16px 0;">
+  <a href="/web/ai/digests" style="display:inline-block;background:#151f36;color:#e8eefc;border:1px solid #24314f;border-radius:12px;padding:10px 14px;text-decoration:none;font-weight:800;">
+    📝 Конспекты AI-чата
+  </a>
+</div>
+
     <p>Отдельный разговорный чат. Команды управления оставляем в AI Lab, а здесь можно спрашивать, обсуждать систему, файлы, идеи и контекст.</p>
   </div>
 

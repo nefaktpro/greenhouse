@@ -470,3 +470,105 @@ def ask_ai_with_fallback(message: str):
 
 def ask_ai_smoke_test(message: str = "Ответь коротко: AI-связь GREENHOUSE v17 работает?"):
     return ask_ai_with_fallback(message)
+
+
+
+def ask_ai_summary(message: str):
+    """
+    AI call for summaries/compression.
+    Priority: DeepSeek -> OpenAI.
+    Reason: summaries are text compression and should be cheaper by default.
+    """
+    backup = _cfg_deepseek()
+    primary = _cfg_openai()
+
+    deepseek_error = None
+
+    if backup:
+        try:
+            client = _openai_client(backup)
+            import time
+            start = time.time()
+            resp = client.chat.completions.create(
+                model=backup["model"],
+                messages=[
+                    {
+                        "role": "system",
+                        "content": (
+                            "Ты AI-редактор памяти GREENHOUSE v17. "
+                            "Твоя задача — сжимать дневные/недельные логи в точный структурированный конспект. "
+                            "Не придумывай факты. Не выполняй действия. Не обращайся к файлам/HA. "
+                            "Пиши кратко, по делу, на русском."
+                        ),
+                    },
+                    {"role": "user", "content": message},
+                ],
+                max_tokens=2200,
+            )
+            return {
+                "ok": True,
+                "provider": "deepseek",
+                "model": backup["model"],
+                "fallback_used": False,
+                "latency_ms": round((time.time() - start) * 1000),
+                "answer": resp.choices[0].message.content if resp.choices else "",
+                "primary_error": None,
+            }
+        except Exception as e:
+            deepseek_error = {
+                "error": str(e),
+                "error_info": classify_ai_error(e),
+            }
+
+    if primary:
+        try:
+            client = _openai_client(primary)
+            import time
+            start = time.time()
+            resp = client.chat.completions.create(
+                model=primary["model"],
+                messages=[
+                    {
+                        "role": "system",
+                        "content": (
+                            "Ты AI-редактор памяти GREENHOUSE v17. "
+                            "DeepSeek недоступен, сделай точный структурированный конспект. "
+                            "Не придумывай факты. Не выполняй действия. "
+                            "Пиши кратко, по делу, на русском."
+                        ),
+                    },
+                    {"role": "user", "content": message},
+                ],
+                max_tokens=2200,
+            )
+            return {
+                "ok": True,
+                "provider": "openai",
+                "model": primary["model"],
+                "fallback_used": True,
+                "latency_ms": round((time.time() - start) * 1000),
+                "answer": resp.choices[0].message.content if resp.choices else "",
+                "primary_error": deepseek_error,
+            }
+        except Exception as e:
+            return {
+                "ok": False,
+                "provider": None,
+                "model": None,
+                "fallback_used": False,
+                "error": str(e),
+                "error_info": classify_ai_error(e),
+                "primary_error": deepseek_error,
+                "answer": None,
+            }
+
+    return {
+        "ok": False,
+        "provider": None,
+        "model": None,
+        "fallback_used": False,
+        "error": "no_available_models",
+        "error_info": classify_ai_error("no_available_models"),
+        "primary_error": deepseek_error,
+        "answer": None,
+    }
